@@ -82,6 +82,7 @@ const CREDS = window.__E2E_CREDS || null;
   // ---- 最後まで答えて提出 ----
   const total = Number(($("qnum").textContent.split("/")[1] || "0").trim());
   step("問題数が読める", total > 0, $("qnum").textContent);
+  step("1問目では「もどる」が出ない", $("btn-prev").hidden);
   for (let i = 0; i < total; i++) {
     await until(() => btns().length > 0);
     btns()[0].click();                       // 以降は先頭を選ぶ
@@ -89,15 +90,37 @@ const CREDS = window.__E2E_CREDS || null;
     $("btn-next").click();
     await sleep(220);
   }
+  // ---- 段階4（2026-11-16）：最後の「ていしゅつ する」は確認のシートを出すだけ。シートの中のボタンで送る ----
+  step("最後の「ていしゅつ する」で確認のシートが出る（まだ送らない）",
+       await until(() => !$("sheet").hidden && $("sheet-submit")) && !$("scr-quiz").hidden);
+  const dots = [...d.querySelectorAll("#sheet-body .qz-dot")];
+  step("シートに番号が問題数ぶん並ぶ", dots.length === total, dots.length + "/" + total);
+  step("ぜんぶ答えたので「まだ」の番号は無い", dots.every(b => !b.classList.contains("blank")));
+  dots[0].click();                           // 番号で1問目へ戻れる
+  step("番号を押すと その問題へ もどる", await until(() => $("sheet").hidden && $("qnum").textContent.trim().startsWith("1 /")),
+       $("qnum").textContent);
+  for (let i = 0; i < total - 1; i++) { $("btn-next").click(); await sleep(120); }
+  $("btn-next").click();
+  await until(() => !$("sheet").hidden && $("sheet-submit"));
+  $("sheet-submit").click();
   step("提出して結果が出る", await until(() => !$("scr-result").hidden, 25000), $("quiz-msg").textContent);
   step("点数が出ている", /^\d+$/.test($("r-score").textContent), $("r-score").textContent);
-  const rrows = [...d.querySelectorAll("#r-list .rrow")];
-  step("答えの確認が問題数ぶん出る", rrows.length === total, rrows.length + "/" + total);
-  step("★正解の文字が空でない（番号から引けている）",
-       rrows.every(r => (r.querySelector(".ans") || {}).textContent && r.querySelector(".ans").textContent.trim().length > 0),
-       (rrows[0] && rrows[0].textContent || "").slice(0, 60));
-  step("もんだい本来の番号が出ている（1. から）", /^1\./.test(rrows[0].querySelector(".rbody").textContent.trim()),
-       rrows[0].querySelector(".rbody").textContent.trim().slice(0, 20));
+  const marks = [...d.querySelectorAll("#r-list .rmk")];
+  step("○×の札が問題数ぶん出る", marks.length === total, marks.length + "/" + total);
+  step("もんだい本来の番号の順（1 から）", marks.map(m => m.querySelector(".n").textContent).join(",") ===
+       Array.from({ length: total }, (_, i) => String(i + 1)).join(","), marks.map(m => m.querySelector(".n").textContent).join(","));
+  // ★正解の文字は札を押したシートに出る。全部押して、どれも空でないこと（番号から引けている）
+  let empty = 0;
+  for (const m of marks) {
+    m.click();
+    await until(() => !$("sheet").hidden && d.querySelector("#sheet-body .ans"));
+    const a = d.querySelector("#sheet-body .ans");
+    if (!a || !a.textContent.trim()) empty++;
+  }
+  step("★どの札を押しても正解の文字が出る（番号から引けている）", empty === 0, "empty=" + empty);
+  step("答え合わせのシートに最後の札の番号が出る",
+       ((d.querySelector("#sheet-body .ax-chip") || {}).textContent || "").includes(String(total)),
+       (d.querySelector("#sheet-body .ax-chip") || {}).textContent);
 
   log.done = true;
   out.textContent = "E2E_RESULT " + JSON.stringify(log);

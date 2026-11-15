@@ -254,3 +254,89 @@ body.sp #scr-survey .sv-nav .btn,
 body.sp #scr-survey .sv-nav .sbtn.primary{height:56px;border-radius:18px;background:var(--navy);color:#fff;font-size:1rem;font-weight:800;
   box-shadow:0 8px 20px rgba(14,58,99,.25);padding:0;}
 body.sp #scr-survey .msg{margin:10px 0 0;}
+
+/* ── 小テスト（段階4・2026-11-16）：上に×と進み具合、大きな選択肢、下にもどる／つぎへ ── */
+.qz-top{padding-bottom:4px;}
+.qz-prog{flex:1;height:10px;border-radius:999px;background:#DCE2EA;overflow:hidden;margin:0 4px;}
+.qz-prog i{display:block;height:100%;width:0;border-radius:999px;background:var(--navy-2);transition:width .25s ease;}
+body.sp #scr-quiz .qnum{min-width:52px;text-align:center;font-size:.82rem;font-weight:800;color:#374151;}
+.qz-meta{display:flex;gap:8px;padding:2px 22px 0;}
+.qz-chip{height:28px;padding:0 10px;border-radius:999px;background:#E3EEFA;color:#0F4E85;font-size:.75rem;font-weight:800;
+  display:inline-flex;align-items:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.qz-chip[hidden]{display:none;}
+.qz-body{max-width:640px;margin:0 auto;padding:14px 16px calc(96px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:16px;}
+.qz-card{background:var(--card);border-radius:var(--r-xl);padding:22px 20px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-s);}
+.qz-lead{font-size:.82rem;color:var(--sub2);}
+body.sp #scr-quiz .prompt{font-size:1.4rem;font-weight:700;line-height:2.15;margin:0;overflow-wrap:anywhere;}
+#choices{display:flex;flex-direction:column;gap:10px;}
+#choices.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+body.sp #scr-quiz .choice{position:relative;margin:0;min-height:64px;border-radius:var(--r-l);border:2px solid var(--card);
+  background:var(--card);box-shadow:var(--shadow-s);font-size:1.05rem;font-weight:800;color:var(--ink2);padding:12px 16px;gap:12px;
+  -webkit-tap-highlight-color:transparent;}
+body.sp #scr-quiz #choices.grid .choice{min-height:84px;justify-content:center;font-size:1.35rem;padding:14px 10px;text-align:center;}
+body.sp #scr-quiz #choices.grid .choice .mark{position:absolute;left:10px;top:10px;width:22px;height:22px;font-size:.7rem;}
+body.sp #scr-quiz .choice.sel{border-color:var(--navy-2);background:#E3EEFA;color:#0F4E85;box-shadow:0 0 0 4px rgba(23,105,170,.12);}
+body.sp #scr-quiz .savest{margin:0;}
+body.sp #scr-quiz .msg{margin:0;}
+.qz-foot{position:fixed;left:0;right:0;bottom:0;z-index:20;max-width:640px;margin:0 auto;display:flex;gap:10px;
+  padding:12px 16px calc(16px + env(safe-area-inset-bottom,0px));background:var(--ground);}
+.qz-foot .sbtn{height:56px;border-radius:18px;font-weight:800;}
+.qz-foot .qz-prev{width:120px;flex:none;background:var(--card);color:var(--ink2);box-shadow:var(--shadow-s);font-weight:700;}
+.qz-foot .qz-prev[hidden]{display:none;}
+.qz-foot #btn-next{flex:1;background:var(--navy-2);color:#fff;font-size:1rem;box-shadow:0 8px 20px rgba(23,105,170,.3);}
+.qz-foot #btn-next:disabled{background:#B9C6D6;box-shadow:none;cursor:default;}
+/* 提出前のシート：番号のボタン（まだの問題は黄色） */
+.qz-dots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+.qz-dot{height:48px;border-radius:14px;border:0;background:#E3EEFA;color:#0F4E85;font:inherit;font-weight:800;cursor:pointer;}
+.qz-dot.blank{background:#FEF3C7;color:#7A4A00;box-shadow:inset 0 0 0 2px #F6C344;}
+.sh-note{font-size:.78rem;color:var(--sub2);text-align:center;margin:0;}
+
+/* ── 結果（段階4）：点数のリング・問題ごとの ○× ── */
+.rs-ttl{flex:1;text-align:center;font-weight:800;padding-right:44px;}
+.rs{max-width:640px;margin:0 auto;padding:4px 16px 24px;display:flex;flex-direction:column;gap:14px;}
+.rs-hero{position:relative;overflow:hidden;background:var(--navy);color:#fff;border-radius:28px;padding:22px 20px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;}
+.rs-hero::before{content:"";position:absolute;left:-50px;bottom:-60px;width:180px;height:180px;border-radius:50%;
+  background:var(--navy-2);opacity:.45;}
+.rs-sub{position:relative;font-size:.82rem;color:#C8DBEE;text-align:center;overflow-wrap:anywhere;}
+.rs-sub:empty{display:none;}
+.rs-ring{position:relative;width:168px;height:168px;}
+.rs-ring svg{display:block;}
+.rs-ring circle{fill:none;stroke-width:14;}
+.rs-ring .bg{stroke:rgba(255,255,255,.18);}
+.rs-ring .arc{stroke:#F6C344;stroke-linecap:round;stroke-dasharray:0 440;transition:stroke-dasharray .6s ease;}
+.rs-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+body.sp .rs-num .big{font-size:3.2rem;font-weight:800;line-height:1;color:#fff;}
+body.sp .rs-num .of{font-size:.88rem;color:#C8DBEE;font-weight:700;}
+.rs-card{background:var(--card);border-radius:var(--r-xl);padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-s);}
+.rs-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.rs-h h2{margin:0;font-size:1rem;font-weight:800;}
+.rs-h span{font-size:.75rem;color:var(--sub2);}
+.rs-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+.rmk{height:56px;border-radius:16px;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  line-height:1.2;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.rmk.ok{background:#E6F4EA;color:#1E7B34;}
+.rmk.ng{background:#FDE7E7;color:#B42318;}
+.rmk .n{font-size:.7rem;font-weight:700;opacity:.8;}
+.rmk .s{font-size:1.15rem;font-weight:800;}
+.rs-prev{flex-direction:row;align-items:center;gap:14px;}
+.rs-prev[hidden]{display:none;}
+.rs-prev-ic{width:44px;height:44px;border-radius:14px;background:#E6F4EA;color:#1E7B34;display:grid;place-items:center;flex:none;}
+.rs-prev-t{display:flex;flex-direction:column;min-width:0;}
+.rs-prev-t b{font-size:.9rem;}
+.rs-prev-t span{font-size:.75rem;color:var(--sub2);}
+/* 答え合わせのシート */
+.ax-head{display:flex;align-items:center;gap:10px;}
+.ax-chip{height:28px;padding:0 10px;border-radius:999px;font-size:.75rem;font-weight:800;display:inline-flex;align-items:center;flex:none;}
+.ax-chip.ng{background:#FDE7E7;color:#B42318;}
+.ax-chip.ok{background:#E6F4EA;color:#1E7B34;}
+.ax-q{margin:0;font-size:1.15rem;font-weight:700;line-height:2.15;overflow-wrap:anywhere;}
+.ax-rows{display:flex;flex-direction:column;gap:8px;}
+.ax-row{display:flex;align-items:baseline;gap:10px;padding:12px 14px;border-radius:14px;flex-wrap:wrap;}
+.ax-row.ng{background:#FDE7E7;color:#8A1C12;}
+.ax-row.ok{background:#E6F4EA;color:#14532D;}
+.ax-row .k{font-size:.85rem;}
+.ax-row .v{font-size:1.05rem;}
+.ax-tip{background:#F3F4F6;border-radius:16px;padding:12px 14px;font-size:.88rem;color:#374151;line-height:1.85;}
+.ax-tip b{color:var(--ink2);margin-right:8px;}

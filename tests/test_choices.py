@@ -91,7 +91,7 @@ class TestChoicesStructure(unittest.TestCase):
               re.search(r'seedFrom\(\s*me\s*\+\s*.#.\s*\+\s*q\.id\s*\)', idx) is not None)
         self.check("★保存するのは元の番号で、画面の位置ではない",
               "draftRecord(q.id, idx)" in idx and "// ★元の番号。画面の位置ではない" in idx)
-        self.check("結果画面も番号で正解を引く", "q.choices.find(c=>c.idx===item.correct)" in idx)
+        self.check("結果画面も番号で正解を引く", "q.choices.find(c=>c.idx===idx)" in idx and "choiceLabel(q, Number(item.correct))" in idx)  # 段階4で答え合わせのシートへ移した
         self.check("選んでいない状態を undefined で判定（0 と混同しない）", "chosen === undefined" in idx)
 
     def test_03_import_script(self):

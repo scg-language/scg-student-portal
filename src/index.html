@@ -146,36 +146,56 @@
   </section>
 
   <!-- 出題 -->
+  <!-- 段階4（2026-11-16）：上に×と進み具合、大きな選択肢、最後は「ていしゅつ しますか？」シート -->
   <section id="scr-quiz" hidden>
-    <div class="panel">
-      <div class="qbar">
-        <span class="qnum" id="qnum"></span>
-        <div class="track"><div class="fill" id="qfill" style="width:0%"></div></div>
+    <div class="sv-top qz-top">
+      <button class="iconbtn" id="btn-quiz-quit" type="button" data-i18n-aria="q.quit" aria-label="やめる"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div class="qz-prog"><i id="qfill"></i></div>
+      <span class="qnum" id="qnum"></span>
+    </div>
+    <div class="qz-meta"><span class="qz-chip" id="qz-lesson" hidden></span></div>
+    <div class="qz-body">
+      <div class="qz-card">
+        <span class="qz-lead" id="qz-lead"></span>
+        <div class="prompt" id="qprompt"></div>
       </div>
-      <div class="prompt" id="qprompt"></div>
       <!-- 選択肢は設問ごとに数が変わる（実データは3〜4択が多い）ので、ここに描き込む -->
-      <div id="choices"></div>
-      <button class="btn" id="btn-next" disabled style="margin-top:6px;">つぎへ</button>
+      <div id="choices" role="radiogroup"></div>
       <!-- 下書きの保存ぐあい。「保存済み」と「提出」は別物なので、ここでは提出とは言わない -->
       <div class="savest" id="savest" hidden></div>
       <div class="msg" id="quiz-msg"></div>
     </div>
+    <div class="qz-foot">
+      <button class="sbtn qz-prev" id="btn-prev" type="button" data-i18n="q.prev">もどる</button>
+      <button class="sbtn primary" id="btn-next" type="button" disabled>つぎへ</button>
+    </div>
   </section>
 
-  <!-- テスト結果 -->
+  <!-- テスト結果（段階4）：点数のリング、問題ごとの ○×（押すと答え合わせのシート） -->
   <section id="scr-result" hidden>
-    <div class="panel">
-      <div class="score">
-        <div class="big" id="r-score"></div>
-        <div class="of" id="r-of"></div>
+    <div class="sv-top">
+      <button class="iconbtn" id="btn-r-close" type="button" data-i18n-aria="r.home" aria-label="ホームに もどる"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <span class="rs-ttl" data-i18n="r.title">けっか</span>
+    </div>
+    <div class="rs">
+      <section class="rs-hero">
+        <span class="rs-sub" id="r-sub"></span>
+        <div class="rs-ring" id="r-ring" role="img">
+          <svg width="168" height="168" viewBox="0 0 168 168" aria-hidden="true"><circle cx="84" cy="84" r="70" class="bg"/><circle cx="84" cy="84" r="70" class="arc" id="r-arc" transform="rotate(-90 84 84)"/></svg>
+          <div class="rs-num"><span class="big" id="r-score"></span><span class="of" id="r-of"></span></div>
+        </div>
+      </section>
+      <section class="rs-card">
+        <div class="rs-h"><h2 data-i18n="r.check">もんだいごとの けっか</h2><span data-i18n="r.tap">おすと こたえが みられます</span></div>
+        <div class="rs-grid" id="r-list"></div>
+      </section>
+      <section class="rs-card rs-prev" id="r-prev" hidden>
+        <span class="rs-prev-ic" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
+        <span class="rs-prev-t"><b id="r-prev-main"></b><span id="r-prev-sub"></span></span>
+      </section>
+      <div class="sh-actions">
+        <button class="sbtn primary" id="btn-r-home" type="button" data-i18n="r.home">ホームに もどる</button>
       </div>
-    </div>
-    <div class="panel">
-      <h2 data-i18n="r.check">こたえの かくにん</h2>
-      <div id="r-list"></div>
-    </div>
-    <div class="inpanel">
-      <button class="btn" id="btn-r-home" data-i18n="r.home">マイページへ もどる</button>
     </div>
   </section>
 
@@ -1752,35 +1772,90 @@ function choiceOrder(q){
   return a;
 }
 
+/* 2×2 に並べるのは「4択以下で、どの選択肢も短い」ときだけ。長い文の選択肢は1列（折り返して読めるように） */
+function choiceGrid(q){
+  if(q.choices.length > 4) return false;
+  return q.choices.every(c => rubyStrip(String(c.label||"")).length <= 10);
+}
 function render(){
   clearMsg("quiz-msg");
   const q=questions[cur];
   $("qnum").textContent = (cur+1)+" / "+questions.length;
-  $("qfill").style.width = (cur/questions.length*100)+"%";
+  $("qfill").style.width = ((cur+1)/questions.length*100)+"%";
+  $("qz-lesson").textContent = (quizSet && quizSet.lesson) || "";
+  $("qz-lesson").hidden = !(quizSet && quizSet.lesson);
+  $("qz-lead").textContent = t("q.prompt").trim();
   // ★設問文は ${漢字}(よみ) を含むので rubyHtml を通す（中でエスケープしてからタグに戻す）
-  $("qprompt").innerHTML = escHtml(t("q.prompt")) + rubyHtml(q.prompt);
+  $("qprompt").innerHTML = rubyHtml(q.prompt);
 
   const chosen = answers[q.id];                 // ★元の番号。画面の位置ではない
   const box = $("choices");
   box.innerHTML = "";
+  box.className = choiceGrid(q) ? "grid" : "";
   choiceOrder(q).forEach((idx, pos)=>{
     const c = q.choices.find(x=>x.idx===idx);
     const b = document.createElement("button");
     b.type = "button";
     b.className = "choice" + (chosen===idx ? " sel" : "");
     b.setAttribute("data-idx", idx);
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", chosen===idx ? "true" : "false");
     const m = document.createElement("span"); m.className = "mark"; m.textContent = MARKS[pos] || (pos+1);
-    const s = document.createElement("span"); setRuby(s, c ? c.label : "");   // 選択肢にもルビが入りうる
+    const s = document.createElement("span"); s.className = "lbl"; setRuby(s, c ? c.label : "");   // 選択肢にもルビが入りうる
     b.appendChild(m); b.appendChild(s);
     b.onclick = ()=>{ draftRecord(q.id, idx); render(); };
     box.appendChild(b);
   });
 
+  $("btn-prev").hidden = cur === 0;
   $("btn-next").disabled = (chosen === undefined);
   $("btn-next").textContent = (cur===questions.length-1) ? t("q.submit") : t("q.next");
 }
-$("btn-next").onclick = async ()=>{
-  if(cur < questions.length-1){ cur++; render(); return; }
+$("btn-prev").onclick = ()=>{ if(cur > 0){ cur--; render(); window.scrollTo(0,0); } };
+
+/* × … 答えは1問ごとに保存してあるので「つづきから できる」と言ってよい（アンケートと違う） */
+$("btn-quiz-quit").onclick = ()=>{
+  sheet.open(body => {
+    body.appendChild(el("h2", "sh-title", t("q.quit.q")));
+    body.appendChild(el("p", "sh-text", t("q.quit.body")));
+    const acts = el("div", "sh-actions");
+    acts.appendChild(sheetButton("primary", t("q.quit.no")));
+    const quit = sheetButton("quiet warn", t("q.quit.yes"), ()=>{ sheet.close(true); draftFlush(); quizSet=null; goMyPage(); });
+    quit.id = "sheet-quiz-quit";
+    acts.appendChild(quit);
+    body.appendChild(acts);
+  });
+};
+
+/* 最後の「ていしゅつ する」→ 確認のシート。番号を押すと その問題へ もどる（番号は受験中の位置） */
+function openSubmitSheet(){
+  const left = questions.filter(q => answers[q.id] === undefined).length;
+  sheet.open(body => {
+    body.appendChild(el("h2", "sh-title", t("q.sub.q")));
+    body.appendChild(el("p", "sh-text", left ? t("q.sub.left",{n:left}) : t("q.sub.all",{n:questions.length})));
+    const grid = el("div", "qz-dots");
+    questions.forEach((q, i) => {
+      const b = el("button", "qz-dot" + (answers[q.id] === undefined ? " blank" : ""), String(i+1));
+      b.type = "button";
+      b.setAttribute("aria-label", t("q.sub.goto",{n:i+1}));
+      b.onclick = ()=>{ sheet.close(); cur = i; render(); window.scrollTo(0,0); };
+      grid.appendChild(b);
+    });
+    body.appendChild(grid);
+    body.appendChild(el("p", "sh-note", t("q.sub.hint")));
+    const acts = el("div", "sh-actions");
+    const go = sheetButton("primary", t("q.submit"), ()=>{ sheet.close(true); doSubmit(); });
+    go.id = "sheet-submit";
+    acts.appendChild(go);
+    acts.appendChild(sheetButton("quiet", t("q.sub.back")));
+    body.appendChild(acts);
+  });
+}
+$("btn-next").onclick = ()=>{
+  if(cur < questions.length-1){ cur++; render(); window.scrollTo(0,0); return; }
+  openSubmitSheet();
+};
+async function doSubmit(){
   $("btn-next").disabled=true; $("btn-next").textContent=t("q.sending");
   try{
     // 提出の前に、未送信の下書きを送り切る（送れなくても提出そのものは進める）
@@ -1799,30 +1874,84 @@ $("btn-next").onclick = async ()=>{
     err("quiz-msg", closed ? t("q.timeup") : t("q.fail",{msg:e.message}));
     $("btn-next").disabled=false; $("btn-next").textContent=t("q.submit");
   }
-};
+}
+/* 結果：リング（○もん / ぜんぶ）＋問題ごとの ○×。○× は もんだい本来の番号（seq）の順。
+   ★「ごうかく」は出さない（合格点の決まりが無い）。「もういちど」も出さない（再受験は無い運用）。 */
+function choiceLabel(q, idx){ const hit = q && q.choices.find(c=>c.idx===idx); return hit ? hit.label : ""; }
 function showResult(r){
   lastResult=r;
   $("r-score").textContent = r.score;
   $("r-of").textContent = t("r.of",{total:r.total});
+  $("r-ring").setAttribute("aria-label", t("r.ring",{s:r.score,total:r.total}));
+  const C = 2*Math.PI*70, k = r.total ? Math.max(0, Math.min(1, r.score/r.total)) : 0;
+  $("r-arc").style.strokeDasharray = (C*k).toFixed(1) + " " + C.toFixed(1);
+  $("r-sub").textContent = [quizSet && quizSet.lesson, quizSet && quizSet.title].filter(Boolean).join(" ・ ");
   const list=$("r-list"); list.innerHTML="";
-  r.results.forEach(item=>{
+  r.results.slice().sort((a,b)=>a.seq-b.seq).forEach(item=>{
     const q = questions.find(x=>x.seq===item.seq);
     if(!q) return;                                   // 出題しなかった設問は結果にも出さない
-    const row=document.createElement("div"); row.className="rrow";
-    const hit = q.choices.find(c=>c.idx===item.correct);
-    const correctTxt = hit ? hit.label : "";
-    // 🔴 ここは以前、設問文と正解を**素のまま**innerHTML に入れていた（タグがそのまま効く状態）。
-    //    出題画面は textContent で安全だったのに、結果画面だけ穴が開いていた。
-    //    ルビ対応にあわせて、設問文も正解も必ず rubyHtml を通す（中でエスケープしてから戻す）。
-    row.innerHTML =
-      "<span class='rmark "+(item.is_correct?"ok'>○":"ng'>✕")+"</span>"+
-      "<div class='rbody'>"+item.seq+". "+rubyHtml(q.prompt)+"<br>"+escHtml(t("r.ans"))+
-      "<span class='ans'>"+rubyHtml(correctTxt)+"</span></div>";
-    list.appendChild(row);
+    const b = el("button", "rmk " + (item.is_correct ? "ok" : "ng"));
+    b.type = "button";
+    b.setAttribute("data-seq", item.seq);
+    b.setAttribute("aria-label", t("r.mk",{n:item.seq, w:t(item.is_correct ? "r.ok" : "r.ng")}));
+    b.appendChild(el("span", "n", String(item.seq)));
+    b.appendChild(el("span", "s", item.is_correct ? "○" : "×"));
+    b.onclick = ()=>openAnswerSheet(item, q);
+    list.appendChild(b);
   });
   show("scr-result");
+  window.scrollTo(0,0);
+  paintPrevAttempt(r);
+}
+/* 答え合わせのシート。🔴 設問文・選択肢・解説は先生が Excel に書いたもの＝必ず rubyHtml / setRuby を通す */
+function openAnswerSheet(item, q){
+  sheet.open(body => {
+    const head = el("div", "ax-head");
+    head.appendChild(el("span", "ax-chip " + (item.is_correct ? "ok" : "ng"), t("r.qn",{n:item.seq})));
+    head.appendChild(el("h2", "sh-title", t(item.is_correct ? "r.ok.t" : "r.ng.t")));
+    body.appendChild(head);
+    const p = el("p", "ax-q"); setRuby(p, q.prompt); body.appendChild(p);
+    const rows = el("div", "ax-rows");
+    if(!item.is_correct){
+      const mine = el("div", "ax-row ng");
+      mine.appendChild(el("span", "k", t("r.mine")));
+      const v = el("b", "v");
+      if(item.chosen == null || item.chosen === "") v.textContent = t("r.blank"); else setRuby(v, choiceLabel(q, Number(item.chosen)));
+      mine.appendChild(v); rows.appendChild(mine);
+    }
+    const ok = el("div", "ax-row ok");
+    ok.appendChild(el("span", "k", t("r.ans").replace(/[:：]\s*$/, "")));
+    const ans = el("b", "v ans"); setRuby(ans, choiceLabel(q, Number(item.correct)));
+    ok.appendChild(ans); rows.appendChild(ok);
+    body.appendChild(rows);
+    if(item.explanation){
+      const tip = el("div", "ax-tip");
+      tip.appendChild(el("b", "", t("r.tip")));
+      const tx = el("span", ""); setRuby(tx, item.explanation); tip.appendChild(tx);
+      body.appendChild(tip);
+    }
+    const acts = el("div", "sh-actions");
+    acts.appendChild(sheetButton("primary", t("r.gotit")));
+    body.appendChild(acts);
+  });
+}
+/* まえの テストとの くらべ。★自分の提出だけ（RLS が他人の行を返さない）。取れなければ出さない */
+async function paintPrevAttempt(r){
+  $("r-prev").hidden = true;
+  try{
+    const me = api.profile && api.profile.id; if(!me) return;
+    const rows = await api.get("/rest/v1/attempts?select=score,total,submitted_at,quiz_set_id&student_id=eq."+me+"&order=submitted_at.desc&limit=2");
+    const prev = rows.find(x => !(quizSet && x.quiz_set_id === quizSet.id)) || null;
+    if(!prev || !lastResult || lastResult !== r) return;
+    const same = prev.total === r.total, d = r.score - prev.score;
+    $("r-prev-main").textContent = same ? t(d > 0 ? "r.prev.up" : d < 0 ? "r.prev.down" : "r.prev.same",{n:Math.abs(d)})
+                                        : t("r.prev.t");
+    $("r-prev-sub").textContent = t("r.prev.sub",{d:fmtDay(prev.submitted_at), s:prev.score, total:prev.total});
+    $("r-prev").hidden = false;
+  }catch(e){ /* くらべが出なくても結果は見られる */ }
 }
 $("btn-r-home").onclick=goMyPage;
+$("btn-r-close").onclick=goMyPage;
 
 /* ---- アンケート（定義は assets/surveys.js・回答は survey_responses） ----
    2026-09-11 に「回（round）」経由へ変更。1人1本の上書きをやめ、回ごとに1本へ。
@@ -1954,7 +2083,7 @@ function openSurvey(r, draftAnswers, page){
     if(surveyPage === 0) info("survey-msg",t("sv.prev"));
     $("btn-survey-submit").textContent = t("sv.resubmit");
   }else{
-    $("btn-survey-submit").textContent = t("q.submit");
+    $("btn-survey-submit").textContent = t("sv.submit");
   }
   show("scr-survey");
   paintSurveyPage();
