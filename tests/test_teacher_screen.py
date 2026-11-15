@@ -163,18 +163,32 @@ class RequiredFeaturesTest(unittest.TestCase):
         self.assertIn("source_book", self.src)
 
     def test_select_view_can_start_a_run(self):
-        """選ぶ → クラスと時間を決める → はじめる。"""
-        self.assertIn("openRunDialog", self.src)
+        """選ぶ → クラスと時間を決める → はじめる。
+        2026-11-16 の新デザインで、ダイアログ（run-dlg）から右の面（sp-*）に変えた。"""
         self.assertIn("start_quiz_run", self.src)
         self.assertIn("run_target_count", self.src)
-        self.assertIn("run-class", self.src)
-        self.assertIn("run-dur", self.src)
+        self.assertIn('id="sp-classes"', self.src)
+        self.assertIn('id="sp-mins"', self.src)
+        self.assertIn('id="sp-start"', self.src)
 
-    def test_starting_jumps_to_today_with_marker(self):
-        """はじめたら「📅今日」へ移り、その回に目印を出す（master.html と同じ動き）。"""
-        self.assertIn('setView("today")', self.src)
+    def test_class_is_chosen_every_time(self):
+        """🔴 クラスは毎回選ばせる＝テストを選び直したら空に戻す（前回を既定にしない）。"""
+        self.assertIn('sp.set = s; sp.cls = "";', self.src)
+
+    def test_starting_opens_live_with_marker(self):
+        """はじめたら そのまま ライブ集計（映す）へ。今日の表には「いま はじめた回」の目印。
+        （2026-11-16 デザイン案「はじめて QRを 映す」に合わせて、行き先を今日→ライブに変えた）"""
+        self.assertIn('openLive(s, "proj")', self.src)
         self.assertIn("justStartedRunId", self.src)
         self.assertIn("just-started", self.src)
+
+    def test_projector_mode_hides_names_and_scores(self):
+        """「映す」の間は 名前・点数・平均を出さない（教室で全員に見えるため）。"""
+        self.assertIn("body.tchui.proj .hand-only", (SRC / "assets" / "teacher.css").read_text(encoding="utf-8"))
+        i = self.src.find('id="feed"'); j = self.src.rfind('<div class="tcard hand-only">', 0, i)
+        self.assertGreater(j, 0, "提出した順（名前と点数）が hand-only の中に無い")
+        i = self.src.find('id="st-avg"'); j = self.src.rfind('<div class="kc hand-only">', 0, i)
+        self.assertGreater(j, 0, "平均が hand-only の中に無い")
 
     def test_quiz_live_stats(self):
         """📝小テスト ライブ集計: 提出数・平均点・設問別正答率・提出フィード。"""

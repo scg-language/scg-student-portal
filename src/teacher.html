@@ -6,6 +6,7 @@
 <title>SCG 学生ポータル — 先生</title>
 <meta name="theme-color" content="#10365e">
 <link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/teacher.css">
 <style>
   /* teacher.html（2026-09-12 新規・白紙から作った）
      授業中に先生が使うものだけ。登録・アンケート作成・お知らせ配信・点検＝机の仕事は master.html。
@@ -75,7 +76,7 @@
   dialog.cfmdlg .btn.danger{background:var(--ng);border-color:var(--ng);color:#fff;}
 </style>
 </head>
-<body>
+<body class="tchui">
 <header>
   <div class="hin">
     <div class="eyebrow">SCG Student Portal — Teacher</div>
@@ -107,24 +108,31 @@
 
   <section id="scr-dash" hidden>
 
-    <div class="panel" id="tabsbar">
-      <button data-view="today" class="on"><span>📅</span> 今日</button>
-      <button data-view="select"><span>▶</span> テストを選んではじめる</button>
-      <button data-view="quiz"><span>📝</span> 小テスト ライブ集計</button>
-      <span class="sp"></span>
-      <!-- 🔴 行き来の口（2026-09-12 きあ指示）。URLを2つに分けた摩擦は
-           「どっちだっけ」で、URLが2つあること自体ではない。だから**間違えても損をしない**ようにする。
-           ★出すのは role==="master" のときだけ。先生に出すと、押しても断られて意味が無い。
-           （学生画面には付けない＝学生には行き先が無いため。きあ指示） -->
-      <!-- ⚠ ここの文言に「アンケート」「お知らせ配信」「点検・バックアップ」と書かないこと。
-           tests/test_teacher_screen.py が「その機能が入っていないこと」を**文字で**見張っていて、
-           行き先の説明のつもりでも引っかかる（2026-09-12 に実際に落ちた）。
-           ★見張りを緩めるのではなく、こちらの言い方を変える。緩めると本物の混入を見逃す。 -->
-      <a id="go-master" class="ghostbtn" href="master.html" hidden
-         title="問題の登録など、机の仕事はマスターの画面です"><span>→</span> マスター画面</a>
-      <button id="btn-qr" type="button" class="ghostbtn"><span>🔢</span> 学生用QR</button>
-      <span id="whoami" class="whoami" hidden></span>
-      <button id="btn-logout" type="button" class="ghostbtn"><span>⏏</span> ログアウト</button>
+    <!-- 2026-11-16 新デザイン：濃いティールの帯と丸いタブ（先生①〜③）。
+         ★data-view の名前と id はそのまま。ボタンの並びと見た目だけ変えた。 -->
+    <div class="tbar">
+      <div class="tbar-in">
+        <div class="brand"><span class="lg"><img src="assets/logo-mark.png" alt=""></span><span><b>学生ポータル</b><small>TEACHER ・ 先生</small></span></div>
+        <nav id="tabsbar" aria-label="先生メニュー">
+          <button data-view="today" class="on" type="button">今日</button>
+          <button data-view="select" type="button">テストを はじめる</button>
+          <button data-view="quiz" type="button"><i class="livedot" id="live-dot" hidden></i>ライブ集計</button>
+        </nav>
+        <div class="tbar-r">
+          <!-- 🔴 行き来の口（2026-09-12 きあ指示）。URLを2つに分けた摩擦は
+               「どっちだっけ」で、URLが2つあること自体ではない。だから**間違えても損をしない**ようにする。
+               ★出すのは role==="master" のときだけ。先生に出すと、押しても断られて意味が無い。
+               （学生画面には付けない＝学生には行き先が無いため。きあ指示） -->
+          <!-- ⚠ ここの文言に「アンケート」「お知らせ配信」「点検・バックアップ」と書かないこと。
+               tests/test_teacher_screen.py が「その機能が入っていないこと」を**文字で**見張っていて、
+               行き先の説明のつもりでも引っかかる（2026-09-12 に実際に落ちた）。
+               ★見張りを緩めるのではなく、こちらの言い方を変える。緩めると本物の混入を見逃す。 -->
+          <a id="go-master" href="master.html" hidden title="問題の登録など、机の仕事はマスターの画面です">マスター画面</a>
+          <button id="btn-qr" type="button">学生用QR</button>
+          <span id="whoami" class="whoami" hidden></span>
+          <button id="btn-logout" type="button">ログアウト</button>
+        </div>
+      </div>
     </div>
 
     <div class="notice" id="master-notice" hidden>
@@ -133,90 +141,134 @@
       <a href="master.html">マスターの画面</a>にあります。
     </div>
 
-    <!-- ══ 📅今日（既定の画面）══
-         いま開いている実施回だけを見せる。master.html の renderTodayRuns() とほぼ同じ動き
-         （2秒ごとに自動更新・おわる/取り消す）。「今日 登録した回」は机の仕事なのでここには置かない。 -->
+    <!-- ══ 今日（既定の画面）══
+         いま開いている回の大きなカード・「テストを選んで はじめる」・今日 はじめた回。
+         下の表（today-runs）は master.html の renderTodayRuns() と同じ動き（2秒ごと・おわる/取り消す）。 -->
     <div id="view-today" data-viewpane>
-      <div class="dashhead"><span class="t">📅 今日</span></div>
-      <div class="panel">
-        <h2>いま開いている実施回</h2>
-        <div id="today-runs"><div style="color:var(--sub)">読み込み中…</div></div>
-        <div class="msg" id="today-runs-msg" style="display:none;"></div>
-        <div class="note">
-          <b>おわる</b>＝いま終わりにします。<u>出た答えはそのまま集計に入ります</u>（時間が余ったとき）。<br>
-          <b>取り消す</b>＝この回を<b>無かったことに</b>します。
-          🔴 <u>答えは消えません（集計から外れるだけです）</u>（クラスを間違えて開いたとき）。
-          取り消してから、正しいクラスで開き直してください。
+      <div class="tin">
+        <div class="thead"><span class="tdate" id="t-date"></span><h1>今日の 小テスト</h1></div>
+        <div id="t-hero"></div>
+        <div class="trow">
+          <button class="tstart" type="button" id="t-go-select">
+            <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+            <span><b>テストを 選んで はじめる</b><span>クラスを選ぶ → QRを映す → 学生が スマホで 受ける</span></span>
+          </button>
+          <div class="tcard truns"><h2>今日 はじめた回</h2><div id="t-runs"><div class="tnote">読み込み中…</div></div></div>
         </div>
+        <div class="tcard">
+          <h2>いま開いている実施回</h2>
+          <div id="today-runs"><div class="tnote">読み込み中…</div></div>
+          <div class="msg" id="today-runs-msg" style="display:none;"></div>
+          <p class="tnote">
+            <b>おわる</b>＝いま終わりにします。<u>出た答えはそのまま集計に入ります</u>（時間が余ったとき）。<br>
+            <b>取り消す</b>＝この回を<b>無かったことに</b>します。
+            🔴 <u>答えは消えません（集計から外れるだけです）</u>（クラスを間違えて開いたとき）。
+            取り消してから、正しいクラスで開き直してください。</p>
+        </div>
+        <p class="tnote">小テストは成績に入れません。画面を離れた記録は、クラス全体の人数だけを出します（個人別には出しません）。</p>
       </div>
     </div>
 
-    <!-- ══ ▶ テストを選んではじめる（新規の要）══
-         教材で絞る・テスト名で検索・件数表示・もっと見る。編集・公開・停止・削除は置かない＝できるのは「はじめる」だけ。 -->
+    <!-- ══ テストを はじめる（新規の要）══
+         左＝テストのカード（教材で絞る・テスト名で検索・件数・もっと見る）、右＝クラスと時間。
+         編集・公開・停止・削除は置かない＝できるのは「はじめる」だけ。
+         🔴 クラスは毎回選ばせる（前回を既定にしない）。選ぶと対象人数がその場に出る。 -->
     <div id="view-select" data-viewpane hidden>
-      <div class="dashhead"><span class="t">▶ テストを選んではじめる</span></div>
-      <div class="panel">
-        <h2>登録されているテスト</h2>
-        <div class="filterbar" id="sel-filterbar">
-          <select id="sel-filter-book" hidden aria-label="教材で絞る"><option value="">すべての教材</option></select>
-          <input type="search" id="sel-filter-q" placeholder="テスト名で検索" aria-label="テスト名で検索">
-        </div>
-        <div class="note" id="sel-filter-note" style="margin:0 0 10px;">読み込み中…</div>
-        <div class="tblwrap"><table class="tbl" id="sel-list-tbl">
-          <thead><tr><th>テスト名</th><th>課</th><th>操作</th></tr></thead>
-          <tbody id="sel-list-body"></tbody>
-        </table></div>
-        <div class="morebar" id="sel-list-more" hidden>
-          <button class="btn ghost" id="sel-btn-more" type="button">もっと見る</button>
-        </div>
-        <div class="note">クラスと時間を指定して、その時間だけ学生の画面に出します。
-          はじめたら「📅 今日」に移り、そこで残り時間と提出数が見られます。</div>
-        <div class="msg" id="sel-msg" style="display:none;"></div>
+      <div class="tin sel2">
+        <section class="sel-l" aria-labelledby="sel-h">
+          <div class="thead"><span class="step">1 ・ テストを 選ぶ</span><h1 id="sel-h">どの テストを しますか？</h1></div>
+          <div class="filterbar" id="sel-filterbar">
+            <input type="search" id="sel-filter-q" placeholder="テスト名で 探す" aria-label="テスト名で探す">
+            <select id="sel-filter-book" hidden aria-label="教材で絞る"><option value="">すべての教材</option></select>
+          </div>
+          <p class="tnote" id="sel-filter-note">読み込み中…</p>
+          <div class="tgrid" id="sel-list-body"></div>
+          <div class="morebar" id="sel-list-more" hidden>
+            <button class="tbtn" id="sel-btn-more" type="button">もっと見る</button>
+          </div>
+        </section>
+        <section class="tcard sel-r" id="sel-panel" aria-labelledby="sp-title">
+          <div><span class="step">2 ・ クラスと 時間</span><h2 id="sp-title">左から テストを 選んでください</h2><span class="tnote" id="sp-sub"></span></div>
+          <div class="lbl">クラス（毎回 選びます）</div>
+          <div class="tchips" id="sp-classes"><span class="tnote">クラスの一覧を読み込んでいます…</span></div>
+          <div class="ttarget" id="sp-target"></div>
+          <div class="lbl">時間</div>
+          <div class="tseg" id="sp-mins" role="radiogroup" aria-label="時間"></div>
+          <p class="tnote">時間になると 自動で 終わります。早く終わったときは「いま 終える」。</p>
+          <div class="mixnote">問題と 選択肢の 順番は、学生ごとに まぜて 出ます（となりの人と 同じに なりません）。</div>
+          <button class="tbig" id="sp-start" type="button" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>はじめて QRを 映す</button>
+          <div class="msg" id="sel-msg" style="display:none;"></div>
+        </section>
       </div>
     </div>
 
-    <!-- ══ 📝 小テスト ライブ集計 ══
-         提出数・平均点・設問別正答率・提出フィード。結果の書き出し（CSV）はこの中。 -->
+    <!-- ══ ライブ集計 ══
+         「映す」＝教室のプロジェクター用。名前・点数・平均を出さない（提出数・残り時間・問題ごとの正答率だけ）。
+         「手元」＝先生の画面。平均・提出した順・テストの変更・結果の書き出し（CSV）が出る。 -->
     <div id="view-quiz" data-viewpane hidden>
-      <div class="dashhead"><span class="t">📝 小テスト ライブ集計</span></div>
-      <div class="panel">
-        <div class="filterbar" id="qp-filterbar">
-          <select id="qp-filter-book" hidden aria-label="教材で絞る"><option value="">すべての教材</option></select>
-          <input type="search" id="qp-filter-q" placeholder="テスト名で検索" aria-label="テスト名で検索">
+      <div class="tin">
+        <div class="lhead">
+          <div class="thead"><span class="tdate" id="lv-sub"></span><h1 id="lv-title">ライブ集計</h1></div>
+          <div class="lv-act">
+            <div class="tmode" id="lv-mode" role="radiogroup" aria-label="表示">
+              <button type="button" role="radio" data-mode="proj">映す</button>
+              <button type="button" role="radio" data-mode="hand">手元</button>
+            </div>
+            <button class="tbtn pri" id="lv-end" type="button" hidden>いま 終える</button>
+          </div>
         </div>
-        <div class="note" id="qp-filter-note" style="margin:0 0 10px;"></div>
-        <div class="field" style="max-width:460px;margin-bottom:0;">
-          <label for="quiz-pick">集計するテスト（新しい順）</label>
-          <select id="quiz-pick"></select>
+        <div class="lgrid">
+          <section class="tcard qrcard" aria-label="QRコード">
+            <div id="lv-qr" role="img" aria-label="学生ポータルを開くQRコード"></div>
+            <b>スマホで 読んで<br>テストを ひらく</b>
+            <span class="tnote">学籍番号で ログインしてから</span>
+          </section>
+          <div class="lmain">
+            <section class="kc3" aria-label="提出の状況">
+              <div class="kc teal"><span>提出</span><div class="big"><b id="st-count">0</b><small id="lv-of"></small></div>
+                <div class="tbarh"><i id="lv-bar" style="width:0%"></i></div></div>
+              <div class="kc"><span>のこり</span><div class="big"><b id="lv-left">—</b></div><small id="lv-until">いま開いている回は ありません</small></div>
+              <div class="kc hand-only"><span>いまの 平均</span><div class="big"><b id="st-avg">–</b><small id="lv-avg-of"></small></div><small>提出した人の 平均（問題数）</small></div>
+            </section>
+            <section class="tcard" aria-labelledby="qr-h">
+              <div class="hrow"><h2 id="qr-h">問題ごとの 正答率</h2><span class="tnote">50%未満は オレンジ</span></div>
+              <div id="qrates" class="vbars"><div class="tnote">提出待ち…</div></div>
+            </section>
+            <!-- ★個人別は出さない。小テストは成績に反映しない＝罰の材料にしないため（master.html と同じ方針） -->
+            <div id="focus-note" class="focusnote" hidden></div>
+          </div>
         </div>
-      </div>
-      <div class="stats">
-        <div class="stat"><div class="v" id="st-count">0</div><div class="l">提出数</div></div>
-        <div class="stat"><div class="v" id="st-avg">–</div><div class="l">平均点 / 10</div></div>
-      </div>
-      <div class="panel">
-        <h2>設問別 正答率</h2>
-        <div id="qrates"><div style="color:var(--sub)">提出待ち…</div></div>
-        <!-- ★個人別は出さない。小テストは成績に反映しない＝罰の材料にしないため（master.html と同じ方針） -->
-        <div id="focus-note" class="focusnote" hidden></div>
-      </div>
-      <div class="panel">
-        <h2>提出フィード</h2>
-        <div class="feed" id="feed"><div style="color:var(--sub)">提出待ち…</div></div>
-      </div>
-      <div class="panel">
-        <h2>結果の書き出し</h2>
-        <div class="note">学籍番号つきの CSV をブラウザの中だけで作ります（送信しません）。
-          Excel で開けるよう UTF-8（BOM付き）で保存します。<b>個票</b>と<b>問題ごとの集計</b>は別ファイルです。</div>
-        <div class="field" style="max-width:460px;">
-          <label for="csv-run-pick">範囲</label>
-          <select id="csv-run-pick"><option value="">全クラスまとめて（横断）</option></select>
+        <p class="tnote proj-only" style="text-align:center;">「映す」にしている間は、名前・点数・平均を 出しません。</p>
+        <div class="tcard hand-only">
+          <h2>テストを 変える</h2>
+          <div class="filterbar" id="qp-filterbar">
+            <select id="qp-filter-book" hidden aria-label="教材で絞る"><option value="">すべての教材</option></select>
+            <input type="search" id="qp-filter-q" placeholder="テスト名で検索" aria-label="テスト名で検索">
+          </div>
+          <p class="tnote" id="qp-filter-note"></p>
+          <div class="field" style="max-width:460px;margin-bottom:0;">
+            <label for="quiz-pick">集計するテスト（新しい順）</label>
+            <select id="quiz-pick"></select>
+          </div>
         </div>
-        <div class="btnrow">
-          <button class="btn ghost" id="csv-btn-student" type="button" style="width:auto;">個票を CSV で書き出す</button>
-          <button class="btn ghost" id="csv-btn-question" type="button" style="width:auto;">問題ごとの集計を CSV で書き出す</button>
+        <div class="tcard hand-only">
+          <h2>提出した順（手元だけ）</h2>
+          <div class="feed" id="feed"><div class="tnote">提出待ち…</div></div>
         </div>
-        <div class="msg" id="csv-msg" style="display:none;"></div>
+        <div class="tcard hand-only">
+          <h2>結果の書き出し</h2>
+          <p class="tnote">学籍番号つきの CSV をブラウザの中だけで作ります（送信しません）。
+            Excel で開けるよう UTF-8（BOM付き）で保存します。<b>個票</b>と<b>問題ごとの集計</b>は別ファイルです。</p>
+          <div class="field" style="max-width:460px;">
+            <label for="csv-run-pick">範囲</label>
+            <select id="csv-run-pick"><option value="">全クラスまとめて（横断）</option></select>
+          </div>
+          <div class="btnrow">
+            <button class="btn ghost" id="csv-btn-student" type="button" style="width:auto;">個票を CSV で書き出す</button>
+            <button class="btn ghost" id="csv-btn-question" type="button" style="width:auto;">問題ごとの集計を CSV で書き出す</button>
+          </div>
+          <div class="msg" id="csv-msg" style="display:none;"></div>
+        </div>
       </div>
     </div>
 
@@ -243,25 +295,6 @@
       <button type="submit" class="btn" id="cfm-ok" value="ok">OK</button>
     </div>
   </form>
-</dialog>
-
-<!-- テストを「はじめる」ダイアログ。master.html の run-dlg と同じ形（クラスは毎回選ばせる）。 -->
-<dialog class="cfmdlg" id="run-dlg">
-  <h3 id="run-title"></h3>
-  <div class="field">
-    <label for="run-class">対象クラス（かならず選びます）</label>
-    <select id="run-class"></select>
-  </div>
-  <div class="field">
-    <label for="run-dur">時間（分）</label>
-    <input type="number" id="run-dur" value="20" min="1" max="480">
-  </div>
-  <div class="note" id="run-target">クラスの一覧を読み込んでいます…</div>
-  <div class="msg" id="run-msg" style="display:none;"></div>
-  <div class="btnrow cfm-actions">
-    <button type="button" class="btn ghost" id="run-cancel">やめる</button>
-    <button type="button" class="btn" id="run-start" disabled>はじめる</button>
-  </div>
 </dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -319,79 +352,78 @@ async function fetchClassNames(){
   return [...new Set(rows.map(r=>r.class_name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ja"));
 }
 
-/* テストを「はじめる」ダイアログ。master.html の openRunDialog と同じ形。
-   戻り値: はじめられたら start_quiz_run の返り値、キャンセルなら false。 */
-function openRunDialog(qs){
-  const dlg=$("run-dlg"), sel=$("run-class"), dur=$("run-dur"), tgt=$("run-target"),
-        msg=$("run-msg"), startBtn=$("run-start"), cancelBtn=$("run-cancel");
-  $("run-title").textContent = "「"+qs.title+"」を はじめる";
-  dur.value = 20;
-  msg.style.display = "none";
-  startBtn.disabled = true; cancelBtn.disabled = false;
-  sel.innerHTML = "<option value=''>－ 選んでください －</option>";
-  sel.value = "";
-  tgt.textContent = "クラスの一覧を読み込んでいます…";
-
-  return new Promise(resolve=>{
-    let settled=false;
-    function cleanup(){
-      dlg.removeEventListener("close", onClose);
-      sel.removeEventListener("change", onChange);
-      dur.oninput = null;
-      startBtn.removeEventListener("click", onStart);
-      cancelBtn.removeEventListener("click", onCancel);
-    }
-    function finish(v){ if(settled) return; settled=true; cleanup(); dlg.close(""); resolve(v); }
-    function onCancel(){ finish(false); }
-    function onClose(){ finish(false); }
-
-    async function onChange(){
-      const cls = sel.value;
-      if(!cls){ startBtn.disabled=true; tgt.textContent="クラスを選ぶと対象人数が出ます。"; return; }
-      startBtn.disabled = true;
-      tgt.textContent = "人数を数えています…";
-      const n0 = Number(dur.value)||20;
-      try{
-        const n = await api.rpc("run_target_count", {p_class_names:[cls]});
-        tgt.textContent = "「"+cls+"」を、"+n+"人 を対象に、"+n0+"分間 はじめます。";
-      }catch(e){
-        tgt.textContent = "「"+cls+"」を、"+n0+"分間 はじめます。（対象人数は数えられませんでした）";
-      }
-      startBtn.disabled = false;
-    }
-    dur.oninput = ()=>{ if(sel.value) onChange(); };
-
-    async function onStart(){
-      const cls = sel.value; if(!cls) return;
-      const n = Number(dur.value);
-      if(!Number.isFinite(n) || n<1 || n>480){
-        msg.style.display="block"; msg.className="msg err"; msg.textContent="時間は1〜480分で入れてください。";
-        return;
-      }
-      startBtn.disabled=true; cancelBtn.disabled=true;
-      msg.style.display="block"; msg.className="msg info"; msg.textContent="はじめています…";
-      try{
-        const r = await api.rpc("start_quiz_run", {p_quiz_set_id:qs.id, p_class_names:[cls], p_duration_min:n});
-        cleanup(); settled=true; dlg.close("ok"); resolve(r);
-      }catch(e){
-        msg.className="msg err"; msg.textContent="はじめられませんでした（"+e.message+"）";
-        startBtn.disabled=false; cancelBtn.disabled=false;
-      }
-    }
-
-    dlg.addEventListener("close", onClose);
-    sel.addEventListener("change", onChange);
-    startBtn.addEventListener("click", onStart);
-    cancelBtn.addEventListener("click", onCancel);
-
-    fetchClassNames().then(names=>{
-      names.forEach(n=>{ const o=document.createElement("option"); o.value=n; o.textContent=n; sel.appendChild(o); });
-      tgt.textContent = names.length ? "クラスを選ぶと対象人数が出ます。" : "学生のクラスが見つかりませんでした。";
-    }).catch(e=>{ tgt.textContent = "クラス一覧を読み込めませんでした（"+e.message+"）。"; });
-
-    dlg.showModal();
+/* テストを はじめる：右の面（2026-11-16 新デザイン。旧 run-dlg のダイアログを置き換えた）。
+   🔴 クラスは毎回選ばせる（テストを選び直すたびに空にする＝前回を既定にしない）。
+   選んだ瞬間に対象人数が出る（run_target_count）＝「A①（20人）」が違えば押す前に気づく。 */
+const sp = { set:null, cls:"", min:20, names:null, busy:false };
+const SP_MINS = [10, 15, 20, 30];
+async function spClasses(){
+  const box = $("sp-classes");
+  if(!sp.names){
+    try{ sp.names = await fetchClassNames(); }
+    catch(e){ box.textContent = "クラス一覧を読み込めませんでした（"+e.message+"）。"; return; }
+  }
+  box.innerHTML = "";
+  if(!sp.names.length){ box.textContent = "学生のクラスが見つかりませんでした。"; return; }
+  sp.names.forEach(n=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tchip"; b.textContent = n;
+    b.onclick = ()=>{ if(!sp.set) return; sp.cls = n; spPaint(); spCount(); };
+    box.appendChild(b);
   });
+  spPaint();
 }
+function spPaint(){
+  $("sp-title").textContent = sp.set ? sp.set.title : "左から テストを 選んでください";
+  $("sp-sub").textContent = sp.set ? [sp.set.lesson, sp.set.n ? sp.set.n+"問" : ""].filter(Boolean).join(" ・ ") : "";
+  $("sp-classes").querySelectorAll(".tchip").forEach(b=>{
+    b.setAttribute("aria-pressed", b.textContent===sp.cls ? "true" : "false");
+    b.disabled = !sp.set;
+  });
+  const seg = $("sp-mins"); seg.innerHTML = "";
+  SP_MINS.forEach(m=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.setAttribute("role","radio"); b.setAttribute("aria-checked", sp.min===m ? "true" : "false");
+    b.textContent = m+"分";
+    b.onclick = ()=>{ sp.min = m; spPaint(); spCount(); };
+    seg.appendChild(b);
+  });
+  $("sp-start").disabled = !(sp.set && sp.cls) || sp.busy;
+  if(!sp.cls) $("sp-target").textContent = sp.set ? "クラスを選ぶと 対象の人数が 出ます。" : "";
+}
+async function spCount(){
+  if(!sp.cls) return;
+  const cls = sp.cls, min = sp.min;
+  $("sp-target").textContent = "人数を数えています…";
+  try{
+    const n = await api.rpc("run_target_count", {p_class_names:[cls]});
+    if(sp.cls===cls) $("sp-target").textContent = "「"+cls+"」の "+n+"人に、"+min+"分間 出ます。";
+  }catch(e){
+    // ★人数が出せなくても止めない。クラス名だけ見て進められるように
+    if(sp.cls===cls) $("sp-target").textContent = "「"+cls+"」に、"+min+"分間 出ます。（対象人数は数えられませんでした）";
+  }
+}
+function spPick(s){
+  sp.set = s; sp.cls = "";   // 🔴 テストを選び直したらクラスは空に戻す
+  $("sel-msg").style.display = "none";
+  document.querySelectorAll("#sel-list-body .tcardbtn").forEach(b=>b.setAttribute("aria-pressed", b.getAttribute("data-qsid")===s.id ? "true" : "false"));
+  spPaint();
+}
+$("sp-start").onclick = async ()=>{
+  if(!sp.set || !sp.cls) return;
+  const msg = (text, ng)=>{ const m=$("sel-msg"); m.style.display="block"; m.textContent=text; m.className="msg"+(ng?" err":" info"); };
+  sp.busy = true; spPaint(); msg("はじめています…");
+  try{
+    const r = await api.rpc("start_quiz_run", {p_quiz_set_id:sp.set.id, p_class_names:[sp.cls], p_duration_min:sp.min});
+    // ⚠ start_quiz_run が返すキーは run_id（id ではない）。db/2026-09-10_four_layers.sql を見て確かめること
+    justStartedRunId = r.run_id || null;
+    $("sel-msg").style.display = "none";
+    const s = sp.set; sp.set = null; sp.cls = "";
+    sp.busy = false; spPaint();
+    openLive(s, "proj");   // デザイン案どおり、はじめたら そのまま QR を映す画面へ
+  }catch(e){ msg("はじめられませんでした（"+e.message+"）", true); }
+  finally{ sp.busy = false; spPaint(); }
+};
 
 /* ══════════════════════════════════════════════════════════════════
    quiz_sets の絞り込み検索（教材・テスト名）。「テストを選んではじめる」と
@@ -470,14 +502,16 @@ async function showSelectList(resetLimit){
   $("sel-filter-note").textContent = "読み込み中…";
   try{
     const [{ rows: sets, total }, live] = await Promise.all([
-      searchQuizSets("id,title,lesson", { book: selState.book, q: selState.q, limit: selState.limit }),
+      searchQuizSets("id,title,lesson,questions!questions_quiz_set_id_fkey(count)", { book: selState.book, q: selState.q, limit: selState.limit }),
       liveQuizSetIds(),
     ]);
+    sets.forEach(s=>{ s.n = (s.questions && s.questions[0] && s.questions[0].count) || 0; });
     $("sel-list-body").innerHTML = sets.map(s=>
-      "<tr data-qsid='"+esc(s.id)+"'><td>"+esc(s.title)+"</td><td>"+esc(s.lesson||"")+"</td>"+
-      "<td class='actcell'><button class='btn btnsm sel-start' type='button'>はじめる</button>"+
-      (live.has(s.id) ? " <span class='pill live' title='いま学生の画面に出ています'>実施中</span>" : "")+
-      "</td></tr>"
+      "<button type='button' class='tcardbtn' data-qsid='"+esc(s.id)+"' aria-pressed='"+(sp.set && sp.set.id===s.id ? "true" : "false")+"'>"+
+      "<span class='bk'>"+esc(s.lesson||"")+"</span><span class='tt'>"+esc(s.title)+"</span>"+
+      "<span class='mt'>"+(s.n ? s.n+"問" : "")+"</span>"+
+      (live.has(s.id) ? "<span class='pill live' title='いま学生の画面に出ています'>実施中</span>" : "")+
+      "</button>"
     ).join("");
     const filtering = !!(selState.book || selState.q);
     if(!sets.length){
@@ -496,25 +530,8 @@ async function showSelectList(resetLimit){
 
 function wireSelectListActions(sets){
   const byId = {}; sets.forEach(s=>byId[s.id]=s);
-  const msg = (text, ng)=>{ const m=$("sel-msg"); m.style.display="block"; m.textContent=text; m.className="msg"+(ng?" err":" info"); };
-  $("sel-list-tbl").querySelectorAll("tr[data-qsid]").forEach(tr=>{
-    const id = tr.getAttribute("data-qsid"), s = byId[id];
-    const btn = tr.querySelector(".sel-start");
-    btn.onclick = async ()=>{
-      btn.disabled = true;
-      try{
-        const r = await openRunDialog(s);
-        if(!r){ btn.disabled=false; return; }
-        const cls = (r.class_names && r.class_names[0]) || "";
-        const until = new Date(r.closes_at).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
-        msg("「"+s.title+"」を「"+cls+"」で はじめました"
-          + (r.target_count!=null ? "（"+r.target_count+"人対象・" : "（")+until+"まで）。");
-        // ⚠ start_quiz_run が返すキーは run_id（id ではない）。db/2026-09-10_four_layers.sql を見て確かめること
-        justStartedRunId = r.run_id || null;
-        setView("today");
-        window.scrollTo(0, 0);
-      }catch(e){ msg("はじめられませんでした（"+e.message+"）", true); btn.disabled=false; }
-    };
+  $("sel-list-body").querySelectorAll(".tcardbtn[data-qsid]").forEach(b=>{
+    b.onclick = ()=>spPick(byId[b.getAttribute("data-qsid")]);
   });
 }
 
@@ -526,15 +543,15 @@ function setView(v){
   activeView = v;
   document.querySelectorAll("#tabsbar [data-view]").forEach(b=>b.classList.toggle("on", b.getAttribute("data-view")===v));
   document.querySelectorAll("[data-viewpane]").forEach(p=>{ p.hidden = (p.id!=="view-"+v); });
-  if(v==="today") tick();
-  else if(v==="select") showSelectList(true);
-  else if(v==="quiz") openQuizView();
+  if(v==="today"){ tdAt = 0; tick(); }
+  else if(v==="select"){ showSelectList(true); spClasses(); spPaint(); }
+  else if(v==="quiz"){ lvQr(); openQuizView(); }
 }
 document.querySelectorAll("#tabsbar [data-view]").forEach(b=>{ b.onclick = ()=>setView(b.getAttribute("data-view")); });
 
 async function tick(){
   try{
-    if(activeView==="today") await renderTodayRuns();
+    if(activeView==="today") await Promise.all([ renderTodayRuns(), renderTodayExtras() ]);
     else if(activeView==="quiz") await tickQuiz();
   }catch(e){ /* 一時的な失敗は次のtickで回復 */ }
 }
@@ -551,6 +568,78 @@ function fmtRemain(closesAt){
   const m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000);
   return m+"分"+String(s).padStart(2,"0")+"秒";
 }
+/* 今日：大きなカード（いま開いている回）と「今日 はじめた回」（2026-11-16 新デザイン）。
+   ★人数・提出数だけ。名前は出さない。「＋5分」は無い（実施回の締切を直す口がまだ無い＝DBに関数が要る）。 */
+let tdAt = 0;
+function tHM(iso){ return new Date(iso).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}); }
+async function renderTodayExtras(){
+  if(Date.now() - tdAt < 4000) return;
+  tdAt = Date.now();
+  const d = new Date();
+  $("t-date").textContent = (d.getMonth()+1)+"月"+d.getDate()+"日（"+"日月火水木金土"[d.getDay()]+"）";
+  const mid = new Date(); mid.setHours(0,0,0,0);
+  const nowIso = new Date().toISOString();
+  const sel = "id,quiz_set_id,class_names,student_ids,opens_at,closes_at,is_void,quiz_sets(title,lesson),attempts(count)";
+  const [live, runs] = await Promise.all([
+    api.get("/rest/v1/quiz_runs?select="+sel+"&is_void=eq.false&opens_at=lte."+nowIso+"&closes_at=gt."+nowIso+"&order=closes_at.asc"),
+    api.get("/rest/v1/quiz_runs?select="+sel+"&opens_at=gte."+mid.toISOString()+"&order=opens_at.desc&limit=30"),
+  ]);
+  $("live-dot").hidden = !live.length;
+  const subOf = r => (Array.isArray(r.attempts) && r.attempts[0] && r.attempts[0].count) || 0;
+  const setOf = r => ({ id:r.quiz_set_id, title:(r.quiz_sets&&r.quiz_sets.title)||"（不明）", lesson:(r.quiz_sets&&r.quiz_sets.lesson)||"" });
+  const hero = $("t-hero");
+  if(!live.length){
+    hero.innerHTML = "<section class='thero idle'><span class='h-t'><span class='name'>いま 開いている テストは ありません</span>"
+      + "<span class='sub'>「テストを 選んで はじめる」から はじめると、ここに出ます。</span></span></section>";
+  }else{
+    const r = live[0], s = setOf(r);
+    if(runTargetCache[r.id]===undefined){
+      try{ runTargetCache[r.id] = await api.rpc("run_target_count",{p_class_names:r.class_names||[], p_student_ids:r.student_ids||[]}); }
+      catch(e){ runTargetCache[r.id] = null; }
+    }
+    const tg = runTargetCache[r.id], n = subOf(r), left = Math.max(0, Math.ceil((new Date(r.closes_at)-Date.now())/60000));
+    const cls = (r.class_names&&r.class_names.length) ? r.class_names.join("・") : "全員";
+    hero.innerHTML = "<section class='thero' aria-label='いま開いている回'>"
+      + "<span class='h-t'><span class='badge'><i></i>いま 開いている"+(live.length>1 ? "（ほか "+(live.length-1)+"）" : "")+"</span>"
+      + "<span class='name'>"+esc((s.lesson && s.lesson!==s.title ? s.lesson+" " : "")+s.title)+"</span>"
+      + "<span class='sub'>"+esc(cls)+" ・ "+tHM(r.opens_at)+" から ・ "+tHM(r.closes_at)+" に自動で終わる</span></span>"
+      + "<span class='h-n'><span><b>"+n+"</b> <span>"+(tg!=null ? "/ "+tg+"人 提出" : "人 提出")+" ・ あと "+left+"分</span></span>"
+      + "<span class='tbarh'><i style='width:"+(tg ? Math.min(100, Math.round(n/tg*100)) : 0)+"%'></i></span></span>"
+      + "<span class='h-a'><button type='button' class='w' id='t-show'>映して 見る</button>"
+      + "<button type='button' id='t-end'>いま 終える</button></span></section>";
+    $("t-show").onclick = ()=>openLive(s, "proj");
+    $("t-end").onclick = ()=>endRun(r.id, s.title+"（"+cls+"）");
+  }
+  const box = $("t-runs");
+  if(!runs.length){ box.innerHTML = "<p class='tnote'>今日は まだ はじめていません。</p>"; return; }
+  const now = Date.now();
+  box.innerHTML = runs.map((r,i)=>{
+    const s = setOf(r), isLive = !r.is_void && new Date(r.opens_at)<=now && new Date(r.closes_at)>now;
+    const cls = (r.class_names&&r.class_names.length) ? r.class_names.join("・") : "全員";
+    const st = r.is_void ? "<span class='tst void'>取り消し</span>" : (isLive ? "<span class='tst live'>実施中</span>" : "<span class='tst'>終わった</span>");
+    return "<div class='trun'><span class='tm'>"+tHM(r.opens_at)+"</span>"
+      + "<span class='tt'><b>"+esc(s.title)+"</b><span>"+esc(cls)+" ・ 提出 "+subOf(r)+"</span></span>"+st
+      + "<button type='button' class='tlink' data-i='"+i+"'>"+(isLive ? "映して 見る" : "結果を 見る")+"</button></div>";
+  }).join("");
+  box.querySelectorAll("[data-i]").forEach(b=>{
+    const r = runs[Number(b.getAttribute("data-i"))], isLive = !r.is_void && new Date(r.closes_at)>Date.now();
+    b.onclick = ()=>openLive(setOf(r), isLive ? "proj" : "hand");
+  });
+}
+/* いま終える（今日の大きなカードとライブ集計から）。下の表の「おわる」と同じ RPC・同じ説明 */
+async function endRun(runId, label){
+  const ok = await askDialog({
+    title: "「"+label+"」を おわりにします",
+    body: "残り時間を待たずに、学生の画面からすぐに消えます。\n"
+        + "★出た答えは そのまま集計に入ります（点数は有効です）。\n"
+        + "まだ提出していない人の答えは、提出されません。",
+    okText: "おわる",
+  });
+  if(!ok) return;
+  try{ await api.rpc("close_quiz_run",{p_run_id:runId}); tdAt = 0; lv.at = 0; await tick(); }
+  catch(e){ todayRunsMsg("閉じられませんでした（"+e.message+"）", true); }
+}
+
 async function renderTodayRuns(){
   const nowIso = new Date().toISOString();
   let runs;
@@ -688,32 +777,113 @@ $("quiz-pick").onchange = ()=>{
   tickQuiz().catch(()=>{});
 };
 
+/* ライブ集計（2026-11-16 新デザイン）。
+   「映す」＝プロジェクター用：名前・点数・平均を出さない（body.proj で .hand-only を隠す）。
+   「手元」＝先生の画面：平均・提出した順・テストの変更・CSV。
+   いま開いている回があれば、その回だけで数える（quiz_stats に p_run_id を渡す）。 */
+const lv = { mode:"hand", run:null, runFor:null, at:0 };
+function setMode(m){
+  lv.mode = m;
+  try{ localStorage.setItem("sp_t_mode", m); }catch(e){}
+  document.body.classList.toggle("proj", m==="proj");
+  document.querySelectorAll("#lv-mode [data-mode]").forEach(b=>b.setAttribute("aria-checked", b.getAttribute("data-mode")===m ? "true" : "false"));
+}
+$("lv-mode").onclick = e=>{ const b = e.target.closest("[data-mode]"); if(b) setMode(b.getAttribute("data-mode")); };
+let lvQrDone = false;
+function lvQr(){
+  if(lvQrDone || typeof QRCode==="undefined") return;
+  const url = location.href.replace(/teacher\.html.*$/,"");
+  new QRCode($("lv-qr"),{text:url,width:240,height:240,correctLevel:QRCode.CorrectLevel.M});
+  lvQrDone = true;
+}
+function openLive(s, mode){
+  if(s){
+    quizSet = { id:s.id, title:s.title, lesson:s.lesson };
+    if(![...$("quiz-pick").options].some(o=>o.value===s.id)){
+      const o = document.createElement("option"); o.value = s.id; o.textContent = s.title+(s.lesson ? "（"+s.lesson+"）" : "");
+      $("quiz-pick").prepend(o);
+      quizSets = [quizSet].concat(quizSets.filter(x=>x.id!==s.id));
+    }
+    $("quiz-pick").value = s.id;
+    lastCount = 0; lv.run = null; lv.runFor = null;
+    $("qrates").innerHTML = "<div class='tnote'>読み込み中…</div>";
+    $("feed").innerHTML = "<div class='tnote'>読み込み中…</div>";
+  }
+  if(mode) setMode(mode);
+  setView("quiz");
+  window.scrollTo(0, 0);
+}
+async function lvRun(){
+  if(lv.runFor===quizSet.id && Date.now()-lv.at < 10000) return;
+  lv.runFor = quizSet.id; lv.at = Date.now();
+  const nowIso = new Date().toISOString();
+  const rs = await api.get("/rest/v1/quiz_runs?select=id,class_names,student_ids,opens_at,closes_at&quiz_set_id=eq."+quizSet.id
+    + "&is_void=eq.false&opens_at=lte."+nowIso+"&closes_at=gt."+nowIso+"&order=closes_at.asc&limit=1");
+  lv.run = rs[0] || null;
+  if(lv.run && runTargetCache[lv.run.id]===undefined){
+    try{ runTargetCache[lv.run.id] = await api.rpc("run_target_count",{p_class_names:lv.run.class_names||[], p_student_ids:lv.run.student_ids||[]}); }
+    catch(e){ runTargetCache[lv.run.id] = null; }
+  }
+}
+/* のこり時間（1秒ごと）。★表示だけ。閉じる判定はサーバー側 */
+function lvClock(){
+  if(!lv.run){ $("lv-left").textContent = "—"; $("lv-until").textContent = "いま開いている回は ありません"; return; }
+  const ms = new Date(lv.run.closes_at) - Date.now();
+  if(ms <= 0){ $("lv-left").textContent = "0:00"; $("lv-until").textContent = "時間に なりました"; lv.at = 0; return; }
+  const m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000);
+  $("lv-left").textContent = m+":"+String(s).padStart(2,"0");
+  $("lv-until").textContent = tHM(lv.run.closes_at)+" に 自動で 終わります";
+}
+setInterval(()=>{ if(activeView==="quiz") lvClock(); }, 1000);
+$("lv-end").onclick = ()=>{
+  if(!lv.run) return;
+  const cls = (lv.run.class_names&&lv.run.class_names.length) ? lv.run.class_names.join("・") : "全員";
+  endRun(lv.run.id, quizSet.title+"（"+cls+"）");
+};
+
 async function openQuizView(){
   await ensureQpFilters();
   if(!quizSets.length){
     const sets = await loadQuizPickOptions().catch(()=>[]);
     quizSets = sets;
-    if(sets.length){ quizSet = sets[0]; renderQuizPickOptions(sets); $("quiz-pick").value = quizSet.id; }
+    if(sets.length){
+      const keep = quizSet;
+      renderQuizPickOptions(sets);
+      if(keep && !sets.some(x=>x.id===keep.id)){ quizSets = [keep].concat(sets); const o=document.createElement("option"); o.value=keep.id; o.textContent=keep.title; $("quiz-pick").prepend(o); }
+      quizSet = keep || sets[0];
+      $("quiz-pick").value = quizSet.id;
+    }
   }
   if(quizSet) await tickQuiz().catch(()=>{});
 }
 
 async function tickQuiz(){
   if(!quizSet) return;
-  const s = await api.rpc("quiz_stats",{p_quiz_set_id:quizSet.id});
+  await lvRun().catch(()=>{});
+  const s = await api.rpc("quiz_stats", lv.run ? {p_quiz_set_id:quizSet.id, p_run_id:lv.run.id} : {p_quiz_set_id:quizSet.id});
   if(s.error) return;
   updateRunPick(s.runs);
   const n = s.attempts.length;
+  const tg = lv.run ? runTargetCache[lv.run.id] : null;
+  const cls = lv.run ? ((lv.run.class_names&&lv.run.class_names.length) ? lv.run.class_names.join("・") : "全員") : "";
+  $("lv-title").textContent = quizSet.title || "ライブ集計";
+  $("lv-sub").textContent = lv.run ? cls+" ・ "+tHM(lv.run.opens_at)+" から" : ((quizSet.lesson ? quizSet.lesson+" ・ " : "")+"いま開いている回は ありません（これまでの提出を ぜんぶ数えています）");
+  $("lv-end").hidden = !lv.run;
+  $("live-dot").hidden = !lv.run && $("live-dot").hidden;
   $("st-count").textContent = n;
+  $("lv-of").textContent = tg!=null ? "/ "+tg+"人" : "人";
+  $("lv-bar").style.width = (tg ? Math.min(100, Math.round(n/tg*100)) : 0)+"%";
   $("st-avg").textContent = n ? (s.attempts.reduce((a,x)=>a+x.score,0)/n).toFixed(1) : "–";
+  $("lv-avg-of").textContent = n && s.attempts[0].total ? "/ "+s.attempts[0].total : "";
+  lvClock();
   if(s.by_question.length){
     $("qrates").innerHTML = s.by_question.map(q=>{
-      const pct = Math.round(q.ok/q.n*100);
-      const cls = pct<50?"low":(pct<75?"mid":"");
-      return "<div class='qrate'><span class='qn'>Q"+q.seq+"</span>"+
-        "<div class='track'><div class='fill "+cls+"' style='width:"+pct+"%'></div></div>"+
-        "<span class='pct'>"+pct+"%</span></div>";
+      const pct = q.n ? Math.round(q.ok/q.n*100) : 0;
+      return "<div class='vb"+(pct<50?" low":"")+"' title='Q"+q.seq+"："+q.ok+" / "+q.n+"人'><span class='p'>"+pct+"%</span>"+
+        "<i style='height:"+Math.max(4, Math.round(pct*1.3))+"px'></i><span class='q'>Q"+q.seq+"</span></div>";
     }).join("");
+  }else{
+    $("qrates").innerHTML = "<div class='tnote'>提出待ち…</div>";
   }
   const f = s.focus;
   if(f && f.students > 0){
@@ -828,6 +998,7 @@ $("csv-btn-question").onclick  = ()=>exportQuizCsv("question");
 
 /* QR（学生用の入口を表示するだけ）。master.html の btn-qr と同じ形。 */
 let qrDone=false;
+$("t-go-select").onclick = ()=>setView("select");
 $("btn-qr").onclick = ()=>{
   $("qrov").classList.add("on");
   if(!qrDone){
@@ -874,6 +1045,9 @@ function showWhoAmI(){
 
 async function start(){
   showWhoAmI();
+  document.body.classList.add("authed");
+  let m = "hand"; try{ m = localStorage.getItem("sp_t_mode") || "hand"; }catch(e){}
+  setMode(m);
   $("scr-login").hidden=true; $("scr-dash").hidden=false;
   setView("today");
   timer = setInterval(tick, 2000);
@@ -895,7 +1069,7 @@ $("btn-login").onclick = async () => {
   finally{ $("btn-login").disabled=false; }
 };
 $("in-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") $("btn-login").click(); });
-$("btn-logout").onclick = ()=>{ clearInterval(timer); api.logout(); location.reload(); };
+$("btn-logout").onclick = ()=>{ clearInterval(timer); document.body.classList.remove("authed","proj"); api.logout(); location.reload(); };
 
 (async ()=>{
   if(api.token && api.profile && (api.profile.role==="teacher" || api.profile.role==="master")){
