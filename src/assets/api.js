@@ -17,8 +17,13 @@ const M = (key, fallback, vars) => {
  * Supabaseのサインイン APIには同一IPからの回数制限がある。学校Wi-Fiで全員が
  * 同時にログインし直すと弾かれるため、「一度ログインしたら保持」が正しい運用。
  * 小テスト当日はログイン済みの状態で開くだけ → データAPIには制限がなく150同時OK（実測済）。 */
-let _store = localStorage;
-try { _store.setItem("_t", "1"); _store.removeItem("_t"); } catch (e) { _store = sessionStorage; }
+// Room displays never restore or read a teacher's browser session.
+const _roomDisplayOnly = window.SCG_ROOM_DISPLAY_ONLY === true;
+let _store = { getItem() { return null; }, setItem() {}, removeItem() {} };
+if (!_roomDisplayOnly) {
+  _store = localStorage;
+  try { _store.setItem("_t", "1"); _store.removeItem("_t"); } catch (e) { _store = sessionStorage; }
+}
 
 const api = {
   token: _store.getItem("sp_token") || null,
@@ -137,5 +142,24 @@ const api = {
       throw new Error(body.message || M("err.send", "送信に失敗しました（{s}）", { s: res.status }));
     }
     return res.json();
+  },
+
+  /* Display-only RPC: always use the anonymous role, never this.token. */
+  async publicRpc(name, args) {
+    if (name !== "get_teacher_demo_display") throw new Error("表示用の接続先ではありません。");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(SB_URL + "/rest/v1/rpc/" + name, {
+        method: "POST",
+        headers: { "apikey": SB_ANON, "Authorization": "Bearer " + SB_ANON, "Content-Type": "application/json" },
+        body: JSON.stringify(args || {}),
+        cache: "no-store",
+        referrerPolicy: "no-referrer",
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error("教室画面に接続できませんでした。");
+      return await res.json();
+    } finally { clearTimeout(timeout); }
   },
 };
