@@ -357,6 +357,7 @@ async function fetchClassNames(){
    選んだ瞬間に対象人数が出る（run_target_count）＝「A①（20人）」が違えば押す前に気づく。 */
 const sp = { set:null, cls:"", min:20, names:null, busy:false };
 const SP_MINS = [10, 15, 20, 30];
+let spTicket = 0;
 async function spClasses(){
   const box = $("sp-classes");
   if(!sp.names){
@@ -393,14 +394,16 @@ function spPaint(){
 }
 async function spCount(){
   if(!sp.cls) return;
-  const cls = sp.cls, min = sp.min;
+  // 🔴 一番新しい問い合わせの結果だけ出す（クラスを押してすぐ時間を変えると、古い「20分」の答えが
+  //    あとから届いて「10分」を上書きしていた＝2026-11-16 公開版の通しで発覚）
+  const cls = sp.cls, min = sp.min, ticket = ++spTicket;
   $("sp-target").textContent = "人数を数えています…";
   try{
     const n = await api.rpc("run_target_count", {p_class_names:[cls]});
-    if(sp.cls===cls) $("sp-target").textContent = "「"+cls+"」の "+n+"人に、"+min+"分間 出ます。";
+    if(ticket===spTicket) $("sp-target").textContent = "「"+cls+"」の "+n+"人に、"+min+"分間 出ます。";
   }catch(e){
     // ★人数が出せなくても止めない。クラス名だけ見て進められるように
-    if(sp.cls===cls) $("sp-target").textContent = "「"+cls+"」に、"+min+"分間 出ます。（対象人数は数えられませんでした）";
+    if(ticket===spTicket) $("sp-target").textContent = "「"+cls+"」に、"+min+"分間 出ます。（対象人数は数えられませんでした）";
   }
 }
 function spPick(s){
