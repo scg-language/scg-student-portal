@@ -1,4 +1,4 @@
-/* Authenticated synthetic demo transport. Never use the live quiz tables. */
+/* Authenticated transport: server commands and snapshots for dummy students only. */
 (function(){
   "use strict";
   const $=id=>document.getElementById(id);
@@ -64,110 +64,140 @@
   }
 
   const preview=window.__twoDevicePreview;
-  if(!preview||typeof preview.setRemoteBlocked!=="function"||typeof api==="undefined")return;
-  let roomId="room-a",version=0,ready=false,sending=false,pending=null,scheduled=null,lastSent=0,failed=false,loading=false,generation=0;
-  let roomRows=[],roomTimer=null,unsubscribe=null;
-  preview.setRemoteBlocked(true);
+  if(!preview||typeof preview.setCommandHandler!=="function"||typeof api==="undefined")return;
+  const allowedActions=new Set(["SELECT","START","EXTEND","END","TOGGLE_STATS","NEXT_QUESTION","PREV_QUESTION","HARDEST_QUESTION","STOP_PROJECTION","RESET"]);
+  let roomId="room-a",version=0,ready=false,failed=false,loading=false,generation=0,queued=0;
+  let roomRows=[],roomTimer=null,lastRoomsRead=0,queue=Promise.resolve();
+
   function connection(value,error=false){$("demo-connection").textContent=value;$("demo-connected-bar").classList.toggle("error",error);}
   function loginMessage(value){$("demo-login-message").textContent=value;$("demo-login-message").hidden=!value;}
   function teacherAllowed(){return api.profile&&["teacher","master"].includes(api.profile.role);}
+  function lockControls(){preview.setRemoteBlocked(!ready||failed||queued>0,{allowRoomSelection:failed&&queued===0&&teacherAllowed()});}
   async function teacherRpc(name,args){
     let timeout;
     try{return await Promise.race([api.rpc(name,args),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error("DEMO_TIMEOUT")),20000);})]);}
     finally{clearTimeout(timeout);}
   }
-  function stopSending(error){
-    failed=true;ready=false;pending=null;clearTimeout(scheduled);scheduled=null;preview.setRemoteBlocked(true);connection(friendly(error),true);
+  function stopSending(error){failed=true;ready=false;connection(friendly(error),true);lockControls();}
+  function validateSnapshot(result){
+    const state=result?.private_state;
+    if(!result||!Number.isSafeInteger(result.version)||result.version<0||!state||state.schemaVersion!==1||state.source!=="existing-dummy-quiz"||!Array.isArray(state.tests)||!Array.isArray(state.classes)||!Array.isArray(state.rooms)||!state.selection){
+      throw new Error("DEMO_INVALID_STATE");
+    }
+    if(state.run&&(!Array.isArray(state.run.submissions)||!Array.isArray(state.run.questionStats)||!["running","ended"].includes(state.run.status)))throw new Error("DEMO_INVALID_STATE");
+    return state;
   }
-  function scheduleDrain(immediate){
-    if(!ready||failed||loading||sending||!pending)return;
-    const delay=immediate?0:Math.max(0,5000-(Date.now()-lastSent));
-    clearTimeout(scheduled);scheduled=setTimeout(()=>{scheduled=null;drain();},delay);
+  function applySnapshot(result,id){
+    const state=validateSnapshot(result);
+    if(result.roomId!==id||state.selection.roomId!==id)throw new Error("DEMO_INVALID_STATE");
+    roomId=id;version=result.version;
+    preview.replaceState(state);
+    if(roomRows.length)preview.updateRemoteRooms(roomRows);
   }
-  async function drain(){
-    if(!ready||failed||loading||sending||!pending)return;
-    const current=pending;pending=null;sending=true;
-    const ticket=generation,currentRoom=roomId;
-    connection("教室へ同期しています…");
-    try{
-      const result=await teacherRpc("teacher_demo_publish",{p_room_id:currentRoom,p_expected_version:version,p_private_state:current.state,p_public_state:current.projection});
-      if(ticket!==generation)return;
-      if(!result||!Number.isInteger(result.version))throw new Error("INVALID_VERSION");
-      version=result.version;lastSent=Date.now();connection("同期しました · "+new Date(lastSent).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
-    }catch(error){if(ticket===generation)stopSending(error);}
-    finally{sending=false;if(pending&&ready&&!failed)scheduleDrain(pending.immediate);}
-  }
-  function queue(state,projection,action){
-    if(!ready||failed||loading)return;
-    if(state.selection.roomId!==roomId&&!state.run){state.selection.roomId=roomId;preview.replaceState(state);state=preview.getState();projection=preview.getProjection();}
-    const immediate=action?.type!=="TICK"||Boolean(pending?.immediate);
-    pending={state:clone(state),projection:clone(projection),immediate};scheduleDrain(immediate);
-  }
-  async function refreshRooms(){
+  async function refreshRooms(ticket){
     const rows=await teacherRpc("teacher_demo_rooms",{});
-    if(!Array.isArray(rows))throw new Error("INVALID_ROOMS");
-    roomRows=rows;preview.updateRemoteRooms(rows);
-    return rows;
+    if(ticket!==generation)return;
+    if(!Array.isArray(rows))throw new Error("DEMO_INVALID_STATE");
+    roomRows=rows;lastRoomsRead=Date.now();preview.updateRemoteRooms(rows);
   }
-  async function loadRoom(id){
-    if(loading)return false;
-    loading=true;ready=false;failed=false;pending=null;clearTimeout(scheduled);scheduled=null;preview.setRemoteBlocked(true);connection("保存済みの状態を読み込んでいます…");
-    const ticket=++generation;
-    try{
-      await refreshRooms();
-      if(ticket!==generation)return false;
-      if(!roomRows.some(room=>room.roomId===id))throw new Error("ROOM_UNAVAILABLE");
-      const loaded=await teacherRpc("teacher_demo_load",{p_room_id:id});
-      if(ticket!==generation)return false;
-      if(!loaded||!Number.isInteger(loaded.version))throw new Error("INVALID_VERSION");
-      let state=loaded.private_state||window.TwoDeviceCore.createState();
-      state=clone(state);state.selection.roomId=id;
-      preview.setTeacherProfile(api.profile);preview.replaceState(state);
-      preview.updateRemoteRooms(roomRows);
-      roomId=id;version=loaded.version;lastSent=0;failed=false;loading=false;ready=true;preview.setRemoteBlocked(false);
-      connection("読み込みました。教室画面へ接続します。");queue(preview.getState(),preview.getProjection(),{type:"LOAD"});return true;
-    }catch(error){if(ticket===generation){loading=false;stopSending(error);}return false;}
-    finally{if(ticket===generation)loading=false;}
+
+  // Commands, reloads and polling share one queue. A read never races a command
+  // and no client-produced state is ever published back to the database.
+  function enqueue(work,kind,allowFailed=false){
+    const ticket=generation;
+    queued++;if(kind==="load")loading=true;lockControls();
+    const operation=queue.then(async()=>{
+      if(ticket!==generation)return null;
+      if(failed&&!allowFailed)throw new Error("DEMO_SYNC_HALTED");
+      return await work(ticket);
+    });
+    queue=operation.catch(()=>null);
+    return operation.catch(error=>{
+      if(ticket===generation)stopSending(error);
+      const safe=new Error(friendly(error));safe.code="REMOTE_COMMAND_FAILED";throw safe;
+    }).finally(()=>{
+      queued=Math.max(0,queued-1);
+      if(ticket===generation){if(kind==="load")loading=false;lockControls();}
+    });
   }
-  async function flush(){
-    if(pending&&ready&&!failed){clearTimeout(scheduled);scheduled=null;await drain();}
-    while(sending)await pause(60);
-    if(pending&&ready&&!failed)await drain();
-    if(failed)throw new Error("SYNC_FAILED");
+  async function readSnapshot(id,ticket,refresh){
+    if(refresh||Date.now()-lastRoomsRead>=15000)await refreshRooms(ticket);
+    if(ticket!==generation)return null;
+    if(!roomRows.some(room=>room.roomId===id))throw new Error("DEMO_ROOM_UNAVAILABLE");
+    const result=await teacherRpc("teacher_demo_live_load",{p_room_id:id});
+    if(ticket!==generation)return null;
+    applySnapshot(result,id);ready=true;failed=false;
+    connection("学生ポータルの提出を確認中 · "+new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+    return preview.getState();
   }
+  function loadRoom(id){
+    if(loading||queued>0){connection("直前の操作が終わるまでお待ちください。");return Promise.resolve(null);}
+    connection("保存済みの実施回と提出を読み込んでいます…");
+    return enqueue(ticket=>readSnapshot(id,ticket,true),"load",true);
+  }
+  function executeAction(action){
+    if(!allowedActions.has(action?.type))return Promise.reject(new Error("この遠隔検証では、学生ポータルから実際に受験してください。"));
+    if(!ready||failed||queued>0)return Promise.reject(new Error("接続または直前の操作を確認してください。"));
+    return enqueue(async ticket=>{
+      connection("操作を反映しています…");
+      const result=await teacherRpc("teacher_demo_live_action",{p_room_id:roomId,p_expected_version:version,p_action:clone(action)});
+      if(ticket!==generation)return null;
+      applySnapshot(result,roomId);
+      connection("操作を反映しました。学生ポータルからの提出を確認します。");
+      return preview.getState();
+    },"action");
+  }
+  preview.setCommandHandler(executeAction);
+  preview.setRemoteBlocked(true,{allowRoomSelection:false});
+
   async function switchRoom(id){
-    if(loading)return;
-    if(!id){const state=preview.getState();preview.replaceState(state);connection("この遠隔検証では、確認用教室を選んでください。",true);return;}
-    const run=preview.getState().run;
-    if(run&&run.status==="running"){preview.replaceState(preview.getState());connection("実施中は教室を変えられません。先にこの回を終えてください。",true);return;}
-    try{if(!failed)await flush();await loadRoom(id);}catch(error){stopSending(error);}
+    if(loading||queued>0){connection("直前の操作が終わるまでお待ちください。");return;}
+    const state=preview.getState();
+    if(!id||state.run?.status==="running"){
+      preview.replaceState(state);
+      connection(!id?"確認用教室を選んでください。":"実施中は教室を変えられません。先にこの回を終えてください。",true);
+      return;
+    }
+    try{await loadRoom(id);}catch(_){}
   }
   $("room-select").addEventListener("change",event=>{event.stopImmediatePropagation();switchRoom(event.target.value);},true);
+
   async function connect(){
-    if(!teacherAllowed()){api.logout();throw new Error("TEACHER_REQUIRED");}
+    if(!teacherAllowed()){api.logout();throw new Error("DEMO_TEACHER_REQUIRED");}
+    ++generation;failed=false;ready=false;loading=false;lockControls();
     $("demo-login-panel").hidden=true;$("demo-connected-bar").hidden=false;$("teacher-app").hidden=false;
-    $("demo-current-teacher").textContent=(api.profile.display_name||api.profile.student_no)+" · 遠隔検証用";
+    $("demo-current-teacher").textContent=(api.profile.display_name||api.profile.student_no)+" · ダミー生徒での受験検証";
     preview.setTeacherProfile(api.profile);
-    if(!unsubscribe)unsubscribe=preview.subscribe(queue);
     await loadRoom(roomId);
-    clearInterval(roomTimer);roomTimer=setInterval(()=>{if(ready&&!loading)refreshRooms().catch(()=>{});},15000);
+    clearInterval(roomTimer);
+    roomTimer=setInterval(()=>{
+      if(!ready||failed||loading||queued>0||!teacherAllowed())return;
+      enqueue(ticket=>readSnapshot(roomId,ticket,false),"poll").catch(()=>{});
+    },5000);
   }
   $("demo-login-form").addEventListener("submit",async event=>{
     event.preventDefault();$("demo-login-button").disabled=true;loginMessage("");
     try{await api.login($("demo-login-id").value,$("demo-login-password").value);$("demo-login-password").value="";await connect();}
-    catch(error){api.logout();loginMessage(String(error?.message||"").includes("TEACHER_REQUIRED")?friendly(error):"ログインできませんでした。先生用の番号・パスワード・通信をご確認ください。");}
+    catch(error){
+      if(teacherAllowed()){loginMessage("");connection(friendly(error),true);}
+      else{api.logout();loginMessage("ログインできませんでした。先生用の番号・パスワード・通信をご確認ください。");}
+    }
     finally{$("demo-login-password").value="";$("demo-login-button").disabled=false;}
   });
-  $("demo-reload").onclick=async()=>{
-    if(loading)return;
-    if(sending){connection("直前の同期が終わるまでお待ちください。");return;}
-    await loadRoom(roomId);
-  };
+  $("demo-reload").onclick=()=>loadRoom(roomId).catch(()=>{});
   $("demo-logout").onclick=()=>{
-    ++generation;ready=false;failed=false;pending=null;clearTimeout(scheduled);clearInterval(roomTimer);scheduled=null;preview.setRemoteBlocked(true);api.logout();
-    $("teacher-app").hidden=true;$("demo-connected-bar").hidden=true;$("demo-login-panel").hidden=false;loginMessage("ログアウトしました。教室画面は更新が途切れると待ち受けに戻ります。");
+    ++generation;ready=false;failed=false;loading=false;clearInterval(roomTimer);preview.setRemoteBlocked(true,{allowRoomSelection:false});api.logout();
+    preview.setTeacherProfile(null);preview.replaceState(window.TwoDeviceCore.createState());
+    $("teacher-app").hidden=true;$("demo-connected-bar").hidden=true;$("demo-login-panel").hidden=false;
+    loginMessage("ログアウトしました。教室画面は更新が途切れると待ち受けに戻ります。");
   };
-  window.addEventListener("pagehide",()=>{ready=false;++generation;clearTimeout(scheduled);clearInterval(roomTimer);});
-  window.__teacherDemoRemote={getStatus:()=>({roomId,version,ready,sending,failed,loading,pending:Boolean(pending)}),reload:()=>loadRoom(roomId)};
-  if(api.token&&api.profile)connect().catch(()=>{api.logout();loginMessage("ログインし直してください。");$("teacher-app").hidden=true;$("demo-connected-bar").hidden=true;$("demo-login-panel").hidden=false;});
+  window.addEventListener("pagehide",()=>{ready=false;++generation;clearInterval(roomTimer);});
+  window.__teacherDemoRemote={
+    getStatus:()=>({roomId,version,ready,sending:queued>0,failed,loading,pending:queued>0,source:"existing-dummy-quiz"}),
+    reload:()=>loadRoom(roomId),whenIdle:()=>queue,
+  };
+  if(api.token&&api.profile)connect().catch(error=>{
+    if(teacherAllowed()){connection(friendly(error),true);return;}
+    api.logout();loginMessage("ログインし直してください。");$("teacher-app").hidden=true;$("demo-connected-bar").hidden=true;$("demo-login-panel").hidden=false;
+  });
 })();

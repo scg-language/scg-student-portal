@@ -228,6 +228,8 @@ class TeacherDemoRemote(unittest.TestCase):
         if selected[0].get("occupied") and not selected[0].get("ownedByMe"):
             raise unittest.SkipTest("The demo classroom is occupied; no takeover was attempted.")
         loaded = require_ok(cls.teacher.rpc("teacher_demo_load", {"p_room_id": ROOM}), "Demo state load")
+        if (loaded.get("private_state") or {}).get("source") == "existing-dummy-quiz":
+            raise unittest.SkipTest("This classroom uses real fixture quizzes; run test_teacher_demo_live_quiz instead.")
         cls.version = loaded.get("version")
         if not isinstance(cls.version, int) or cls.version < 0:
             raise DemoRemoteError("The demo state version is invalid.")

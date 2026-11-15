@@ -101,6 +101,15 @@ async function main(){
   await evaluate('window.scrollTo(0,0)');await capture('mobile-projection.png');
   await click('#view-teacher');
   await check('Mobile control tab retains the completed run',()=>evaluate('document.getElementById("view-teacher").getAttribute("aria-pressed")==="true"&&Boolean(__twoDevicePreview.getState().run)'));
+  await evaluate('(()=>{const now=Date.now()-20*60000;let state=TwoDeviceCore.createState({now});state=TwoDeviceCore.reduce(state,{type:"START"},{now});state=TwoDeviceCore.reduce(state,{type:"SUBMIT_SAMPLE",count:5},{now:now+1000});state.source="existing-dummy-quiz";state.tests[0].id="10000000-0000-0000-0000-000000000001";state.selection.testId=state.tests[0].id;state.run.testId=state.tests[0].id;state.classes[0].id="fixture-class";state.selection.classId="fixture-class";state.run.classId="fixture-class";window.__liveEndedFixture=TwoDeviceCore.reduce(state,{type:"END"},{now:now+2000});window.__liveCommandCalls=0;__twoDevicePreview.setCommandHandler(async()=>{__liveCommandCalls++;return null;});__twoDevicePreview.replaceState(state);})()');
+  await check('Live snapshots refresh the real test and class catalog',()=>evaluate('document.getElementById("test-select").value==="10000000-0000-0000-0000-000000000001"&&document.getElementById("class-select").value==="fixture-class"'));
+  await check('A fast phone clock cannot release live answers before the database ends the run',()=>evaluate('(()=>{const p=__twoDevicePreview.getProjection();return p.mode==="running"&&p.question===null&&__twoDevicePreview.getState().run.status==="running";})()'));
+  await evaluate('__twoDevicePreview.dispatch({type:"TICK"});__twoDevicePreview.updateRemoteRooms([{roomId:"room-a",label:"確認用教室A",online:true,occupied:true,ownedByMe:true},{roomId:"room-b",label:"確認用教室B",online:false,occupied:false,ownedByMe:false}]);');
+  await check('Live tick and room refresh preserve the server run and its projection assignment',()=>evaluate('__twoDevicePreview.getState().run.status==="running"&&__twoDevicePreview.getProjection().mode==="running"&&__liveCommandCalls===0'));
+  await evaluate('__twoDevicePreview.dispatch({type:"SUBMIT_SAMPLE",count:5});');
+  await check('Live mode rejects synthetic submission commands and hides their controls',()=>evaluate('__liveCommandCalls===0&&__twoDevicePreview.getState().run.submittedCount===5&&document.getElementById("demo-submissions").hidden'));
+  await evaluate('__twoDevicePreview.replaceState(__liveEndedFixture);');
+  await check('Only an ended database snapshot enables live answer review',()=>evaluate('__twoDevicePreview.getProjection().mode==="review"&&Boolean(__twoDevicePreview.getProjection().question)'));
   await check('No unexpected network/API request',async()=>blocked.length===0);
   await check('No browser JavaScript exceptions',async()=>exceptions.length===0);
   const result={url,checks,blockedRequests:blocked.length,exceptions,output};
