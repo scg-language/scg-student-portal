@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>進路アンケート・日本語／英語版の確認</title>
+<link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/survey-form.css">
+<style>
+body{background:#eef2f7;color:#10161c;font-size:17px}
+.preview-header{padding:22px;background:#20375a;color:white}.preview-header h1{font-size:23px;margin:0 0 8px}.preview-header p{margin:0;font-size:15px;line-height:1.65;color:#eef3fa}
+.preview-main{max-width:850px;margin:auto;padding:22px 18px 60px}.preview-card{background:#fff;border:1px solid #c8d2df;border-radius:13px;padding:24px}
+.preview-tools{display:flex;gap:8px;margin:0 0 18px;align-items:center;flex-wrap:wrap}.preview-tools button,.preview-action{font:inherit;font-weight:700;cursor:pointer;border:1px solid #8198b3;border-radius:8px;padding:10px 17px;background:white;color:#20375a}.preview-tools button[aria-pressed=true],.preview-action.primary{background:#20375a;color:white}
+.preview-intro{font-size:16px;line-height:1.8;margin:8px 0 20px}.preview-card h2{font-size:22px;line-height:1.5;margin:0 0 9px}.preview-warning{border-left:5px solid #b78818;background:#fff7df;padding:10px 13px;font-size:15px;line-height:1.7;margin:12px 0 20px}
+.preview-message{color:#a12222;background:#fff0f0;padding:11px;border-radius:7px;margin:12px 0}.preview-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.preview-receipt{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:0}.preview-receipt dt,.preview-receipt dd{margin:0;padding:12px 7px;border-bottom:1px solid #d2dae4;font-size:15px;overflow-wrap:anywhere;white-space:pre-wrap}.preview-receipt dt{font-weight:700}
+@media(max-width:520px){.preview-main{padding:15px 11px 40px}.preview-card{padding:18px 14px}.preview-header{padding:18px 14px}.preview-header h1{font-size:21px}.preview-receipt{grid-template-columns:1fr}.preview-receipt dt{border:0;padding-bottom:0}.preview-receipt dd{padding-top:5px}}
+</style>
+</head>
+<body>
+<header class="preview-header"><h1 id="preview-heading">進路アンケート・日本語／英語版の確認</h1><p id="preview-caption">現在の1年生全員向け／2027年1月実施予定。12月に実施できる状態を目指した初版です。</p></header>
+<main class="preview-main">
+<div class="preview-tools"><button id="preview-ja" type="button" aria-pressed="true">日本語</button><button id="preview-en" type="button" aria-pressed="false">English</button></div>
+<div class="preview-warning" id="preview-warning">確認用画面です。実在の学生情報は使っていません。回答はサーバーやファイルへ保存されず、このページを閉じると消えます。</div>
+<section class="preview-card" id="preview-form-panel"><h2 id="preview-title"></h2><p class="preview-intro" id="preview-intro"></p><div id="preview-fields"></div><div id="preview-message" class="preview-message" role="alert" hidden></div><div class="preview-actions"><button id="preview-submit" class="preview-action primary" type="button">回答内容を確認する（保存しません）</button></div></section>
+<section class="preview-card" id="preview-receipt-panel" hidden><h2 id="receipt-title"></h2><p id="receipt-note"></p><dl class="preview-receipt" id="receipt-list"></dl><div class="preview-actions"><button id="preview-back" class="preview-action primary" type="button">回答画面に戻る</button></div></section>
+</main>
+<script src="assets/surveys.js"></script>
+<script src="assets/survey-form.js"></script>
+<script>
+"use strict";
+const definition=SURVEYS.find(s=>s.key==="shinro_2027_jan_v1");
+const profile={student_no:"DUMMY-JAN-001",display_name:"確認用の学生 / Preview student",class_name:"確認用クラス / Preview class"};
+let previewLang="ja",formController=null,savedPreview=null;
+const previewText={
+ ja:{heading:"進路アンケート・日本語／英語版の確認",caption:"現在の1年生全員向け／2027年1月実施予定。12月に実施できる状態を目指した初版です。",warning:"確認用画面です。実在の学生情報は使っていません。回答はサーバーやファイルへ保存されず、このページを閉じると消えます。",submit:"回答内容を確認する（保存しません）",receipt:"回答内容の確認",note:"保存される項目の形を確認しています。本番への送信は行っていません。",back:"回答画面に戻る"},
+ en:{heading:"Career survey: Japanese / English preview",caption:"For all current first-year students, planned for January 2027. This first version is being prepared for use from December.",warning:"Preview only. No real student information is used. Your answers are not saved to a server or file and will disappear when you close this page.",submit:"Check answers (not saved)",receipt:"Check your answers",note:"This shows the answers that would be submitted. Nothing has been sent to the live system.",back:"Return to answers"}
+};
+const get=id=>document.getElementById(id);
+function previewLabel(v){return v&&typeof v==="object"?(v[previewLang]||v.ja||v.en||""):String(v||"");}
+function mountPreview(answers){
+ const tx=previewText[previewLang];document.documentElement.lang=previewLang;
+ get("preview-heading").textContent=tx.heading;get("preview-caption").textContent=tx.caption;get("preview-warning").textContent=tx.warning;
+ get("preview-title").textContent=previewLabel(definition.title);get("preview-intro").textContent=previewLabel(definition.intro);
+ get("preview-submit").textContent=tx.submit;get("receipt-title").textContent=tx.receipt;get("receipt-note").textContent=tx.note;get("preview-back").textContent=tx.back;
+ get("preview-ja").setAttribute("aria-pressed",String(previewLang==="ja"));get("preview-en").setAttribute("aria-pressed",String(previewLang==="en"));
+ formController=SurveyForm.mount(get("preview-fields"),definition,{lang:previewLang,answers:answers||{},profile});
+ get("preview-message").hidden=true;
+}
+function showReceipt(){
+ const list=get("receipt-list");list.replaceChildren();
+ definition.q.forEach(q=>{
+  if(!Object.prototype.hasOwnProperty.call(savedPreview,q.k))return;
+  const value=savedPreview[q.k],values=Array.isArray(value)?value:[value];
+  const display=values.map(v=>{const o=(q.o||[]).find(x=>x.v===v);return o?previewLabel(o):String(v||"");}).join(" / ");
+  const term=document.createElement("dt"),answer=document.createElement("dd");term.textContent=previewLabel(q.l);answer.textContent=display||"—";list.append(term,answer);
+ });
+ get("preview-form-panel").hidden=true;get("preview-receipt-panel").hidden=false;
+}
+function switchPreviewLanguage(lang){
+ const draft=formController?formController.read():{};previewLang=lang;mountPreview(draft);
+ if(!get("preview-receipt-panel").hidden)showReceipt();
+}
+get("preview-ja").onclick=()=>switchPreviewLanguage("ja");get("preview-en").onclick=()=>switchPreviewLanguage("en");
+get("preview-submit").onclick=()=>{
+ const result=formController.validate();
+ if(!result.ok){formController.showErrors(result.errors);get("preview-message").textContent=result.errors[0].message;get("preview-message").hidden=false;return;}
+ savedPreview=result.answers;showReceipt();window.scrollTo({top:0,behavior:"smooth"});
+};
+get("preview-back").onclick=()=>{mountPreview(savedPreview);get("preview-receipt-panel").hidden=true;get("preview-form-panel").hidden=false;};
+mountPreview({});
+window.careerSurveyPreview={definition,getForm:()=>formController,getSaved:()=>savedPreview};
+</script>
+</body>
+</html>

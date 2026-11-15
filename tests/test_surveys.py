@@ -79,7 +79,8 @@ class TestSurveysStructure(unittest.TestCase):
         cls.L_raw, _ = node_eval(I18N_JS, "LANGS")
         cls.I = cls.I_raw or {}
         cls.L = cls.L_raw or []
-        cls.html = open(INDEX, encoding="utf-8").read()
+        with open(INDEX, encoding="utf-8") as source:
+            cls.html = source.read()
 
     def check(self, name, cond, detail=""):
         print(("  ✅ " if cond else "  ❌ ") + name + (f"  ({detail})" if detail and not cond else ""))
@@ -91,12 +92,14 @@ class TestSurveysStructure(unittest.TestCase):
         S = self.S
         self.check("surveys.js が node で評価できる", self.S_raw is not None, self.s_err)
         keys = [s.get("key") for s in S]
-        self.check("アンケートが4本（しんろ1・せいかつ2・がくひ1）", len(S) == 4, str(len(S)))
+        self.check("既存4本と1月進路アンケートの計5本", len(S) == 5, str(len(S)))
         self.check("key が一意", len(set(keys)) == len(keys))
         self.check("key は英小文字・数字・_ のみ", all(isinstance(k, str) and re.fullmatch(r"[a-z0-9_]+", k) for k in keys))
         shinro = next((s for s in S if s.get("key") == "shinro_2026"), None)
         self.check("shinro_2026 が残り、質問キーが job/field/town（既存回答と互換）",
                     shinro is not None and [q["k"] for q in shinro["q"]] == ["job", "field", "town"])
+        self.check("今回の進路アンケートは既存キーを上書きしない",
+                   "shinro_2027_jan_v1" in keys)
 
     def test_02_surveys_detail(self):
         for s in self.S:
@@ -104,17 +107,44 @@ class TestSurveysStructure(unittest.TestCase):
             self.check(f"{k}: title/desc/intro が {{ja,en}}・sb/color あり",
                         all(is_ml(s.get(x)) for x in ("title", "desc", "intro")) and bool(s.get("sb")) and bool(s.get("color")))
             qk = [q.get("k") for q in s.get("q", [])]
-            self.check(f"{k}: 質問は1〜9問・回答キーが一意", 1 <= len(qk) <= 9 and len(set(qk)) == len(qk))
+            limit = 64 if k == "shinro_2027_jan_v1" else 9
+            self.check(f"{k}: 質問数が範囲内・回答キーが一意", 1 <= len(qk) <= limit and len(set(qk)) == len(qk))
+            sections = s.get("sections", [])
+            section_keys = [section.get("key") for section in sections]
+            if sections:
+                self.check(f"{k}: 大項目のキーが一意・見出しは日英",
+                           len(set(section_keys)) == len(section_keys)
+                           and all(isinstance(key, str) and re.fullmatch(r"[a-z0-9_]+", key)
+                                   for key in section_keys)
+                           and all(is_ml(section.get("title")) for section in sections))
             for q in s.get("q", []):
-                base = all(x in q for x in ("k", "t", "l", "sl")) and q["t"] in ("text", "select") and is_ml(q["l"]) and isinstance(q["sl"], str)
-                if q.get("t") == "select":
+                base = (all(x in q for x in ("k", "t", "l", "sl"))
+                        and q["t"] in ("text", "select", "multi", "date")
+                        and is_ml(q["l"]) and isinstance(q["sl"], str)
+                        and isinstance(q["k"], str)
+                        and re.fullmatch(r"[a-z0-9_]+", q["k"]) is not None
+                        and ("required" not in q or isinstance(q["required"], bool))
+                        and (not sections or q.get("section") in section_keys))
+                if q.get("t") in ("select", "multi"):
                     o = q.get("o", [])
                     vs = [x.get("v") for x in o]
                     ok = base and len(o) >= 2 and all(is_ml(x) and isinstance(x.get("v"), str) and re.fullmatch(r"[a-z0-9_]+", x["v"]) for x in o) and len(set(vs)) == len(vs)
                     what = "選択肢2つ以上・v は英小文字/数字/_・一意・{ja,en}"
-                else:
-                    ok = base and is_ml(q.get("ph")) and "'" not in q["ph"]["ja"] + q["ph"]["en"]   # placeholder は属性に入れるので引用符なし
-                    what = "ph は {ja,en}・引用符なし"
+                    if q.get("t") == "multi":
+                        ok = ok and all(value in vs for value in q.get("exclusive", []))
+                        ok = ok and all(len(group) >= 2 and all(value in vs for value in group)
+                                        for group in q.get("exclusiveGroups", []))
+                elif q.get("t") == "text":
+                    ok = base and is_ml(q.get("ph"))
+                    what = "ph は {ja,en}"
+                else:  # date はブラウザの日付入力。placeholder は任意
+                    ok = base and ("ph" not in q or is_ml(q.get("ph")))
+                    what = "日付入力・任意のphは {ja,en}"
+                when = q.get("showWhen")
+                if when is not None:
+                    ok = (ok and isinstance(when, dict)
+                          and when.get("key") in qk and when.get("key") != q.get("k")
+                          and isinstance(when.get("is"), str))
                 self.check(f"{k}.{q.get('k')}: 形式OK（{what}）", ok)
 
     def test_03_i18n(self):

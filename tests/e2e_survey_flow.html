@@ -57,13 +57,13 @@ const CREDS = window.__E2E_CREDS || null;
   step("lang switch button present (ja)", !!$("langbtn") && $("langcur").textContent === "日本語", $("langcur") && $("langcur").textContent);
   w.eval('setLang("en")');
   await sleep(200);
-  step("en: mypage strings switched", $("btn-gotest").textContent.includes("Take a quiz") && $("my-name").textContent.indexOf(" さん") < 0 && $("langcur").textContent === "English",
+  step("en: mypage strings switched", $("btn-gotest").textContent.includes("Quizzes") && $("my-name").textContent.indexOf(" さん") < 0 && $("langcur").textContent === "English",
        $("btn-gotest").textContent.trim() + " / " + $("my-name").textContent + " / " + $("langcur").textContent);
   let saved = null; try { saved = w.localStorage.getItem("sp_lang"); } catch (e) {}
   step("en: choice is remembered (localStorage sp_lang)", saved === "en", saved);
   w.eval('setLang("ja")');
   await sleep(200);
-  step("back to ja", $("btn-gotest").textContent.includes("テストを うける"), $("btn-gotest").textContent.trim());
+  step("back to ja", $("btn-gotest").textContent.trim() === "テスト", $("btn-gotest").textContent.trim());
   await sleep(1500); // survey map の読込を待つ
   // ★2026-09-11 の月次化以降、一覧に出るのは「いま自分に開いている回」なので、
   //   何行あるか・何件済みかは**その時のDBの状態しだい**。決め打ちにせず、前後の差で見る。
@@ -92,6 +92,9 @@ const CREDS = window.__E2E_CREDS || null;
   step("empty submit is rejected", $("survey-msg").textContent.includes("1つ以上"), $("survey-msg").textContent);
   selects.forEach(s => { s.selectedIndex = 1; });
   $("btn-survey-submit").click();
+  // 2026-11 段階3: 送信のあとは完了画面 → 「アンケートの いちらんへ」で一覧に戻る
+  step("completion screen after submit", await until(() => !$("scr-survey-done").hidden, 25000), $("survey-msg").textContent);
+  $("btn-svdone-list").click();
   step("back to list after submit", await until(() => !$("scr-surveylist").hidden && $("surveylist-msg").textContent.includes("うけとりました"), 25000), $("survey-msg").textContent + " / " + $("surveylist-msg").textContent);
   const after = rows(d);
   // ★行数を決め打ちにしない（開いている回の数はDBの状態しだい）。**並びの規則**を見る＝

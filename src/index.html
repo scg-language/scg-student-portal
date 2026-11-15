@@ -7,8 +7,10 @@
 <meta name="theme-color" content="#10365e">
 <link rel="stylesheet" href="assets/app.css">
 <link rel="stylesheet" href="assets/preview.css">
+<link rel="stylesheet" href="assets/survey-form.css">
+<link rel="stylesheet" href="assets/student.css">
 </head>
-<body>
+<body class="sp">
 <header>
   <div class="hin">
     <div class="hrow">
@@ -45,61 +47,91 @@
     <div class="list" id="exam-list"></div>
   </section>
 
-  <!-- マイページ -->
+  <!-- ホーム（旧マイページ）2026-11 新デザイン。id は既存のJS・テストが使うので残す -->
   <section id="scr-mypage" hidden>
-    <div class="panel">
-      <div class="me">
-        <div class="avatar">🎓</div>
-        <div>
-          <div class="mename" id="my-name"></div>
-          <div class="memeta"><span class="chip" id="my-class"></span><span id="my-no"></span></div>
-        </div>
+    <div class="home-top">
+      <img class="mark" src="assets/logo-mark.png" alt="">
+      <span class="ttl" data-i18n="app.title">学生ポータル</span>
+      <button type="button" class="iconbtn" id="home-lang" aria-label="Language"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg></button>
+      <button type="button" class="iconbtn avatarbtn" id="home-me" aria-label="マイ"><span id="home-initial"></span></button>
+    </div>
+    <div class="home-hello">
+      <span class="date" id="home-date"></span>
+      <span class="hi"><span id="home-greet"></span><span id="my-name"></span></span>
+      <span class="meta"><span id="my-no"></span><span id="my-class"></span></span>
+    </div>
+    <div class="home-body">
+      <!-- アンケートの大きなカード（まだの回があるときだけ「まだ」、ぜんぶ出したら落ち着いた表示、回が無ければ隠す） -->
+      <button type="button" class="hero" id="home-hero" hidden>
+        <span class="state" id="hero-state"></span>
+        <span><span class="name" id="hero-name"></span><br><span class="sub" id="hero-sub"></span></span>
+        <span class="foot"><span class="more" id="hero-more"></span><span class="cta"><span id="hero-cta"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span></span>
+      </button>
+
+      <div class="tiles">
+        <button type="button" class="tile" id="tile-quiz">
+          <span class="ic c-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></span>
+          <span><span class="k" data-i18n="tile.quiz"></span><br><span class="v" id="tile-quiz-v">…</span></span>
+          <span class="go2" data-i18n="tile.quiz.go"></span>
+        </button>
+        <button type="button" class="tile" id="tile-exam">
+          <span class="ic c-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16"/><path d="M9 3v4"/><path d="M15 3v4"/></svg></span>
+          <span><span class="k" id="tile-exam-k" data-i18n="tile.exam"></span><br><span class="v" id="tile-exam-v"></span></span>
+          <span class="s" id="tile-exam-s"></span>
+        </button>
       </div>
-    </div>
-    <div class="sechead" data-i18n="my.now">いま動きます</div>
-    <div class="list">
-      <button class="row" id="btn-gotest" style="--c:#1769aa">
-        <span class="bar"></span>
-        <span class="txt">
-          <span class="sb">Quiz</span>
-          <span class="nm" data-i18n="my.quiz">テストを うける</span>
-          <span class="ds" data-i18n="my.quiz.ds">せんたくしから えらぶ もんだい。すぐに てんすうが でます</span>
-        </span>
-        <span class="go"></span>
-      </button>
-      <button class="row" id="btn-gosurvey" style="--c:#2f9e44">
-        <span class="bar"></span>
-        <span class="txt">
-          <span class="sb">Survey</span>
-          <span class="nm"><span data-i18n="my.survey">アンケートに こたえる</span><span class="badge-done" id="survey-done-badge" hidden>ていしゅつ済み</span></span>
-          <span class="ds" data-i18n="my.survey.ds">しんろ・すまい・アルバイト・がくひ の 4つ</span>
-        </span>
-        <span class="go"></span>
-      </button>
-    </div>
 
-    <div class="sechead" data-i18n="my.soon">これから作る画面（イメージ）</div>
-    <div class="list">
-      <button class="row" data-go="grades" style="--c:#1769aa"><span class="bar"></span>
-        <span class="txt"><span class="sb">Record</span><span class="nm" data-i18n="my.grades">せいせき（成績）</span>
-        <span class="ds" data-i18n="my.grades.ds">JLPT・JPT・定期試験・模試・出席率</span></span><span class="go"></span></button>
-      <button class="row" data-go="news" style="--c:#c77700"><span class="bar"></span>
-        <span class="txt"><span class="sb">News</span><span class="nm" data-i18n="my.news">おしらせ</span>
-        <span class="ds" data-i18n="my.news.ds">試験の日程・休みの期間・大事な連絡</span></span><span class="go"></span></button>
-      <button class="row" data-go="jobs" style="--c:#7b5cd6"><span class="bar"></span>
-        <span class="txt"><span class="sb">Job</span><span class="nm" data-i18n="my.jobs">アルバイト</span>
-        <span class="ds" data-i18n="my.jobs.ds">求人と、28時間ルールの注意</span></span><span class="go"></span></button>
-      <button class="row" data-go="schools" style="--c:#1f7a8c"><span class="bar"></span>
-        <span class="txt"><span class="sb">Schools</span><span class="nm" data-i18n="my.schools">しんがく先の情報</span>
-        <span class="ds" data-i18n="my.schools.ds">専門学校・大学の一覧と出願の締切</span></span><span class="go"></span></button>
-      <button class="row" data-go="voices" style="--c:#0f9b8e"><span class="bar"></span>
-        <span class="txt"><span class="sb">Voices</span><span class="nm" data-i18n="my.voices">せんぱいの声</span>
-        <span class="ds" data-i18n="my.voices.ds">いま進学先にいる卒業生へのインタビュー</span></span><span class="go"></span></button>
-    </div>
+      <section class="sec2">
+        <h2 data-i18n="menu.title">メニュー</h2>
+        <div class="grid8">
+        <button class="gi" id="btn-gosurvey" type="button"><span class="ic c-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 12h6"/><path d="M9 16h4"/></svg></span><span class="lb" data-i18n="menu.survey"></span><span class="badge-done" id="survey-done-badge" hidden></span></button>
+        <button class="gi" id="btn-gotest" type="button"><span class="ic c-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></span><span class="lb" data-i18n="menu.quiz"></span></button>
+        <button class="gi" id="btn-exams" type="button"><span class="ic c-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16"/><path d="M9 3v4"/><path d="M15 3v4"/></svg></span><span class="lb" data-i18n="menu.exams"></span></button>
+        <button class="gi" data-go="grades" type="button"><span class="ic c-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg></span><span class="lb" data-i18n="menu.grades"></span><span class="mk" data-i18n="menu.mock">イメージ</span></button>
+        <button class="gi" data-go="news" type="button"><span class="ic c-rose"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><span class="lb" data-i18n="menu.news"></span><span class="mk" data-i18n="menu.mock">イメージ</span></button>
+        <button class="gi" data-go="schools" type="button"><span class="ic c-violet"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-5 9 5-9 5z"/><path d="M7 12v5c3 2 7 2 10 0v-5"/></svg></span><span class="lb" data-i18n="menu.schools"></span><span class="mk" data-i18n="menu.mock">イメージ</span></button>
+        <button class="gi" data-go="voices" type="button"><span class="ic c-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span class="lb" data-i18n="menu.voices"></span><span class="mk" data-i18n="menu.mock">イメージ</span></button>
+        <button class="gi" data-go="jobs" type="button"><span class="ic c-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2"/></svg></span><span class="lb" data-i18n="menu.jobs"></span><span class="mk" data-i18n="menu.mock">イメージ</span></button>
+        </div>
+        <span class="menu-note" data-i18n="menu.mocknote"></span>
+      </section>
 
-    <div class="inpanel">
       <div class="msg" id="my-msg"></div>
-      <button class="btn ghost" id="btn-logout" style="margin-top:8px;" data-i18n="my.logout">ログアウト</button>
+      <!-- ログアウトはマイ（下のタブ）が本命。ここにも残すのは e2e（run_e2e_career_survey.cjs）が押すため -->
+      <button type="button" class="home-out" id="btn-logout" data-i18n="my.logout">ログアウト</button>
+    </div>
+  </section>
+
+  <!-- マイ（設定）— 2026-11 追加。端末に残すのは言語と文字の大きさだけ -->
+  <section id="scr-settings" hidden>
+    <div class="set-wrap">
+      <h1 data-i18n="set.title">マイ</h1>
+      <div class="set-card">
+        <span class="av" id="set-initial"></span>
+        <div><div class="nm" id="set-name"></div><div class="mt" id="set-meta"></div></div>
+      </div>
+      <section class="set-sec">
+        <h2 data-i18n="set.section">せってい</h2>
+        <div class="set-group">
+          <button type="button" class="set-row" id="set-lang">
+            <span class="ic" style="background:#1769AA"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg></span>
+            <span class="lb" data-i18n="set.lang"></span><span class="vl" id="set-lang-v"></span><span class="chev"></span>
+          </button>
+          <div class="set-block">
+            <div class="hd"><span class="set-row-ic ic" style="width:32px;height:32px;border-radius:10px;background:#6D28D9;color:#fff;display:grid;place-items:center;font-weight:800;">あ</span><span class="lb" style="font-weight:700" data-i18n="set.size"></span></div>
+            <div class="seg" role="radiogroup" id="set-size">
+              <button type="button" role="radio" data-size="s" data-i18n="set.size.s"></button>
+              <button type="button" role="radio" data-size="m" data-i18n="set.size.m"></button>
+              <button type="button" role="radio" data-size="l" data-i18n="set.size.l"></button>
+            </div>
+          </div>
+          <button type="button" class="set-row" id="set-a2hs">
+            <span class="ic" style="background:#0D9488"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 8v6"/><path d="M9 11h6"/></svg></span>
+            <span class="lb" data-i18n="set.a2hs"></span><span class="chev"></span>
+          </button>
+        </div>
+      </section>
+      <button type="button" class="set-out" id="set-logout" data-i18n="my.logout">ログアウト</button>
     </div>
   </section>
 
@@ -158,16 +190,39 @@
   </section>
 
   <!-- アンケート回答（定義から質問を組み立てる） -->
+  <!-- 2026-11 段階3: 区切り（sections）が2つ以上ある定義はページ送り。区切りの無い定義は1ページのまま。
+       × は「まだ送っていない変更」があるときだけ、とちゅうで やめるか シートで聞く。 -->
   <section id="scr-survey" hidden>
-    <div class="backrow">
-      <button class="backbtn" id="btn-survey-back"><i></i> <span data-i18n="q.back">もどる</span></button>
-      <span class="backtitle" id="survey-title"></span>
+    <div class="sv-top">
+      <button class="iconbtn" id="btn-survey-back" type="button" data-i18n-aria="sv.close" aria-label="とじる"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div class="sv-top-t"><span class="ttl" id="survey-title"></span><span class="stp" id="survey-step"></span></div>
     </div>
+    <div class="sv-prog" id="survey-prog" hidden><i id="survey-prog-bar"></i></div>
     <div class="panel">
       <div id="survey-intro" style="font-size:.9rem;color:var(--sub);line-height:1.85;margin-bottom:18px;"></div>
       <div id="survey-fields"></div>
-      <button class="btn" id="btn-survey-submit">そうしん（送信）</button>
       <div class="msg" id="survey-msg"></div>
+      <div class="sv-nav">
+        <button class="sbtn quiet" id="btn-survey-prev" type="button" data-i18n="sv.prevpage" hidden>まえへ</button>
+        <button class="sbtn primary" id="btn-survey-next" type="button" data-i18n="sv.nextpage" hidden>つぎへ</button>
+        <button class="btn" id="btn-survey-submit">そうしん（送信）</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- アンケートの提出完了（段階3）。控えは「こたえを みる」でシートに全部出す -->
+  <section id="scr-survey-done" hidden>
+    <div class="svd">
+      <div class="svd-ic" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h1 class="svd-t" data-i18n="sv.done.t">うけとりました</h1>
+      <div class="svd-name" id="svdone-name"></div>
+      <div class="svd-when" id="svdone-when"></div>
+      <p class="svd-note" data-i18n="sv.done.note"></p>
+      <div class="sh-actions">
+        <button class="sbtn primary" id="btn-svdone-view" type="button" data-i18n="sv.done.view">こたえを みる</button>
+        <button class="sbtn quiet" id="btn-svdone-list" type="button" data-i18n="sv.done.list">アンケートの いちらんへ</button>
+        <button class="sbtn quiet" id="btn-svdone-home" type="button" data-i18n="sv.done.home">ホームへ</button>
+      </div>
     </div>
   </section>
 
@@ -1124,6 +1179,20 @@
 
 </main>
 <footer data-i18n="app.footer">SCG 学生ポータル（デモ）</footer>
+<!-- 下のタブ（ログイン後の一覧系の画面だけ出す。テスト・アンケートの回答中は隠す） -->
+<nav class="tabbar" id="tabbar" aria-label="メニュー" hidden><div class="in">
+    <button type="button" data-tab="home"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg><span data-i18n="tab.home"></span></button>
+    <button type="button" data-tab="learn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg><span data-i18n="tab.learn"></span></button>
+    <button type="button" data-tab="news"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span data-i18n="tab.news"></span></button>
+    <button type="button" data-tab="me"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6z"/></svg><span data-i18n="tab.me"></span></button>
+</div></nav>
+<!-- 下から出るシート（中身は JS が毎回組み立てる） -->
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-panel" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="sheet-title">
+    <span class="sheet-grip" aria-hidden="true"></span>
+    <div id="sheet-body" style="display:flex;flex-direction:column;gap:16px;"></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="assets/exam-dates.js"></script>
@@ -1132,11 +1201,25 @@
 <script src="assets/pw-eye.js"></script>
 <script src="assets/api.js"></script>
 <script src="assets/surveys.js"></script>
+<script src="assets/survey-form.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const screens = ["scr-login","scr-mypage","scr-quizlist","scr-quiz","scr-result","scr-surveylist","scr-survey"];
+const screens = ["scr-login","scr-mypage","scr-settings","scr-quizlist","scr-quiz","scr-result","scr-surveylist","scr-survey","scr-survey-done"];
+/* 下のタブ: 一覧系の画面だけに出す。回答中（テスト・アンケート）と結果は隠して集中させる */
+const TAB_OF = { "scr-mypage":"home", "scr-surveylist":"home", "scr-quizlist":"learn", "scr-settings":"me" };
+function setTab(name){
+  const bar = $("tabbar"); if(!bar) return;
+  bar.hidden = !name;
+  bar.querySelectorAll("[data-tab]").forEach(b => {
+    if(b.getAttribute("data-tab") === name) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+  });
+}
 function show(id){
   screens.forEach(s => $(s).hidden = (s !== id));
+  /* ログイン後は青いヒーローヘッダーを畳み、ホーム上部とタブに任せる（student.css） */
+  document.body.classList.toggle("authed", id !== "scr-login");
+  setTab(TAB_OF[id] || null);
+  if(typeof sheet !== "undefined") sheet.close(true);
   /* しけんの ひ はログイン画面でだけ出す（ログイン後はマイページの導線が主役） */
   $("sec-exams").hidden = (id !== "scr-login");
   /* 動く画面へ移るときは「画面イメージ」の箱を閉じる */
@@ -1146,6 +1229,38 @@ function show(id){
 function err(id, text){ const m=$(id); m.className="msg err"; m.textContent=text; }
 function info(id, text){ const m=$(id); m.className="msg info"; m.textContent=text; }
 function clearMsg(id){ const m=$(id); m.className="msg"; m.textContent=""; }
+
+/* ---- 小さな部品（2026-11 新デザイン）---- */
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+/* 下から出るシート。中身は open(build) の build(body) で毎回組み立てる。
+   ★文言は textContent で入れる（定義やDB由来の文字列を innerHTML に入れない）。 */
+const sheet = (() => {
+  const root = $("sheet"), panel = root.querySelector(".sheet-panel"), body = $("sheet-body");
+  let back = null, timer = null;
+  function open(build){
+    clearTimeout(timer);
+    back = document.activeElement;
+    body.innerHTML = ""; build(body);
+    root.hidden = false; document.body.classList.add("sheet-open");
+    requestAnimationFrame(() => { root.classList.add("on"); panel.focus(); });
+  }
+  function close(instant){
+    if(root.hidden) return;
+    root.classList.remove("on"); document.body.classList.remove("sheet-open");
+    const done = () => { root.hidden = true; body.innerHTML = ""; };
+    if(instant === true) done(); else timer = setTimeout(done, 220);
+    if(back && back.focus && instant !== true) back.focus();
+  }
+  root.addEventListener("click", e => { if(e.target === root || e.target.closest("[data-sheet-close]")) close(); });
+  document.addEventListener("keydown", e => { if(e.key === "Escape" && !root.hidden) close(); });
+  return { open, close };
+})();
+function sheetButton(cls, text, onclick){
+  const b = el("button", "sbtn " + cls, text); b.type = "button";
+  if(onclick) b.onclick = onclick; else b.setAttribute("data-sheet-close", "");
+  return b;
+}
 
 let quizSet=null, questions=[], cur=0, answers={}, startedAt=0, lastResult=null;
 
@@ -1209,18 +1324,185 @@ $("btn-login").onclick = async () => {
   finally{ $("btn-login").disabled=false; $("btn-login").textContent=t("login.btn"); }
 };
 $("in-pw").addEventListener("keydown", e=>{ if(e.key==="Enter") $("btn-login").click(); });
-$("btn-logout").onclick = () => { draftClearAll(); api.logout(); show("scr-login"); };
+function doLogout(){ surveyDrafts.clear(); surveyForm=null; curRound=null; quizCount=null; draftClearAll(); api.logout(); show("scr-login"); }
+$("btn-logout").onclick = doLogout;
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=goMyPage);
 
 /* ---- マイページ ---- */
 async function goMyPage(){
-  const p = api.profile;
-  $("my-name").textContent = t("my.san",{name:p.display_name});
-  $("my-class").textContent = p.class_name || t("my.noclass");
-  $("my-no").textContent = p.student_no;
+  renderHome();
   show("scr-mypage"); clearMsg("my-msg");
-  try{ await loadSurveyRounds(); renderSurveyBadge(); }catch(e){ /* バッジなしで続行 */ }
+  refreshQuizCount();               // テストの数は待たずに後から入れる
+  try{ await loadSurveyRounds(); renderSurveyBadge(); renderHome(); }catch(e){ /* バッジなしで続行 */ }
 }
+
+/* ---- ホーム（2026-11 新デザイン）----
+   出すのはDBと端末にある本物の値だけ。名前・番号・クラス／アンケートの回／テストの数／しけんの ひ。 */
+let quizCount = null;               // null = まだ数えていない
+function initialOf(name){ return (String(name || "").trim()[0] || "?").toUpperCase(); }
+function todayLabel(){ const d=new Date(); const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); return examDate(iso); }
+function greetWord(){ const h=new Date().getHours(); return t(h>=4&&h<11 ? "home.greet.m" : h<17&&h>=11 ? "home.greet.a" : "home.greet.e"); }
+function nextExams(){
+  const all = (window.EXAM_DATES && window.EXAM_DATES.school_exams) || [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  return all.map(e => ({ ...e, left: Math.round((new Date(e.date+"T00:00:00") - today) / 86400000) }))
+            .filter(e => e.left >= 0).sort((a,b) => a.left - b.left);
+}
+function renderHome(){
+  const p = api.profile; if(!p) return;
+  $("home-date").textContent = todayLabel();
+  $("home-greet").textContent = greetWord() + t("home.sep");
+  $("my-name").textContent = t("my.san",{name:p.display_name});
+  $("my-no").textContent = p.student_no;
+  $("my-class").textContent = p.class_name || t("my.noclass");
+  $("home-initial").textContent = initialOf(p.display_name);
+
+  /* アンケートの大きなカード */
+  const hero = $("home-hero");
+  const todo = openRounds.filter(r => !respByRound[r.round_id]);
+  if(!openRounds.length){ hero.hidden = true; }
+  else if(todo.length){
+    const r = todo[0];
+    hero.hidden = false; hero.classList.remove("done");
+    $("hero-state").textContent = t("hero.todo");
+    $("hero-name").textContent = tx(r.def.title) + ((r.title && r.title !== "常設") ? "・" + r.title : "");
+    $("hero-sub").textContent = r.closes_at ? t("hero.due",{d:fmtDay(r.closes_at)}) : "";
+    $("hero-more").textContent = todo.length > 1 ? t("hero.more",{n:todo.length-1}) : "";
+    $("hero-cta").textContent = t("hero.start");
+    hero.onclick = () => openSurveySheet(r);
+  }else{
+    hero.hidden = false; hero.classList.add("done");
+    $("hero-state").textContent = t("sv.badge.all");
+    $("hero-name").textContent = t("hero.alldone");
+    $("hero-sub").textContent = ""; $("hero-more").textContent = "";
+    $("hero-cta").textContent = t("hero.view");
+    hero.onclick = () => $("btn-gosurvey").click();
+  }
+
+  /* タイル: テストの数 / つぎの しけん */
+  $("tile-quiz-v").textContent = quizCount == null ? "…" : quizCount ? t("tile.quiz.n",{n:quizCount}) : t("tile.quiz.none");
+  const ex = nextExams()[0];
+  if(ex){
+    $("tile-exam-k").textContent = ex.test + "・" + examDate(ex.date);
+    const cd = ex.left === 0 ? t("ex.today") : ex.left === 1 ? t("ex.tomorrow") : t("ex.days",{n:ex.left});
+    $("tile-exam-v").textContent = cd;
+    $("tile-exam-s").textContent = ex.result_date ? t("ex.result",{d:examDate(ex.result_date)}) : "";
+  }else{
+    $("tile-exam-k").textContent = t("tile.exam");
+    $("tile-exam-v").textContent = t("ex.none");
+    $("tile-exam-s").textContent = "";
+  }
+}
+async function refreshQuizCount(){
+  try{ quizCount = (await fetchOpenQuizzes()).length; }catch(e){ quizCount = null; }
+  if(!$("scr-mypage").hidden) renderHome();
+}
+
+/* アンケートの概要をシートで見せてから始める */
+function openSurveySheet(r){
+  const s = r.def;
+  sheet.open(body => {
+    const head = el("div","sh-head");
+    const ic = el("span","ic c-green"); ic.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>';
+    const tt = el("div"); const h = el("div","sh-title", tx(s.title)); h.id = "sheet-title";
+    tt.append(h); if(r.title && r.title !== "常設") tt.append(el("div","sh-sub", r.title));
+    head.append(ic, tt); body.append(head);
+    const stats = el("div","sh-stats");
+    const stat = (v,k) => { const d=el("div"); d.append(el("b",null,v), el("span",null,k)); stats.append(d); };
+    stat(String((s.q || []).length), t("sv.sheet.q"));
+    stat(String((s.sections || []).length || 1), t("sv.sheet.sec"));
+    stat(r.closes_at ? fmtDay(r.closes_at) : "—", t("sv.sheet.due"));
+    body.append(stats);
+    const intro = tx(s.intro).replace(/<br\s*\/?>/gi,"\n");
+    if(intro) body.append(el("p","sh-text", intro));
+    const act = el("div","sh-actions");
+    act.append(sheetButton("primary", t("hero.start"), () => { sheet.close(true); openSurvey(r); }),
+               sheetButton("quiet", t("set.cancel")));
+    body.append(act);
+  });
+}
+
+/* しけんの ひ をシートで（ログイン前の一覧と同じ描き方を使い回す） */
+function openExamSheet(){
+  renderExams();
+  sheet.open(body => {
+    const h = el("div","sh-title", t("ex.title")); h.id = "sheet-title"; body.append(h);
+    const box = el("div","list"); box.innerHTML = $("exam-list").innerHTML; body.append(box);
+    body.append(sheetButton("quiet", t("sheet.close")));
+  });
+}
+
+/* 言語をシートで選ぶ（ログイン前はヘッダーの 🌐 メニュー、ログイン後はこれ） */
+function openLangSheet(){
+  sheet.open(body => {
+    const h = el("div","sh-title", t("set.lang") + " ・ Language"); h.id = "sheet-title"; body.append(h);
+    const list = el("div","sh-list");
+    LANGS.forEach(l => {
+      const b = el("button"); b.type = "button";
+      b.append(el("span","nat", l.native), el("span","en", l.ready ? l.en : l.en + " · " + t("lang.soon")));
+      if(l.code === LANG) b.append(el("span","ck","✓"));
+      b.disabled = !l.ready;
+      b.setAttribute("aria-pressed", String(l.code === LANG));
+      b.onclick = () => { setLang(l.code); sheet.close(); };
+      list.append(b);
+    });
+    body.append(list);
+  });
+}
+
+/* ---- マイ（設定）---- */
+function goSettings(){
+  const p = api.profile; if(!p) return;
+  $("set-initial").textContent = initialOf(p.display_name);
+  $("set-name").textContent = t("my.san",{name:p.display_name});
+  $("set-meta").textContent = p.student_no + " ・ " + (p.class_name || t("my.noclass"));
+  const now = LANGS.find(l => l.code === LANG) || LANGS[0];
+  $("set-lang-v").textContent = now.native;
+  paintSize();
+  show("scr-settings");
+}
+function fontSize(){ try{ return localStorage.getItem("sp_fs") || "m"; }catch(e){ return "m"; } }
+function applySize(v){
+  document.documentElement.classList.remove("fs-s","fs-l");
+  if(v === "s" || v === "l") document.documentElement.classList.add("fs-" + v);
+}
+function paintSize(){
+  const v = fontSize();
+  $("set-size").querySelectorAll("[data-size]").forEach(b => b.setAttribute("aria-checked", String(b.getAttribute("data-size") === v)));
+}
+$("set-size").addEventListener("click", e => {
+  const b = e.target.closest("[data-size]"); if(!b) return;
+  const v = b.getAttribute("data-size");
+  try{ localStorage.setItem("sp_fs", v); }catch(e){}
+  applySize(v); paintSize();
+});
+$("set-lang").onclick = openLangSheet;
+$("home-lang").onclick = openLangSheet;
+$("home-me").onclick = goSettings;
+$("btn-exams").onclick = openExamSheet;
+$("tile-exam").onclick = openExamSheet;
+$("tile-quiz").onclick = () => $("btn-gotest").click();
+$("set-a2hs").onclick = () => sheet.open(body => {
+  const h = el("div","sh-title", t("set.a2hs")); h.id = "sheet-title"; body.append(h);
+  const st = el("div","sh-steps"); st.append(el("div",null,t("set.a2hs.ios")), el("div",null,t("set.a2hs.android")));
+  body.append(st, sheetButton("quiet", t("sheet.close")));
+});
+$("set-logout").onclick = () => sheet.open(body => {
+  const h = el("div","sh-title", t("set.logout.q")); h.id = "sheet-title";
+  body.append(h, el("p","sh-text", t("set.logout.body")));
+  const act = el("div","sh-actions");
+  act.append(sheetButton("danger", t("my.logout"), () => { sheet.close(true); doLogout(); }),
+             sheetButton("quiet", t("set.cancel")));
+  body.append(act);
+});
+$("tabbar").addEventListener("click", e => {
+  const b = e.target.closest("[data-tab]"); if(!b) return;
+  const k = b.getAttribute("data-tab");
+  if(k === "home") goMyPage();
+  else if(k === "learn") $("btn-gotest").click();
+  else if(k === "news") window.openMock && window.openMock("news");
+  else if(k === "me") goSettings();
+});
 
 /* ---- テスト一覧 ----
    2026-09-11: 実施回（quiz_runs）で開いた回も出す。いままでの is_open は
@@ -1233,22 +1515,27 @@ function quizMinutesLeft(iso){
 }
 // 実施回から入った時だけ p_run_id を足す（is_open から入った時は渡さない＝今までどおり動く）
 function withRun(args){ if(quizSet && quizSet.run_id) args.p_run_id = quizSet.run_id; return args; }
+/* 今うけられるテストの一覧（ホームのタイルの数と、一覧画面の両方で使う） */
+async function fetchOpenQuizzes(){
+  const [sets, runs] = await Promise.all([
+    api.get("/rest/v1/quiz_sets?select=id,title,lesson&is_open=eq.true&order=created_at.desc"),
+    api.rpc("my_open_runs", {}),
+  ]);
+  const byId = new Map();
+  sets.forEach(s=>byId.set(s.id, { id:s.id, title:s.title, lesson:s.lesson, run_id:null, closes_at:null }));
+  runs.forEach(r=>byId.set(r.quiz_set_id, { id:r.quiz_set_id, title:r.title, lesson:r.lesson, run_id:r.run_id, closes_at:r.closes_at }));
+  // 締切が近いものを上に。締切の無いもの（is_open のみ）はうしろへ
+  return [...byId.values()].sort((a,b)=>{
+    if(a.closes_at && b.closes_at) return new Date(a.closes_at) - new Date(b.closes_at);
+    return a.closes_at ? -1 : (b.closes_at ? 1 : 0);
+  });
+}
 $("btn-gotest").onclick = async ()=>{
   show("scr-quizlist"); clearMsg("list-msg");
   $("quiz-list").innerHTML = "<div style='color:var(--sub);padding:18px 22px;'>"+t("q.loading")+"</div>";
   try{
-    const [sets, runs] = await Promise.all([
-      api.get("/rest/v1/quiz_sets?select=id,title,lesson&is_open=eq.true&order=created_at.desc"),
-      api.rpc("my_open_runs", {}),
-    ]);
-    const byId = new Map();
-    sets.forEach(s=>byId.set(s.id, { id:s.id, title:s.title, lesson:s.lesson, run_id:null, closes_at:null }));
-    runs.forEach(r=>byId.set(r.quiz_set_id, { id:r.quiz_set_id, title:r.title, lesson:r.lesson, run_id:r.run_id, closes_at:r.closes_at }));
-    // 締切が近いものを上に。締切の無いもの（is_open のみ）はうしろへ
-    const list = [...byId.values()].sort((a,b)=>{
-      if(a.closes_at && b.closes_at) return new Date(a.closes_at) - new Date(b.closes_at);
-      return a.closes_at ? -1 : (b.closes_at ? 1 : 0);
-    });
+    const list = await fetchOpenQuizzes();
+    quizCount = list.length;
     if(!list.length){ $("quiz-list").innerHTML="<div style='color:var(--sub);padding:18px 22px;'>"+t("q.none")+"</div>"; return; }
     $("quiz-list").innerHTML = "";
     list.forEach(s=>{
@@ -1540,6 +1827,9 @@ $("btn-r-home").onclick=goMyPage;
 let openRounds = [];      // [{round_id,survey_key,title,opens_at,closes_at,def}]（def=SURVEYS の該当項目）
 let respByRound = {};     // round_id → {answers, submitted_at}（ログイン本人の分だけ。RLSが他人の行を返さない）
 let curRound = null;
+let surveyForm = null;
+const surveyDrafts = new Map(); // In-memory only; never persisted to a shared device.
+function surveyDraftKey(r){ return String(api.profile?.id || api.profile?.student_no || "") + ":" + r.round_id; }
 async function loadSurveyRounds(){
   const [rounds, rows] = await Promise.all([
     api.rpc("my_open_survey_rounds", {}),
@@ -1547,7 +1837,8 @@ async function loadSurveyRounds(){
   ]);
   respByRound = {};
   rows.forEach(r=>{ if(r.round_id) respByRound[r.round_id] = r; });
-  openRounds = rounds.map(r=>({ ...r, def: SURVEYS.find(s=>s.key===r.survey_key) })).filter(r=>r.def);
+  // Draft definitions are verified in the offline preview, not offered to students.
+  openRounds = rounds.map(r=>({ ...r, def: SURVEYS.find(s=>s.key===r.survey_key) })).filter(r=>r.def && !r.def.previewOnly);
 }
 function renderSurveyBadge(){
   const tot = openRounds.length, n = openRounds.filter(r=>respByRound[r.round_id]).length, b = $("survey-done-badge");
@@ -1568,11 +1859,14 @@ function renderSurveyList(){
     const b=document.createElement("button");
     b.className = "row" + (d ? " done" : "");
     b.style.setProperty("--c", s.color);
-    b.innerHTML = "<span class='bar'></span><span class='txt'>"+
-      "<span class='sb'>"+s.sb+"</span>"+
-      "<span class='nm'>"+tx(s.title)+roundLabel+(d ? " <span class='badge-done'>"+t("sv.done")+"</span>" : "")+"</span>"+
-      "<span class='ds'>"+(d ? t("sv.doneds",{d:fmtDay(d.submitted_at)}) : tx(s.desc))+"</span>"+
-      "</span><span class='go'></span>";
+    b.innerHTML = "<span class='bar'></span><span class='txt'><span class='sb'></span><span class='nm'></span><span class='ds'></span></span><span class='go'></span>";
+    b.querySelector(".sb").textContent = s.sb;
+    b.querySelector(".nm").textContent = tx(s.title) + roundLabel;
+    if(d){
+      const badge=document.createElement("span"); badge.className="badge-done";
+      badge.textContent=t("sv.done"); b.querySelector(".nm").append(" ",badge);
+    }
+    b.querySelector(".ds").textContent = d ? t("sv.doneds",{d:fmtDay(d.submitted_at)}) : tx(s.desc);
     b.onclick = ()=>openSurvey(r);
     list.appendChild(b);
   });
@@ -1583,51 +1877,92 @@ $("btn-gosurvey").onclick = async ()=>{
   try{ await loadSurveyRounds(); renderSurveyBadge(); renderSurveyList(); }
   catch(e){ $("survey-list").innerHTML=""; err("surveylist-msg", e.message); }
 };
-$("btn-survey-back").onclick = ()=>{ clearMsg("surveylist-msg"); renderSurveyList(); show("scr-surveylist"); };
+/* ---- 回答画面（2026-11 段階3）----
+   区切り（def.sections）が2つ以上ある定義は1区切り＝1ページ。区切りの無い定義（今の4本）は1ページのまま。
+   ★ページを分けても答えは1つのフォーム（SurveyForm）にある＝送信・下書き・言語切替は今までと同じ道を通る。
+   ★下書きは画面内のメモリだけ（surveyDrafts）。端末には保存しない＝「途中保存されます」とはうたわない。 */
+let surveyPage = 0;
+let surveySnap = "";            // 開いた時点の答え。× で「まだ送っていない変更」があるかを見る
+const surveyPaged = () => !!surveyForm && surveyForm.pages().length > 1;
+function surveyDirty(){ return !!surveyForm && JSON.stringify(surveyForm.read()) !== surveySnap; }
+function leaveSurvey(){
+  if(curRound && surveyForm) surveyDrafts.set(surveyDraftKey(curRound),surveyForm.read());
+  clearMsg("surveylist-msg"); renderSurveyList(); show("scr-surveylist");
+}
+$("btn-survey-back").onclick = ()=>{
+  if(!surveyDirty()){ leaveSurvey(); return; }
+  sheet.open(body => {
+    const h = el("div","sh-title", t("sv.quit.q")); h.id = "sheet-title";
+    body.append(h, el("p","sh-text", t("sv.quit.body")));
+    const act = el("div","sh-actions");
+    const quit = sheetButton("quiet warn", t("sv.quit.yes"), () => { sheet.close(true); leaveSurvey(); });
+    quit.id = "sheet-quit";
+    act.append(sheetButton("primary", t("sv.quit.no")), quit);
+    body.append(act);
+  });
+};
 
-/* 回答画面: 定義の q[] から入力欄を組み立てる。提出済みなら前回の答えを入れておく */
-function openSurvey(r){
+function paintSurveyPage(){
+  const paged = surveyPaged(), n = paged ? surveyForm.pages().length : 1, i = surveyPage;
+  if(paged) surveyForm.showPage(i);
+  $("survey-step").textContent = paged ? t("sv.step",{n:i+1,t:n}) : "";
+  $("survey-prog").hidden = !paged;
+  $("survey-prog-bar").style.width = Math.round((i+1)/n*100) + "%";
+  $("survey-intro").hidden = paged && i > 0;          // 説明は最初のページだけ
+  const last = i >= n-1;
+  $("btn-survey-prev").hidden = !paged || i === 0;
+  $("btn-survey-next").hidden = !paged || last;
+  $("btn-survey-submit").hidden = paged && !last;
+}
+function gotoSurveyPage(i){
+  surveyPage = i; clearMsg("survey-msg"); surveyForm.clearErrors(); paintSurveyPage(); window.scrollTo(0,0);
+  if(curRound && respByRound[curRound.round_id] && i === 0) info("survey-msg",t("sv.prev"));
+}
+$("btn-survey-next").onclick = ()=>{
+  if(!surveyForm) return;
+  const errs = surveyForm.pageErrors(surveyPage);
+  if(errs.length){ surveyForm.showErrors(errs); err("survey-msg",t("sv.pageerr")); return; }
+  gotoSurveyPage(surveyPage+1);
+};
+$("btn-survey-prev").onclick = ()=>{ if(surveyForm && surveyPage > 0) gotoSurveyPage(surveyPage-1); };
+
+/* 回答画面: 定義の q[] から入力欄を組み立てる。提出済みなら前回の答えを入れておく。
+   page を渡すとそのページで開く（言語を切り替えても最初のページに戻らない） */
+function openSurvey(r, draftAnswers, page){
+  const fresh = draftAnswers === undefined;
   curRound = r; clearMsg("survey-msg");
   const s = r.def;
   const prevRow = respByRound[r.round_id];
-  const prev = prevRow ? (prevRow.answers || {}) : null;
+  const prev = fresh ? (surveyDrafts.get(surveyDraftKey(r)) || (prevRow ? (prevRow.answers || {}) : {})) : draftAnswers;
   const roundLabel = (r.title && r.title !== "常設") ? "　・　"+r.title : "";
   $("survey-title").textContent = tx(s.title) + roundLabel;
-  $("survey-intro").innerHTML = tx(s.intro);
-  const box=$("survey-fields"); box.innerHTML="";
-  s.q.forEach((q,i)=>{
-    const id = "sv-"+q.k, num = "①②③④⑤⑥⑦⑧⑨".charAt(i) || (i+1)+".";
-    const f=document.createElement("div"); f.className="field";
-    let inner = "<label for='"+id+"'>"+num+" "+tx(q.l)+"</label>";
-    if(q.t==="select"){
-      // 保存されるのは o.v（言語に依らない値）。表示だけ今の言語
-      inner += "<select id='"+id+"'><option value=''>"+t("sv.choose")+"</option>"+
-               q.o.map(o=>"<option value='"+o.v+"'>"+tx(o)+"</option>").join("")+"</select>";
-    }else{
-      inner += "<input id='"+id+"' type='text' placeholder='"+tx(q.ph)+"'>";
-    }
-    f.innerHTML = inner; box.appendChild(f);
-    if(prev && prev[q.k]!=null){
-      let v = prev[q.k];
-      if(q.t==="select"){ const hit = q.o.find(o=>o.v===v||o.ja===v||o.en===v); v = hit ? hit.v : ""; }  // 昔の回答（日本語の文）も拾う
-      $(id).value = v;
-    }
-  });
-  if(prev){
-    info("survey-msg",t("sv.prev"));
+  $("survey-intro").textContent = tx(s.intro).replace(/<br\s*\/?>/gi,"\n");
+  $("survey-intro").style.whiteSpace="pre-line";
+  surveyForm = SurveyForm.mount($("survey-fields"),s,{lang:LANG,answers:prev,profile:api.profile});
+  if(fresh) surveySnap = JSON.stringify(surveyForm.read());
+  surveyPage = Math.max(0, Math.min(page || 0, surveyForm.pages().length - 1));
+  if(prevRow){
+    if(surveyPage === 0) info("survey-msg",t("sv.prev"));
     $("btn-survey-submit").textContent = t("sv.resubmit");
   }else{
     $("btn-survey-submit").textContent = t("q.submit");
   }
   show("scr-survey");
+  paintSurveyPage();
 }
 $("btn-survey-submit").onclick = async ()=>{
   const r = curRound; if(!r) return;
   const s = r.def;
-  const ans = {}; let filled = 0;
-  s.q.forEach(q=>{ const v = $("sv-"+q.k).value.trim(); ans[q.k] = v; if(v) filled++; });
-  if(!filled){ err("survey-msg",t("sv.min1")); return; }
-  const btn=$("btn-survey-submit");
+  if(!surveyForm) return;
+  const checked = surveyForm.validate();
+  if(!checked.ok){
+    /* 前のページに こたえて いない ところが あれば、そのページへ戻してから見せる */
+    const at = surveyPaged() ? surveyForm.pageOfKey(checked.errors[0].key) : -1;
+    if(at >= 0 && at !== surveyPage){ surveyPage = at; paintSurveyPage(); }
+    surveyForm.showErrors(checked.errors); err("survey-msg",checked.errors[0].message); return;
+  }
+  const ans = checked.answers;
+  const btn=$("btn-survey-submit"), label = btn.textContent;
   btn.disabled=true; btn.textContent=t("q.sending");
   try{
     // student_id は送らない（DB側の既定値 auth.uid() = ログイン本人に固定される）。
@@ -1636,16 +1971,53 @@ $("btn-survey-submit").onclick = async ()=>{
     await api.upsert("survey_responses","student_id,round_id",{
       round_id: r.round_id, survey_key: s.key, answers: ans, submitted_at: now,
     });
+    surveyDrafts.delete(surveyDraftKey(r));
     respByRound[r.round_id] = { round_id: r.round_id, survey_key: s.key, answers: ans, submitted_at: now };
-    renderSurveyBadge(); renderSurveyList(); show("scr-surveylist");
-    info("surveylist-msg",t("sv.received",{title:tx(s.title)}));
+    renderSurveyBadge();
+    showSurveyDone(r);
   }catch(e){
     err("survey-msg",t("q.fail",{msg:e.message}));
-  }finally{ btn.disabled=false; btn.textContent=t("q.submit"); }
+  }finally{ btn.disabled=false; btn.textContent=label; }
 };
+
+/* ---- 提出完了と、回答の控え（段階3）----
+   控えは端末に残さない。見せるのは respByRound（いま送った答え＝DBに入れたものと同じ値）だけ。 */
+let doneRound = null;
+function fmtWhen(iso){ const d=new Date(iso); return fmtDay(iso)+" "+d.getHours()+":"+String(d.getMinutes()).padStart(2,"0"); }
+function showSurveyDone(r){
+  doneRound = r;
+  const row = respByRound[r.round_id];
+  const roundLabel = (r.title && r.title !== "常設") ? "・"+r.title : "";
+  $("svdone-name").textContent = tx(r.def.title) + roundLabel;
+  $("svdone-when").textContent = row ? t("sv.done.when",{d:fmtWhen(row.submitted_at)}) : "";
+  show("scr-survey-done");
+}
+function openSurveyCopy(r){
+  const row = respByRound[r.round_id]; if(!row) return;
+  const items = SurveyForm.describe(r.def, row.answers || {}, LANG);
+  sheet.open(body => {
+    const h = el("div","sh-title", t("sv.copy.t")); h.id = "sheet-title";
+    body.append(h, el("div","sh-sub", tx(r.def.title) + "　" + fmtWhen(row.submitted_at)));
+    const box = el("div","sv-copy"); box.id = "sv-copy"; let sec = null;
+    items.forEach(it => {
+      if(it.section && it.section !== sec){ box.append(el("div","sv-copy-sec", it.section)); sec = it.section; }
+      const d = el("div","sv-copy-row");
+      d.append(el("div","q", it.label), el("div", it.value ? "a" : "a none", it.value || t("sv.copy.empty")));
+      box.append(d);
+    });
+    body.append(box, sheetButton("quiet", t("sheet.close")));
+  });
+}
+$("btn-svdone-view").onclick = ()=>{ if(doneRound) openSurveyCopy(doneRound); };
+$("btn-svdone-list").onclick = ()=>{
+  const r = doneRound; clearMsg("surveylist-msg"); renderSurveyList(); show("scr-surveylist");
+  if(r) info("surveylist-msg",t("sv.received",{title:tx(r.def.title)}));
+};
+$("btn-svdone-home").onclick = ()=>{ goMyPage(); };
 
 /* ---- 言語（assets/i18n.js）---- */
 initLang();                       // 前回選んだ言語（localStorage）を復元。無ければ日本語
+applySize(fontSize());            // マイで選んだ文字の大きさ
 mountLangSwitch($("langsw"));     // ヘッダー右上の 🌐 メニュー
 window.addEventListener("sp:lang", ()=>{
   // 静的な文言は applyI18n() が貼り替え済み。ここでは JS が組み立てた部分だけ描き直す
@@ -1654,19 +2026,17 @@ window.addEventListener("sp:lang", ()=>{
     // ★バッジは**画面が隠れていても**貼り替える。マイページ以外（アンケート一覧など）で
     //   言語を変えて戻ると、バッジだけ前の言語が残っていた（2026-09-11 に検査で発覚）。
     renderSurveyBadge();
-    if(!$("scr-mypage").hidden){
-      $("my-name").textContent = t("my.san",{name:api.profile.display_name});
-      $("my-class").textContent = api.profile.class_name || t("my.noclass");
-    }
+    if(!$("scr-mypage").hidden) renderHome();
+    if(!$("scr-settings").hidden) goSettings();
   }
   if(!$("scr-quiz").hidden && questions.length) render();
   if(!$("scr-result").hidden && lastResult) showResult(lastResult);
   if(!$("scr-surveylist").hidden) renderSurveyList();
   if(!$("scr-survey").hidden && curRound){
-    const keep={}; curRound.def.q.forEach(q=>{ const el=$("sv-"+q.k); if(el) keep[q.k]=el.value; });
-    openSurvey(curRound);                                        // 今の言語で組み直し
-    curRound.def.q.forEach(q=>{ if(keep[q.k]) $("sv-"+q.k).value=keep[q.k]; });   // 入力途中の値は残す
+    const keep = surveyForm ? surveyForm.read() : {};
+    openSurvey(curRound,keep,surveyPage); // Arrays, hidden drafts and the current page survive language changes.
   }
+  if(!$("scr-survey-done").hidden && doneRound) showSurveyDone(doneRound);
 });
 
 /* ---- 起動 ---- */
@@ -1723,8 +2093,11 @@ window.addEventListener("sp:lang", ()=>{
     activeApp().querySelectorAll("[data-screen]").forEach(function (s) {
       s.hidden = (s.getAttribute("data-screen") !== name);
     });
+    document.body.classList.add("authed");
+    setTab(name === "news" ? "news" : "home");
     window.scrollTo(0, 0);
   }
+  window.openMock = openMock;
   function currentMock() {
     var a = document.querySelector(".app:not(.app-off):not([hidden])");   /* 今 見えている木（言語が変わった直後は旧言語の木） */
     var v = a && a.querySelector("[data-screen]:not([hidden])");
