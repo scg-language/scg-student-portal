@@ -129,14 +129,16 @@ const CREDS = window.__E2E_CREDS || null;
   const doneN = after.filter(x => x.startsWith("[済]")).length;
   // ★言語によって区切りが「／」と「/」で変わるので、**数字だけ**で見る。
   //   ⚠ 文言そのものは下の「言語が残っていない」で別に見る
-  const badgeNums = ($("survey-done-badge").textContent.match(/\d+/g) || []).join(",");
+  // 2026-11-15: バッジの表示は短く（✓ か n/t）、元の文言は aria-label に移った → 数字と言語は aria-label で見る
+  const badgeFull = $("survey-done-badge").getAttribute("aria-label") || "";
+  const badgeNums = (badgeFull.match(/\d+/g) || []).join(",");
   step("バッジの数字が一覧の実際の数と合う",
        $("survey-done-badge").hidden === false && badgeNums === doneN + "," + after.length,
-       "text=" + $("survey-done-badge").textContent + " / 一覧は " + doneN + "／" + after.length);
+       "aria=" + badgeFull + " / text=" + $("survey-done-badge").textContent + " / 一覧は " + doneN + "／" + after.length);
   // ★アンケート一覧で英語にして戻ってきた直後。バッジに前の言語が残っていないこと
   step("バッジに前の言語が残っていない（日本語に戻っている）",
-       $("survey-done-badge").textContent.includes("ていしゅつ"),
-       $("survey-done-badge").textContent);
+       ($("survey-done-badge").getAttribute("aria-label") || "").includes("ていしゅつ"),
+       $("survey-done-badge").getAttribute("aria-label"));
   $("btn-gosurvey").click();
   step("btn-gosurvey (= #survey deep link) opens list", await until(() => !$("scr-surveylist").hidden), "");
   // ★ここも一覧の取得は非同期。中身が入るまで待つ

@@ -207,3 +207,50 @@ body.sp #scr-survey .panel{border-radius:var(--r-l);}
 .sv-copy-row .q{font-size:.78rem;color:var(--sub2);line-height:1.5;}
 .sv-copy-row .a{font-size:.95rem;font-weight:700;line-height:1.6;overflow-wrap:anywhere;white-space:pre-line;}
 .sv-copy-row .a.none{color:#9CA3AF;font-weight:400;}
+
+/* ── 2026-11-15 微調整 ── */
+/* 大きなカードの飾りの丸を文字の後ろへ（長い題名に重なって読みにくかった） */
+.hero::before,.hero::after{z-index:0;}
+.hero > *{z-index:1;}
+.hero .name{padding-right:8px;}
+/* メニューのアンケートの札は短く（✓ か 3/4）。アイコンの右上に丸く乗せる */
+.gi .badge-done{top:-2px;right:calc(50% - 34px);min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  display:grid;place-items:center;font-size:.68rem;line-height:1;border:2px solid #fff;white-space:nowrap;}
+
+/* ── アンケート回答のフォーム（survey-form.js が作る部品）を新デザインに合わせる ── */
+body.sp.authed #scr-survey .panel{background:transparent;border:0;box-shadow:none;padding:0 16px 8px;margin:0;}
+body.sp #survey-intro{background:var(--card);border-radius:var(--r-l);padding:14px 16px;box-shadow:var(--shadow-s);
+  color:#374151!important;font-size:.88rem!important;}
+body.sp .sv-form .sv-identity{background:var(--card);border:0;border-radius:var(--r-l);padding:16px;box-shadow:var(--shadow-s);margin-bottom:14px;}
+body.sp .sv-form .sv-identity h2{font-size:.8rem;font-weight:800;color:var(--sub2);margin:0 0 8px;}
+body.sp .sv-form .sv-identity dl{font-size:.88rem;}
+body.sp .sv-form .sv-section{background:none;border:0;border-radius:0;padding:0 4px;margin:18px 0 12px;
+  font-size:1.35rem;font-weight:800;line-height:1.4;color:var(--ink2);}
+body.sp .sv-form .sv-question{background:var(--card);border-radius:22px;padding:18px 16px;margin:0 0 12px;box-shadow:var(--shadow-s);}
+body.sp .sv-form .sv-question>label{display:block;font-size:1rem;font-weight:800;color:var(--ink2);line-height:1.6;margin-bottom:10px;}
+body.sp .sv-required{font-size:.68rem;font-weight:800;border-radius:999px;padding:2px 8px;background:#FCE8EC;color:#B4234A;margin-left:8px;}
+body.sp .sv-form .sv-hint{color:var(--sub2);font-size:.8rem;margin:-4px 0 10px;}
+body.sp .sv-form .sv-options{gap:8px;}
+body.sp .sv-form .sv-option{min-height:52px;align-items:center;gap:12px;padding:10px 14px;border:2px solid var(--hair);
+  border-radius:14px;background:#fff;font-size:.95rem;font-weight:600;color:var(--ink2);-webkit-tap-highlight-color:transparent;}
+body.sp .sv-form .sv-option input[type=checkbox]{width:22px;height:22px;margin:0;accent-color:#1E7B34;}
+body.sp .sv-form .sv-option:has(input:checked){border-color:#1E7B34;background:#E6F4EA;}
+body.sp .sv-form .sv-option:has(input:disabled){opacity:.5;}
+body.sp .sv-form select,
+body.sp .sv-form input[type=text],
+body.sp .sv-form input[type=date]{width:100%;min-height:52px;border:2px solid transparent;border-radius:14px;background-color:#F3F4F6;
+  padding:0 14px;font:inherit;font-size:1rem;color:var(--ink2);}
+body.sp .sv-form select{-webkit-appearance:none;appearance:none;padding-right:40px;font-weight:600;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;}
+body.sp .sv-form select:focus,
+body.sp .sv-form input:focus{outline:none;border-color:var(--navy-2);background-color:#fff;}
+body.sp .sv-form [aria-invalid=true]{outline:none;border-color:#DC2626!important;}
+
+body.sp .sv-form .sv-options[aria-invalid=true]{border-radius:16px;box-shadow:0 0 0 2px #DC2626;}
+body.sp .sv-form .sv-field-error{font-size:.85rem;font-weight:700;color:#B42318;margin-top:8px;}
+/* 下のボタン（つぎへ・そうしん）は大きく */
+body.sp #scr-survey .sv-nav .btn,
+body.sp #scr-survey .sv-nav .sbtn.primary{height:56px;border-radius:18px;background:var(--navy);color:#fff;font-size:1rem;font-weight:800;
+  box-shadow:0 8px 20px rgba(14,58,99,.25);padding:0;}
+body.sp #scr-survey .msg{margin:10px 0 0;}

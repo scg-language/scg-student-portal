@@ -1843,7 +1843,10 @@ async function loadSurveyRounds(){
 function renderSurveyBadge(){
   const tot = openRounds.length, n = openRounds.filter(r=>respByRound[r.round_id]).length, b = $("survey-done-badge");
   b.hidden = (n===0);
-  b.textContent = (tot>0 && n===tot) ? t("sv.badge.all") : t("sv.badge.n",{n:n,t:tot});
+  /* メニューの格子のアイコンに付くので短く（✓ か n/t）。読み上げと長押しには元の文言を渡す */
+  const full = (tot>0 && n===tot) ? t("sv.badge.all") : t("sv.badge.n",{n:n,t:tot});
+  b.textContent = (tot>0 && n===tot) ? "✓" : n + "/" + tot;
+  b.title = full; b.setAttribute("aria-label", full);
 }
 function fmtDay(iso){ const d=new Date(iso); return (d.getMonth()+1)+"/"+d.getDate(); }
 /* 一覧: まだ答えていないもの → 答えたもの（ていしゅつ済みバッジ）の順に並べる */

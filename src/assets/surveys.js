@@ -148,8 +148,9 @@ const SURVEYS = [
 
   // 2027年1月の進路アンケート。旧 shinro_2026 の定義・回答は変更しない。
   // まず日本語・英語で内容を確認し、確定後に母語版とネイティブ確認へ進む。
-  // 実施対象の名簿・公開日・締切は実施回で設定する。この定義は確認用。
-  { key: "shinro_2027_jan_v1", schemaVersion: 1, previewOnly: true,
+  // 実施対象の名簿・公開日・締切は実施回で設定する（教師画面 master.html の「回を はじめる」）。
+  // 2026-11-15: previewOnly を外し、回を作れば学生のアプリに出るようにした。
+  { key: "shinro_2027_jan_v1", schemaVersion: 1,
     studentIdentity: true, sb: "Career", color: "#2f9e44",
     title: { ja: "進路アンケート（2027年1月）", en: "Career survey (January 2027)" },
     desc: { ja: "進学・就職の希望、費用、面談について", en: "Your future plans, study costs and guidance needs" },

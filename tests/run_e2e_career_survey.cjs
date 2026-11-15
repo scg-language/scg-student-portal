@@ -84,7 +84,7 @@ async function main(){
   await click('#preview-ja');await evaluate('window.scrollTo(0,0)');await screenshot('japanese-mobile.png');
   await navigate(path.join(repo,'src','index.html'),'typeof openSurvey==="function"&&typeof SurveyForm!=="undefined"');
   await evaluate('(()=>{api.profile={student_no:"DUMMY-JAN-001",display_name:"Preview student",class_name:"Preview class"};const def=SURVEYS.find(s=>s.key==="shinro_2027_jan_v1");window.offlineRound={round_id:"00000000-0000-0000-0000-000000000001",survey_key:def.key,title:"Offline verification",def};api.rpc=async()=>[offlineRound];api.get=async()=>[];return loadSurveyRounds();})()');
-  await check('Draft definition is excluded from the real student list','openRounds.length===0');
+  await check('January definition is listed once a round is open (previewOnly removed 2026-11-15)','openRounds.length===1&&openRounds[0].survey_key==="shinro_2027_jan_v1"');
   await evaluate('(()=>{window.offlineCalls=[];api.upsert=async(table,conflict,body)=>{offlineCalls.push({table,conflict,body:JSON.parse(JSON.stringify(body))});};openRounds=[offlineRound];openSurvey(offlineRound);})()');
   await check('Paged survey opens on page 1 of 4 with progress','surveyForm.pages().length===4&&surveyForm.page()===0&&document.getElementById("survey-step").textContent==="1 / 4"&&!document.getElementById("survey-prog").hidden&&document.getElementById("btn-survey-submit").hidden&&!document.getElementById("btn-survey-next").hidden&&document.getElementById("btn-survey-prev").hidden');
   await check('Only page-1 questions are visible','Array.from(document.querySelectorAll(".sv-question")).filter(x=>x.getClientRects().length>0).every(x=>surveyForm.pageOfKey(x.dataset.question)===0)');
@@ -115,7 +115,7 @@ async function main(){
   await check('Last page shows submit instead of next','surveyForm.page()===3&&!document.getElementById("btn-survey-submit").hidden&&document.getElementById("btn-survey-next").hidden');
   await set('jlpt_level','');await click('#btn-survey-submit');
   await check('Submit with an earlier unanswered question jumps back to that page','surveyForm.page()===0&&document.getElementById("sv-jlpt_level").getAttribute("aria-invalid")==="true"');
-  await set('jlpt_level','n4');
+  await set('jlpt_level','n4');await pause(1200); // let the smooth scroll to the error finish before clicking
   await click('#btn-survey-next');await click('#btn-survey-next');await click('#btn-survey-next');
   await evaluate('api.upsert=async()=>{throw new Error("Offline simulated failure");}');
   await click('#btn-survey-submit');
