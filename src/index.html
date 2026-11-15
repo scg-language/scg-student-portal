@@ -1359,7 +1359,13 @@ function renderHome(){
 
   /* アンケートの大きなカード */
   const hero = $("home-hero");
-  const todo = openRounds.filter(r => !respByRound[r.round_id]);
+  /* ★締切のある回（＝今回の実施回）を先に、締切の近い順。締切のない常設の回はその後ろ（元の並びのまま）。
+     先頭にするだけだと常設の回が先に来て、新しく作った回がカードに出なかった（2026-11-15 デモの回で発覚） */
+  const todo = openRounds.filter(r => !respByRound[r.round_id])
+    .map((r,i) => ({r,i})).sort((a,b) => {
+      const ca = a.r.closes_at ? Date.parse(a.r.closes_at) : Infinity, cb = b.r.closes_at ? Date.parse(b.r.closes_at) : Infinity;
+      return ca !== cb ? ca - cb : a.i - b.i;
+    }).map(x => x.r);
   if(!openRounds.length){ hero.hidden = true; }
   else if(todo.length){
     const r = todo[0];
