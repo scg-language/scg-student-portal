@@ -6,6 +6,8 @@
 <title>SCG 学生ポータル — マスター</title>
 <meta name="theme-color" content="#10365e">
 <link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/survey-form.css">
+<link rel="stylesheet" href="assets/admin.css">
 <style>
   /* マスター画面（佐々木がPCで見る前提。スマホでも崩れない）
      ★2026-09-12 に「管理画面 for 先生」から改名した。
@@ -158,7 +160,7 @@
   }
 </style>
 </head>
-<body>
+<body class="admui">
 <header>
   <div class="hin">
     <div class="eyebrow">SCG Student Portal — Master</div>
@@ -194,36 +196,38 @@
   <section id="scr-dash" hidden>
    <div class="adm">
 
+    <!-- 2026-11-16 新デザイン：濃い紫の左メニュー（管理①〜⑥）。
+         ★data-view の名前と各 view-* の id は変えていない（テストが押している）。並びと見出しだけ変えた。 -->
     <aside class="side">
-      <div class="sechead">いま動きます</div>
+      <div class="brand"><span class="lg"><img src="assets/logo-mark.png" alt=""></span>
+        <div><b>学生ポータル</b><span>STAFF ・ 管理</span></div></div>
       <div class="nav">
         <!-- 🔴 入口は「授業」ではなく「今日やること」（ヨリソルの失敗analysis 1番目）。
              ログイン直後にまず出るのはここ＝下の activeView 初期値・view-today の hidden 無しと対応。 -->
-        <button data-view="today" class="on"><span class="ico">📅</span>今日</button>
-        <button data-view="quiz"><span class="ico">📝</span>小テスト ライブ集計</button>
-        <button data-view="survey"><span class="ico">📋</span>アンケート 回答一覧</button>
-        <button data-view="qsets"><span class="ico">✏️</span>問題の登録・解放</button>
-        <button data-view="results"><span class="ico">📥</span>結果をまとめて書き出す</button>
-        <button data-view="editlog"><span class="ico">🧾</span>変更の履歴</button>
-        <button id="btn-qr"><span class="ico">📱</span>学生用QRを表示</button>
+        <button data-view="today" class="on"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg></span>今日</button>
+        <button data-view="quiz"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></span>小テスト</button>
+        <button data-view="survey"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg></span>アンケート 結果</button>
+        <button data-view="svbuild" class="sub">アンケートを 作る</button>
+        <button data-view="students"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.6-5.5 6.5-5.5s5.5 2 6.5 5.5"/></svg></span>学生</button>
+        <button data-view="notice"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg></span>お知らせ<span class="soon">イメージ</span></button>
       </div>
-      <div class="sechead">これから作る画面（イメージ）</div>
+      <div class="sechead">問題と記録</div>
       <div class="nav">
-        <button data-view="svbuild"><span class="ico">🧩</span>アンケートの作成<span class="soon">イメージ</span></button>
-        <button data-view="students"><span class="ico">👥</span>学生アカウント<span class="soon">イメージ</span></button>
-        <button data-view="notice"><span class="ico">📣</span>お知らせ配信<span class="soon">イメージ</span></button>
-        <button data-view="ops"><span class="ico">🛡</span>点検・バックアップ<span class="soon">イメージ</span></button>
-      </div>
-      <div class="nav" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px;">
+        <button data-view="qsets"><span class="ico">✎</span>問題の登録・解放</button>
+        <button data-view="results"><span class="ico">⇩</span>結果をまとめて書き出す</button>
+        <button data-view="editlog"><span class="ico">≡</span>変更の履歴</button>
+        <button id="btn-qr"><span class="ico">▦</span>学生用QRを表示</button>
+        <button data-view="ops"><span class="ico">◇</span>点検・バックアップ<span class="soon">イメージ</span></button>
         <!-- 🔴 行き来の口（2026-09-12 きあ指示）。先生画面とマスター画面を相互に行き来できるようにする。
              ★こちらは**常に出す**。この画面に入れているのはマスターだけで、
                マスターは先生画面にも入れるため（先生画面側は role で出し分けている）。
              ⓘ 学生画面には付けない（学生には行き先が無いため。きあ指示） -->
         <a id="go-teacher" href="teacher.html"
            title="授業中に使う画面（今日・はじめる・ライブ集計）へ"><span class="ico">→</span>先生の画面</a>
-        <div id="whoami" class="whoami" hidden></div>
         <button id="btn-logout"><span class="ico">⏏</span>ログアウト</button>
       </div>
+      <div class="me"><span class="av" id="me-av">?</span>
+        <div class="who"><b id="me-name"></b><div id="whoami" class="whoami" hidden></div></div></div>
     </aside>
 
     <div class="content">
@@ -232,7 +236,20 @@
            いま開いている実施回（クラス・残り時間・提出／対象）と、今日登録した回だけを見せる。
            ★個人別は出さない（quiz_stats の focus と同じ思想）。中身が無くても空白にしない。 -->
       <div id="view-today" data-viewpane>
-        <div class="dashhead"><span class="t">📅 今日</span></div>
+        <!-- 2026-11-16 新デザイン（管理③今日）。あいさつ・実施中の大きなカード・対応すること・近い締切。
+             ★対応することは「今のデータで数えられるもの」だけ（アンケート未提出・面談候補・実施中の回）。
+               再発行の依頼・出席・返信は仕組みが無いので出さない（作り話の数字を置かない）。 -->
+        <div class="a-head">
+          <div class="l"><span class="a-date" id="td-date"></span><h1 class="ah1" id="td-hello">今日</h1></div>
+          <div class="r"><button class="abtn" type="button" data-goto="survey">アンケート結果を 見る</button>
+            <button class="abtn pri" type="button" data-goto="qsets">小テストを はじめる</button></div>
+        </div>
+        <div id="td-live"></div>
+        <div class="a-row">
+          <div class="a-main">
+            <div class="a-head" style="margin-bottom:10px;"><h2 class="secttl" style="margin:0;">対応すること</h2><span class="muted" id="td-todo-n"></span></div>
+            <div id="td-todo"><div class="muted">読み込み中…</div></div>
+            <div style="height:12px;"></div>
         <div class="panel">
           <h2>いま開いている実施回</h2>
           <div id="today-runs"><div style="color:var(--sub)">読み込み中…</div></div>
@@ -245,15 +262,25 @@
             ⓘ 一覧（✏️ 問題の登録・解放）の「停止」は<b>別のもの</b>です＝
             そちらは<u>その回を学生に見せるかどうか</u>の切り替えで、時間とは関係ありません。</div>
         </div>
-        <div class="panel">
-          <h2>今日 登録した回</h2>
-          <div id="today-sets"><div style="color:var(--sub)">読み込み中…</div></div>
+          </div>
+          <div class="a-aside">
+            <div class="panel">
+              <h2>近い締切・試験</h2>
+              <div class="dues" id="td-dues"><div class="muted">読み込み中…</div></div>
+            </div>
+            <div class="panel">
+              <h2>今日 登録した回</h2>
+              <div id="today-sets"><div style="color:var(--sub)">読み込み中…</div></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- ══ 小テスト（動く） ══ -->
       <div id="view-quiz" data-viewpane hidden>
-        <div class="dashhead"><span class="t">📝 小テスト ライブ集計</span></div>
+        <div class="dashhead"><span class="t">小テスト</span>
+          <button class="abtn" type="button" data-goto="qsets">問題を 登録・直す</button>
+          <button class="abtn pri" type="button" data-goto="qsets">＋ 実施回を はじめる</button></div>
         <div class="panel">
           <!-- 絞り込み・検索（2026-09-11）: 一覧①と同じ理由・同じ考え方。テストが増えると
                「はじめる」の下敷きになるこの選択肢からも目当てのテストが見えなくなるため。 -->
@@ -277,6 +304,15 @@
           <!-- ★個人別は出さない。小テストは成績に反映しない＝罰の材料にしないため（方針 2026-09-06）。
                出すのはクラス全体の合計だけで、意味は「この回の数字をどれくらい信用するか」。 -->
           <div id="focus-note" class="focusnote" hidden></div>
+        </div>
+        <!-- 再テスト（2026-11-16 管理④）。線は正答率（％）で引く＝点数ではない（1問1点の決まり・配点で採点しない）。
+             ★名前を出すのは「再テストの連絡」のため。画面を離れた記録とは結び付けない（個人別に出さない方針）。 -->
+        <div class="panel" id="qz-retest">
+          <div class="a-head" style="margin-bottom:10px;"><h2 style="margin:0;">再テストの 対象</h2>
+            <div class="chips" role="radiogroup" aria-label="再テストの線" id="qz-th"></div></div>
+          <div id="qz-re-list"><div class="muted">提出待ち…</div></div>
+          <div class="btnrow"><button class="abtn sm" type="button" id="qz-re-copy">名前をコピー</button></div>
+          <div class="note">「明日は再テストです」の連絡・対象者だけの回づくりは、お知らせの仕組みができてからつなぎます。いまは名前をコピーして使ってください。</div>
         </div>
         <div class="panel">
           <h2>提出フィード</h2>
@@ -303,25 +339,46 @@
       </div>
 
       <!-- ══ アンケート（動く） ══ -->
+      <!-- 2026-11-16 新デザイン（管理①アンケート結果）。中身は assets/admin.js の AdminSurvey。
+           🔴 集計は「回（round_id）」で絞る（以前は survey_key で引いていて、取り消した回の答えも混ざっていた＝進捗ボード1G）。
+           ★対象は回の class_names / student_ids から出す（「A①クラス」決め打ちをやめた）。 -->
       <div id="view-survey" data-viewpane hidden>
-        <div class="stats">
-          <div class="stat"><div class="v" id="sv-count">0</div><div class="l">回答数</div></div>
-          <div class="stat"><div class="v" id="sv-rest">–</div><div class="l">未提出（次に支援する人）</div></div>
+        <div class="a-head">
+          <div class="l"><h1 class="ah1">アンケート 結果</h1>
+            <select id="sv-pick" class="abtn" style="max-width:100%;"></select>
+            <div class="chips" role="tablist" aria-label="回" id="sv-chips"></div></div>
+          <div class="r">
+            <label class="abtn" title="前の回（同じアンケート）の割合を細い棒で重ねます"><input type="checkbox" id="sv-compare"> 前の回と くらべる</label>
+            <select id="sv-class" class="abtn" aria-label="クラスで しぼる"><option value="">すべてのクラス</option></select>
+            <button class="abtn" type="button" id="sv-csv">CSVで書き出す</button>
+            <button class="abtn pri" type="button" id="sv-btn-newround">＋ 新しい回を はじめる</button>
+          </div>
         </div>
-        <div class="panel">
-          <h2>アンケート 回答一覧</h2>
-          <select id="sv-pick" style="font-family:inherit;font-size:1rem;padding:8px 12px;margin:2px 0 12px;border:1px solid var(--line);border-radius:10px;max-width:100%;"></select>
-          <div class="feed" id="sv-list" style="max-height:460px;"><div style="color:var(--sub)">回答待ち…</div></div>
+        <div class="kcards">
+          <div class="kcard"><span class="k">提出</span><div class="v"><b id="sv-count">0</b><span id="sv-of"></span></div><span class="s" id="sv-bycls"></span></div>
+          <div class="kcard"><span class="k">未提出</span><div class="v"><b id="sv-rest">–</b><span>人</span></div><span class="s">「未提出」のタブで名前が見られます</span></div>
+          <div class="kcard or"><span class="k">面談候補</span><div class="v"><b id="sv-flagn">–</b><span>人</span></div><span class="s">目立たせる答えが1つ以上</span></div>
+          <div class="kcard"><span class="k">締切</span><div class="v"><b id="sv-due" style="font-size:1.4rem;">–</b></div><span class="s" id="sv-due-s"></span></div>
         </div>
+        <div class="tabs" role="tablist" id="sv-tabs">
+          <button class="tab" role="tab" data-tab="sum" aria-selected="true">集計</button>
+          <button class="tab" role="tab" data-tab="each">一人ずつ<span class="n" id="sv-tn-each"></span></button>
+          <button class="tab" role="tab" data-tab="rest">未提出<span class="n" id="sv-tn-rest"></span></button>
+          <button class="tab or" role="tab" data-tab="flag">面談候補<span class="n" id="sv-tn-flag"></span></button>
+        </div>
+        <div id="sv-tab-sum"><div class="muted">読み込み中…</div></div>
+        <div id="sv-tab-each" hidden><div class="panel"><div class="awrap" id="sv-list"><div class="muted">回答待ち…</div></div></div></div>
+        <div id="sv-tab-rest" hidden><div class="panel" id="sv-rest-box"></div></div>
+        <div id="sv-tab-flag" hidden><div class="panel" id="sv-flag-box"></div></div>
+        <div class="msg" id="sv-msg" style="display:none;"></div>
         <!-- ══ アンケートの回（2026-09-11・余力枠）══
              小テストの「はじめる」と同じ考え方。★粒度が違う＝複数クラスに同時に出せる（月×学年で1本）。
              一意制約は (survey_key, title) なので、同じ題名は二度作れない（db側で保証） -->
         <div class="panel">
-          <h2>この アンケートの回</h2>
+          <h2>この アンケートの回（閉じる・取り消し）</h2>
           <div class="note"><b>回</b>ごとに集める（毎月おなじアンケートを取れる）。締切は省けます（ずっと開いたまま）。
             🔴 <b>クラスごとに何本も作らないこと</b>（例: 1年生全員なら1本にまとめる。5クラス分作ると全体の傾向が見えなくなる）。</div>
           <div id="sv-rounds-list"><div style="color:var(--sub)">読み込み中…</div></div>
-          <div class="btnrow"><button class="btn" id="sv-btn-newround" type="button" style="width:auto;">＋ 新しい回を はじめる</button></div>
           <div class="msg" id="sv-rounds-msg" style="display:none;"></div>
         </div>
       </div>
@@ -564,92 +621,76 @@
         </div>
       </div>
 
+      <!-- ══ アンケートを作る（2026-11-16 管理②）══
+           ★定義は assets/surveys.js（コード）にある。画面で書き換える仕組みは無い＝ここは「読む・見え方を確かめる・回をはじめる」。
+             画面で作れるようにするには定義を DB に置く判断が要る（指示書§4）。 -->
       <div id="view-svbuild" data-viewpane hidden>
-        <div class="mockflag">🖼 画面イメージ（まだ動きません）— 一覧は本物の定義（assets/surveys.js）から出している。作成フォームはイメージ</div>
-        <div class="panel">
-          <h2>アンケート一覧（いま学生に出ているもの）</h2>
-          <div class="tblwrap"><table class="tbl" id="svbuild-list">
-            <tr><th>名前</th><th>English</th><th class="num">質問数</th><th>対象</th><th>状態</th></tr>
-          </table></div>
+        <div class="a-head">
+          <div class="l"><h1 class="ah1">アンケートを 作る</h1>
+            <select id="bld-pick" class="abtn" aria-label="アンケート"></select></div>
+          <div class="r"><button class="abtn pri" type="button" id="bld-start">この アンケートの 回を はじめる</button></div>
         </div>
-        <div class="panel">
-          <h2>新しいアンケートを作る</h2>
-          <div class="form2">
-            <div class="field"><label>タイトル（やさしい日本語）</label><input type="text" placeholder="れい: ふゆやすみの よてい"></div>
-            <div class="field"><label>Title (English)</label><input type="text" placeholder="e.g. Winter holiday plans"></div>
-            <div class="field"><label>対象クラス</label><select><option>全クラス</option><option>A①</option><option>A②</option></select></div>
-            <div class="field"><label>締切</label><input type="text" placeholder="12/10"></div>
+        <div class="mockflag">質問の中身は <b>assets/surveys.js</b> に書いてあり、この画面では書き換えられません（直すときは定義を直して公開します）。
+          ここでは<b>中身の確認・学生の画面での見え方・回をはじめる</b>ができます。オレンジは「結果で目立たせる」旗の付いた選択肢です。</div>
+        <div class="bld">
+          <div class="col"><div id="bld-list"></div></div>
+          <div class="col" id="bld-detail"></div>
+          <div class="col pv">
+            <div class="a-head" style="margin:0 0 10px;"><b>学生の画面での見え方</b>
+              <div class="chips"><button class="chip on" type="button" data-bld-lang="ja">日本語</button><button class="chip" type="button" data-bld-lang="en">English</button></div></div>
+            <div class="phone"><div id="bld-preview"></div></div>
+            <div class="note">見本です。ここで入力しても保存されません。</div>
           </div>
-          <div class="field"><label>質問 1</label>
-            <div class="form2">
-              <input type="text" placeholder="しつもんぶん（やさしい日本語）">
-              <select><option>えらぶ（1つ）</option><option>じゆうに かく</option></select>
-            </div>
-            <input type="text" placeholder="せんたくし（、で区切る）: にほんに いる、くにに かえる、りょこう" style="margin-top:8px;">
-          </div>
-          <div class="btnrow">
-            <button class="btn ghost" type="button">＋ 質問を足す</button>
-            <button class="btn ghost" type="button">翻訳の下書きを作る（英・中・ネパール・ミャンマー・シンハラ・ベンガル）</button>
-            <button class="btn" type="button">保存して公開</button>
-          </div>
-          <div class="note">翻訳の下書きは学校の翻訳確認スタッフが確認してから公開する。学生の回答は言語に関係なく同じ値で保存されるので集計がずれない。</div>
         </div>
+        <div class="msg" id="bld-msg" style="display:none;"></div>
       </div>
 
-      <!-- ══ イメージ: 学生アカウント ══ -->
+      <!-- ══ 学生（2026-11-16 管理⑤）══
+           ★出しているのはデモDBにある項目だけ（学籍番号・名前・クラス・小テスト・アンケート）。
+             出席率・担任・最終ログイン・パスワード再発行・アカウント停止は、つなぎこみと管理用の権限が無いので出さない。 -->
       <div id="view-students" data-viewpane hidden>
-        <div class="mockflag">🖼 画面イメージ（まだ動きません）— 本番では学生名簿から氏名・クラスを取り込んで一括発行する。ここに出ている学生はすべて架空</div>
-        <div class="kpi">
-          <div class="stat"><div class="v">40</div><div class="l">有効なアカウント</div><div class="s">A① 20・A② 20（ダミー）</div></div>
-          <div class="stat"><div class="v">31</div><div class="l">初回ログイン済み</div><div class="s">未ログイン 9名に声かけ</div></div>
-          <div class="stat"><div class="v">3</div><div class="l">初期パスワードのまま</div><div class="s">変更を促す</div></div>
-        </div>
-        <div class="panel">
-          <h2>学生アカウント</h2>
-          <div class="btnrow" style="margin-bottom:12px;">
-            <button class="btn" type="button">Excelから一括発行</button>
-            <button class="btn ghost" type="button">初期パスワードを再発行</button>
-            <button class="btn ghost" type="button">卒業・退学で停止</button>
+        <div class="a-head"><div class="l"><h1 class="ah1">学生</h1><span class="muted" id="st-sum"></span></div></div>
+        <div class="filters">
+          <input type="search" id="st-q" placeholder="名前・学籍番号で さがす" aria-label="名前・学籍番号で さがす">
+          <select id="st-cls" aria-label="クラス"><option value="">すべてのクラス</option></select>
+          <div class="chips" id="st-flt">
+            <button class="chip on" type="button" data-f="">すべて</button>
+            <button class="chip" type="button" data-f="nosv">アンケート未提出</button>
+            <button class="chip" type="button" data-f="low">小テスト 60%未満</button>
           </div>
-          <div class="tblwrap"><table class="tbl">
-            <tr><th>学籍番号</th><th>名前</th><th>クラス</th><th>パスワード</th><th>最終ログイン</th><th>状態</th></tr>
-            <tr><td>s001</td><td>成基太郎1</td><td>A①</td><td><span class="pill on">変更済み</span></td><td>9/3 21:10</td><td><span class="pill on">有効</span></td></tr>
-            <tr><td>s002</td><td>成基太郎2</td><td>A①</td><td><span class="pill on">変更済み</span></td><td>9/3 20:42</td><td><span class="pill on">有効</span></td></tr>
-            <tr><td>s003</td><td>成基太郎3</td><td>A①</td><td><span class="pill warn">初期のまま</span></td><td>—</td><td><span class="pill on">有効</span></td></tr>
-            <tr><td>s004</td><td>成基太郎4</td><td>A①</td><td><span class="pill on">変更済み</span></td><td>9/3 01:05</td><td><span class="pill on">有効</span></td></tr>
-            <tr><td>s021</td><td>成基太郎21</td><td>A②</td><td><span class="pill on">変更済み</span></td><td>8/30 09:12</td><td><span class="pill off">停止（卒業）</span></td></tr>
-          </table></div>
-          <div class="note">発行の流れ（本番案）: 学生名簿から対象を選ぶ → 初期パスワードつきのカードを印刷 → 学生が初回ログインで変更（強制）。同意書に外部サーバー利用を明記してから運用する。</div>
         </div>
+        <div class="panel"><div class="awrap" id="st-table"><div class="muted">読み込み中…</div></div></div>
+        <div class="note">出席率・担任・最終ログイン・パスワード再発行は、学生マスタDBとのつなぎこみと管理用の権限ができてから足します。</div>
       </div>
 
-      <!-- ══ イメージ: お知らせ配信 ══ -->
+      <!-- ══ イメージ: お知らせ（2026-11-16 管理⑥・まだ動かない）══
+           送る・既読・返信・翻訳・予約には、表と保存場所と送る仕組みが要る（指示書§4）。作り話の数字は置かない。 -->
       <div id="view-notice" data-viewpane hidden>
-        <div class="mockflag">🖼 画面イメージ（まだ動きません）— 学生画面の「おしらせ」に出す連絡をここから配信する</div>
-        <div class="panel">
-          <h2>お知らせを配信する</h2>
-          <div class="form2">
-            <div class="field"><label>タイトル（やさしい日本語）</label><input type="text" placeholder="れい: 12月の JLPT の もうしこみ"></div>
-            <div class="field"><label>対象</label><select><option>全学生</option><option>A①</option><option>A②</option><option>N2 受験者</option></select></div>
-            <div class="field"><label>掲示期間</label><input type="text" placeholder="9/5 〜 9/20"></div>
-            <div class="field"><label>重要度</label><select><option>ふつう</option><option>大事（上に固定）</option></select></div>
+        <div class="a-head"><div class="l"><h1 class="ah1">お知らせ</h1></div></div>
+        <div class="mockflag">画面イメージ（まだ動きません）— 送る仕組み・保存場所が決まってから作ります。宛先の人数は本物の名簿から数えています。</div>
+        <div class="a-row">
+          <div class="a-main">
+            <div class="panel">
+              <h2>宛先</h2>
+              <div class="chips" id="nt-to"><button class="chip on" type="button" data-to="">全員</button></div>
+              <div class="note" id="nt-count"></div>
+              <h2 style="margin-top:16px;">種類</h2>
+              <div class="chips" id="nt-kind"><button class="chip on" type="button">ふつう</button><button class="chip" type="button">重要</button><button class="chip" type="button">緊急（休校など）</button></div>
+              <div class="field" style="margin-top:16px;"><label for="nt-subj">件名（やさしい日本語）</label><input type="text" id="nt-subj" placeholder="れい: ふゆやすみの きかん"></div>
+              <div class="field"><label for="nt-body">本文</label><textarea id="nt-body" placeholder="12がつ 24にち から 1がつ 6にち まで やすみです。"></textarea></div>
+              <label class="chk"><input type="checkbox" disabled><span>自動翻訳（日本語と並べる）</span></label>
+              <label class="chk"><input type="checkbox" disabled><span>返信を受け付ける</span></label>
+              <label class="chk"><input type="checkbox" disabled><span>予約して送る</span></label>
+              <div class="btnrow"><button class="abtn pri" type="button" disabled>送る（準備中）</button></div>
+            </div>
           </div>
-          <div class="field"><label>本文（やさしい日本語）</label><textarea placeholder="12がつ の JLPT を うける ひとは、9がつ 20にち までに じむしつ で もうしこんで ください。"></textarea></div>
-          <div class="btnrow">
-            <button class="btn ghost" type="button">翻訳の下書きを作る（6言語）</button>
-            <button class="btn ghost" type="button">学生画面でプレビュー</button>
-            <button class="btn" type="button">配信する</button>
+          <div class="a-aside">
+            <div class="panel"><h2>学生の画面での見え方</h2>
+              <div class="phone" style="height:auto;min-height:260px;"><div style="background:#fff;border-radius:18px;padding:14px 16px;">
+                <div style="font-size:.72rem;color:#6B7280;">おしらせ</div>
+                <div style="font-weight:800;margin:4px 0 6px;" id="nt-pv-subj">（件名）</div>
+                <div style="font-size:.88rem;white-space:pre-line;" id="nt-pv-body">（本文）</div></div></div></div>
           </div>
-          <div class="note">翻訳は下書きを自動で作り、翻訳確認スタッフの承認後に各言語で表示する（承認前は日本語だけ）。</div>
-        </div>
-        <div class="panel">
-          <h2>配信履歴</h2>
-          <div class="tblwrap"><table class="tbl">
-            <tr><th>配信日</th><th>タイトル</th><th>対象</th><th class="num">既読</th><th>状態</th></tr>
-            <tr><td>9/1</td><td>9がつ の よてい</td><td>全学生</td><td class="num">86%</td><td><span class="pill on">掲示中</span></td></tr>
-            <tr><td>8/25</td><td>JPT の けっか を くばります</td><td>A①</td><td class="num">100%</td><td><span class="pill off">終了</span></td></tr>
-            <tr><td>8/20</td><td>たいふう の とき の れんらく</td><td>全学生</td><td class="num">92%</td><td><span class="pill off">終了</span></td></tr>
-          </table></div>
         </div>
       </div>
 
@@ -776,6 +817,9 @@
 <script src="assets/surveys.js"></script>
 <script src="assets/ruby.js"></script>
 <script src="assets/fmt-import.js"></script>
+<script src="assets/exam-dates.js"></script>
+<script src="assets/survey-form.js"></script>
+<script src="assets/admin.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 function err(id,t){ const m=$(id); m.className="msg err"; m.textContent=t; }
@@ -1016,7 +1060,7 @@ $("btn-login").onclick = async () => {
   finally{ $("btn-login").disabled=false; }
 };
 $("in-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") $("btn-login").click(); });
-$("btn-logout").onclick = ()=>{ clearInterval(timer); api.logout(); location.reload(); };
+$("btn-logout").onclick = ()=>{ clearInterval(timer); document.body.classList.remove("authed"); api.logout(); location.reload(); };
 
 /* 左の一覧 → 右の中身。動く2つはタブ切替のたびに最新を取りにいく */
 document.querySelectorAll(".nav [data-view]").forEach(b=>{ b.onclick = ()=>setView(b.getAttribute("data-view")); });
@@ -1288,6 +1332,7 @@ function setView(v){
   if(v==="editlog") showEditLog();
   if(v==="results") ensureResultFilters();
   if(v==="quiz"||v==="survey"||v==="today") tick();
+  Admin.onView(v);   // 新デザインの画面（assets/admin.js）。学生・アンケートを作る・お知らせ・今日の追加分
   if(v==="qsets"){
     // hashが変われば hashchange 経由で routeQsets() が呼ばれる。既に #qsets 系なら変わらないので直接呼ぶ
     if(location.hash.startsWith("#qsets")) routeQsets(); else location.hash = "#qsets";
@@ -2160,6 +2205,8 @@ function showWhoAmI(){
 
 async function start(){
   showWhoAmI();
+  document.body.classList.add("authed");
+  Admin.init();
   await ensureQpFilters();
   const sets = await loadQuizPickOptions();
   if(!sets.length){ err("login-msg","クイズセットがありません"); return; }
@@ -2208,7 +2255,7 @@ $("qp-filter-q").oninput = ()=>{
 
 async function tick(){
   try{
-    if(activeView==="today") await tickToday();
+    if(activeView==="today") await Promise.all([ tickToday(), Admin.today.tick() ]);
     else if(activeView==="quiz") await tickQuiz();
     else if(activeView==="survey") await Promise.all([ tickSurvey(), renderSurveyRounds() ]);
   }catch(e){ /* 一時的な失敗は次のtickで回復 */ }
@@ -2375,6 +2422,7 @@ async function tickQuiz(){
         "<span class='fscore'>"+a.score+"/"+a.total+"</span><span class='ftime'>"+t+"</span></div>";
     }).join("");
   }
+  Admin.quiz.retest(s.attempts);   // 再テストの対象（正答率の線で引く・assets/admin.js）
   lastCount=n;
 }
 
@@ -2493,36 +2541,13 @@ function svDef(){ return SURVEYS.find(s=>s.key===svKey) || SURVEYS[0]; }
 $("sv-pick").innerHTML = SURVEYS.map(s=>"<option value='"+s.key+"'>"+esc(s.title.ja)+"</option>").join("");
 $("sv-pick").onchange = ()=>{
   svKey = $("sv-pick").value;
-  $("sv-list").innerHTML = "<div style='color:var(--sub)'>読み込み中…</div>";
-  tickSurvey().catch(()=>{});
+  Admin.survey.pickKey(svKey);
   renderSurveyRounds().catch(()=>{});
 };
-async function tickSurvey(){
-  // 学生総数（初回だけ取得）: 未提出数 = 次に支援する人 の算出用
-  // デモではA①クラス（成基太郎1〜20）を対象クラスとして数える。本番はクラス選択UIに置き換える
-  if(studentTotal===null){
-    const all = await api.get("/rest/v1/profiles?select=id&role=eq.student&class_name=eq."+encodeURIComponent("A①クラス"));
-    studentTotal = all.length;
-  }
-  const rows = await api.get("/rest/v1/survey_responses?select=answers,submitted_at,profiles(student_no,display_name)&survey_key=eq."+svKey+"&order=submitted_at.desc");
-  $("sv-count").textContent = rows.length;
-  $("sv-rest").textContent = Math.max(0, studentTotal - rows.length);
-  if(rows.length){
-    const def = svDef();
-    $("sv-list").innerHTML = rows.map(r=>{
-      const t = new Date(r.submitted_at).toLocaleString("ja-JP",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
-      const a = r.answers||{};
-      return "<div class='svrow'><div class='svhead'>"+
-        "<span class='fname'>"+esc(r.profiles.display_name)+"（"+esc(r.profiles.student_no)+"）</span>"+
-        "<span class='ftime'>"+t+"</span></div>"+
-        "<div class='svans'>"+
-        def.q.map(q=>"<span>"+esc(q.sl)+": <b>"+esc(optLabel(q, a[q.k]))+"</b></span>").join("")+
-        "</div></div>";
-    }).join("");
-  }else{
-    $("sv-list").innerHTML = "<div style='color:var(--sub)'>回答待ち…</div>";
-  }
-}
+/* ★2026-11-16 から中身は assets/admin.js の AdminSurvey（回＝round_id で絞った集計）。
+   以前は survey_key で引いていたので、取り消した回の答えも混ざっていた（進捗ボード1G）。
+   2秒ごとの tick から呼ばれるが、読み直しは admin.js の側で間をあける。 */
+async function tickSurvey(){ await Admin.survey.tick(); }
 
 /* アンケートの回の一覧・操作（余力枠・2026-09-11）。小テストの「今日」パネルと同じ考え方だが、
    締切が無い回（常設）もあるので残り時間の表現はしない。teacher は survey_rounds を直接読める
@@ -2594,13 +2619,9 @@ $("sv-btn-newround").onclick = async ()=>{
   const r = await openSurveyRoundDialog(svKey);
   if(!r) return;
   await renderSurveyRounds();
+  Admin.survey.reload();
   svRoundsMsg("「"+r.title+"」を はじめました"+(r.target_count!=null ? "（"+r.target_count+"人対象）" : "")+"。");
 };
-
-/* イメージ「アンケートの作成」の一覧は本物の定義から出す（定義を足せばここにも出る） */
-$("svbuild-list").insertAdjacentHTML("beforeend", SURVEYS.map(s=>
-  "<tr><td>"+esc(s.title.ja)+"</td><td>"+esc(s.title.en||"")+"</td><td class='num'>"+s.q.length+"</td><td>全クラス</td><td><span class='pill on'>公開中</span></td></tr>"
-).join(""));
 
 /* QR */
 let qrDone=false;

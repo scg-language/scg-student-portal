@@ -95,7 +95,8 @@ class TestCareerSurveyDefinition(unittest.TestCase):
             if isinstance(value, dict):
                 if "ja" in value:
                     self.assertTrue({"ja", "en"}.issubset(value))
-                    self.assertFalse(set(value) - {"ja", "en", "v"})
+                    # flag＝管理画面で目立たせる理由の札（2026-11-16）。言語ではないので許す
+                    self.assertFalse(set(value) - {"ja", "en", "v", "flag"})
                     self.assertTrue(value["ja"].strip())
                     self.assertTrue(value["en"].strip())
                 for child in value.values():

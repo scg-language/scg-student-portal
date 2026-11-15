@@ -150,6 +150,8 @@ const SURVEYS = [
   // まず日本語・英語で内容を確認し、確定後に母語版とネイティブ確認へ進む。
   // 実施対象の名簿・公開日・締切は実施回で設定する（教師画面 master.html の「回を はじめる」）。
   // 2026-11-15: previewOnly を外し、回を作れば学生のアプリに出るようにした。
+  /* flag: "理由" ＝ 管理画面の結果で目立たせる選択肢（オレンジ・面談候補に入る。2026-11-16）。
+     ★保存する値（v）は変えていない＝学生の画面と回答には影響しない。どれに付けるかは進路指導部で見直してよい。 */
   { key: "shinro_2027_jan_v1", schemaVersion: 1,
     studentIdentity: true, sb: "Career", color: "#2f9e44",
     title: { ja: "進路アンケート（2027年1月）", en: "Career survey (January 2027)" },
@@ -207,7 +209,7 @@ const SURVEYS = [
           { v: "university", ja: "大学", en: "University" },
           { v: "graduate_school", ja: "大学院", en: "Graduate school" },
           { v: "employment", ja: "就職", en: "Employment" },
-          { v: "undecided", ja: "まだ決まっていない・悩んでいる", en: "Not decided yet / still considering" },
+          { v: "undecided", ja: "まだ決まっていない・悩んでいる", en: "Not decided yet / still considering", flag: "進路未定" },
         ] },
       { k: "job", t: "select", section: "plans", required: true, sl: "希望する仕事",
         l: { ja: "将来やってみたい仕事", en: "What kind of work would you like to do in the future?" },
@@ -285,15 +287,15 @@ const SURVEYS = [
           { v: "family", ja: "母国の家族から送ってもらう", en: "Money sent by my family in my home country" },
           { v: "savings", ja: "自分で貯めたお金から払う", en: "My savings" },
           { v: "part_time_installments", ja: "アルバイト代で分けて払いたい", en: "I would like to pay in installments using my part-time income" },
-          { v: "scholarship_needed", ja: "奨学金がないと払えない", en: "I cannot pay without a scholarship" },
-          { v: "unknown", ja: "分からない・相談したい", en: "I am not sure / I would like advice" },
+          { v: "scholarship_needed", ja: "奨学金がないと払えない", en: "I cannot pay without a scholarship", flag: "学費" },
+          { v: "unknown", ja: "分からない・相談したい", en: "I am not sure / I would like advice", flag: "学費" },
         ] },
       { k: "family_status", t: "select", section: "finance", required: true, sl: "家族の同意",
         l: { ja: "進学について、家族と相談していますか", en: "Have you discussed your further study plans with your family?" },
         o: [
           { v: "agree", ja: "家族は賛成している", en: "My family agrees with my plans" },
           { v: "discussing", ja: "今、家族と相談している", en: "I am discussing my plans with my family" },
-          { v: "not_yet", ja: "まだ家族に話していない", en: "I have not talked to my family yet" },
+          { v: "not_yet", ja: "まだ家族に話していない", en: "I have not talked to my family yet", flag: "家族にまだ話していない" },
         ] },
       { k: "family_talk_by", t: "date", section: "finance", required: true,
         showWhen: { key: "family_status", is: "not_yet" }, sl: "家族と話す予定日",
@@ -303,16 +305,16 @@ const SURVEYS = [
         exclusive: ["none"],
         o: [
           { v: "plans", ja: "やりたいことや行きたい学校が見つからない", en: "I cannot find work I want to do or a school I want to attend" },
-          { v: "money", ja: "学費や生活費が払えるか心配", en: "I am worried about paying tuition or living costs" },
-          { v: "attendance", ja: "出席率が足りるか心配", en: "I am worried about my attendance rate" },
+          { v: "money", ja: "学費や生活費が払えるか心配", en: "I am worried about paying tuition or living costs", flag: "学費" },
+          { v: "attendance", ja: "出席率が足りるか心配", en: "I am worried about my attendance rate", flag: "出席率" },
           { v: "japanese", ja: "日本語（面接や作文）に自信がない", en: "I am not confident in my Japanese for interviews or writing" },
-          { v: "family_opposes", ja: "家族に反対されている", en: "My family is against my plans" },
+          { v: "family_opposes", ja: "家族に反対されている", en: "My family is against my plans", flag: "家族に反対" },
           { v: "none", ja: "特になし", en: "No particular concerns" },
         ] },
       { k: "interview_preference", t: "select", section: "support", required: true, sl: "面談の希望",
         l: { ja: "先生との面談について", en: "When would you like to talk with a teacher?" },
         o: [
-          { v: "soon", ja: "できるだけ早く相談したい", en: "I would like to talk as soon as possible" },
+          { v: "soon", ja: "できるだけ早く相談したい", en: "I would like to talk as soon as possible", flag: "早く相談したい" },
           { v: "regular", ja: "通常の予定（1〜2月）でよい", en: "The regular schedule (January–February) is fine" },
         ] },
     ] },
