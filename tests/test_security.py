@@ -184,6 +184,12 @@ class TestSecurity(unittest.TestCase):
                     {"round_id": rid, "survey_key": "test_ui", "answers": {"job": "テスト"}}, UP)
         self.check("学生はアンケートを提出できる（本人扱いで保存）", st in (200, 201), str(st))
         st, _ = req("/rest/v1/survey_responses", self.stok,
+                    {"round_id": rid, "survey_key": "shinro_2026", "answers": {}})
+        self.check("回と異なる設問キーでは直接提出できない", st in (401, 403), str(st))
+        st, _ = req("/rest/v1/survey_responses", self.stok,
+                    {"round_id": None, "survey_key": "test_ui", "answers": {}})
+        self.check("回を指定しない直接提出はできない", st in (401, 403), str(st))
+        st, _ = req("/rest/v1/survey_responses", self.stok,
                     {"student_id": "00000000-0000-0000-0000-000000000000",
                      "survey_key": "test_rls_fake", "answers": {}})
         self.check("学生は他人名義でアンケートを出せない", st in (401, 403))
