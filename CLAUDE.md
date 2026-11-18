@@ -309,6 +309,15 @@
   回答の本人・回・`survey_key` は学生による更新時に変更できない。過去回答の読み取り条件は維持。
   `tests/sql/survey_response_write_guard.sql` は既存ダミーで11ケースを試し、追加した回・回答を全てロールバックする。
 
+**アンケート定義を DB に置く（2026-11-18 きあ決定・`db/2026-11-18_survey_defs.sql`・本番へ適用済み）**
+- 表 `survey_defs`（key＝`u`＋日付＋`_`＋6文字をサーバーが付ける＝surveys.js のキーとぶつからない）。
+  作る・直す＝`save_survey_def`、公開・下書き・しまう＝`set_survey_def_status`。**マスターだけ**（`is_master()`）
+- 学生は公開中だけ読める／職員は全部読める／表へ直接は誰も書けない（適用直後に匿名・学生・先生で確認）
+- 🔴 その key で回を1本でもはじめたら**直せない・公開をやめられない**（回答の意味が変わるため）＝直すなら複製して新しい key
+- `start_survey_round` は「表にあって公開中でない key」を断る（surveys.js の既存5本は表に無い＝今までどおり通る）
+- ⚠ **画面はまだ**（master.html の「アンケートを作る」は定義を読むだけのまま）。学生画面が `survey_defs` から定義を引く処理も未実装
+- advisor の WARN が2件増える（`save_survey_def` / `set_survey_def_status`＝内部で `is_master()` 検証・仕様）
+
 ★**`survey_responses` には消す口が無い**（「学生は自分の回答を消せない」方針）。だから
 **検査は毎回おなじ回へ上書きする**形にしてある（`test_ui` の「検査用」「検査用2」。
 `db/2026-09-11_survey_rounds_phase2.sql` が常設で作る）。
