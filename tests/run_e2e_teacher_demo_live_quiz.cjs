@@ -218,7 +218,15 @@ async function main(){
     await pause(400);await student.click('#sheet-submit');
     await student.wait('!document.getElementById("scr-result").hidden','the server grades the real submission');
     check('Only one real submit RPC was sent to the expected fixture run',student.submitCount===1&&student.submittedToExpectedRun===true);
-    check('Student result has three question marks',await student.evaluate('document.querySelectorAll("#r-list .rmk").length===3'));
+    // 2026-11-18: the student sees only the score; per-question marks would reveal two-choice answers.
+    check('Student result shows only the score (no per-question marks)',await student.evaluate('/^\d+$/.test(document.getElementById("r-score").textContent)&&document.querySelectorAll(".rmk").length===0'));
+    // 2026-11-18: one submission per run. The list marks it as submitted with the score, and tapping it
+    // shows the score again instead of reopening the quiz.
+    await student.evaluate('document.getElementById("btn-gotest").click()');
+    await student.wait('Array.from(document.querySelectorAll("#quiz-list .row")).some(row=>row.querySelector(".nm")?.textContent==="2台運用 動作確認テスト"&&row.dataset.done==="1")','the submitted quiz is marked as done in the list');
+    await student.evaluate('Array.from(document.querySelectorAll("#quiz-list .row")).find(row=>row.querySelector(".nm")?.textContent==="2台運用 動作確認テスト").click()');
+    await student.wait('!document.getElementById("scr-result").hidden','tapping a submitted quiz shows its score');
+    check('A submitted quiz cannot be reopened from the list',await student.evaluate('document.getElementById("scr-quiz").hidden&&/^\d+$/.test(document.getElementById("r-score").textContent)'));
     await phone.wait('__twoDevicePreview.getState().run.submittedCount===1','teacher receives the real student submission',50000);
     await room.wait('__teacherDemoDisplay.getProjection().submitted===1&&__teacherDemoDisplay.getProjection().target===40','classroom receives one of forty real submissions',50000);
     check('Teacher and classroom both show one real submission',await phone.evaluate('__twoDevicePreview.getState().run.submittedCount===1')&&await room.evaluate('__teacherDemoDisplay.getProjection().submitted===1'));

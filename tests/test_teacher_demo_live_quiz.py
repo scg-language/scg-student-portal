@@ -114,24 +114,29 @@ class TeacherDemoLiveQuiz(unittest.TestCase):
     def test_05_existing_submit_endpoint_reaches_both_views(self):
         state = self.load()
         questions = state['tests'][0]['questions']
-        require_ok(self.rpc(self.student, 'submit_attempt', {
+        result = require_ok(self.rpc(self.student, 'submit_attempt', {
             'p_quiz_set_id': state['tests'][0]['id'], 'p_run_id': self.run_id,
             'p_answers': {q['id']: q['correctIndex'] + 1 for q in questions}, 'p_duration_ms': 3000,
         }), 'Existing student submission')
+        # 2026-11-18: 提出の返事に正誤・正解・解説を入れない（点数だけ）
+        self.assertEqual(result.get('results'), [])
+        self.assertEqual((result.get('score'), result.get('total')), (len(questions), len(questions)))
         self.assertEqual(self.load()['run']['submittedCount'], 1)
         self.assertEqual(self.display()['submitted'], 1)
         self.assertIsNone(self.display()['question'])
 
-    def test_06_resubmission_counts_one_student_and_latest_answers(self):
+    def test_06_second_submission_to_the_same_run_is_refused(self):
+        # 2026-11-18（校長らの意見）: 小テストは実施回ごとに1回だけ。2回目はサーバーが断り、最初の答えが残る。
         state = self.load()
-        require_ok(self.rpc(self.student, 'submit_attempt', {
+        status, body = self.rpc(self.student, 'submit_attempt', {
             'p_quiz_set_id': state['tests'][0]['id'], 'p_run_id': self.run_id,
             'p_answers': {q['id']: 1 for q in state['tests'][0]['questions']}, 'p_duration_ms': 4000,
-        }), 'Existing student repeat submission')
+        })
+        self.assertEqual(status, 409)
+        self.assertIn('already submitted', str((body or {}).get('message', '')))
         state = self.load()
         self.assertEqual(state['run']['submittedCount'], 1)
-        self.assertEqual(state['run']['submissions'][0]['answers'], [0, 0, 0])
-        self.assertAlmostEqual(state['run']['average'], 33.3, places=1)
+        self.assertAlmostEqual(state['run']['average'], 100.0, places=1)
         self.assertEqual(self.display()['submitted'], 1)
 
     def test_07_extend_end_and_review_use_the_real_run(self):
@@ -155,7 +160,7 @@ class TeacherDemoLiveQuiz(unittest.TestCase):
         self.assertIsNone(self.load()['run'])
         self.assertEqual(self.display()['mode'], 'waiting')
         attempts = require_ok(self.teacher.request('/rest/v1/attempts?select=id&run_id=eq.' + self.run_id), 'Retained fixture answers')
-        self.assertEqual(len(attempts), 2)
+        self.assertEqual(len(attempts), 1)   # 2回目は断られている
 
 
 if __name__ == '__main__':

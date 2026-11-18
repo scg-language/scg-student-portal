@@ -81,8 +81,10 @@ class TestIntegrityStructure(unittest.TestCase):
         self.check("種は「学生 + 回」の組から作る（毎回ちがう順にしない）",
               re.search(r"seedFrom\(\s*me\s*\+\s*.\|.\s*\+\s*setId\s*\)", idx) is not None)
         self.check("誰か分からない時は並べ替えない", "if(!me || list.length < 2) return list" in idx)
-        self.check("★もんだい本来の番号(seq)は取得したまま＝先生の集計と結果画面がずれない",
-              "select=id,seq,prompt" in idx and "x.seq===item.seq" in idx)
+        # ★2026-11-18 から結果画面は点数だけ（問題ごとの○×を出さない）＝結果画面側の seq 照合は無くなった。
+        #   先生の集計は seq で出るので、取得に seq が入っていることだけを見る
+        self.check("★もんだい本来の番号(seq)は取得したまま＝先生の集計とずれない",
+              "select=id,seq,prompt" in idx)
 
         # 実際に Node で動かして、決まり方を確かめる
         js = ""

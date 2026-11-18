@@ -73,9 +73,20 @@
   function loginMessage(value){$("demo-login-message").textContent=value;$("demo-login-message").hidden=!value;}
   function teacherAllowed(){return api.profile&&["teacher","master"].includes(api.profile.role);}
   function lockControls(){preview.setRemoteBlocked(!ready||failed||queued>0,{allowRoomSelection:failed&&queued===0&&teacherAllowed()});}
+  // 端末の時計とサーバーの時計の差。返ってきた状態の updatedAt（サーバーの今・ミリ秒）と、
+  // 送った時刻と受け取った時刻のまん中を比べる。往復が遅すぎた回（3秒以上）は当てにしない。
+  function noteServerClock(result,sentAt,receivedAt){
+    const at=result?.private_state?.updatedAt;
+    if(!Number.isFinite(at)||receivedAt-sentAt>3000)return;
+    window.__twoDeviceClockOffset=Math.round(at-(sentAt+receivedAt)/2);
+  }
   async function teacherRpc(name,args){
-    let timeout;
-    try{return await Promise.race([api.rpc(name,args),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error("DEMO_TIMEOUT")),20000);})]);}
+    let timeout;const sentAt=Date.now();
+    try{
+      const result=await Promise.race([api.rpc(name,args),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error("DEMO_TIMEOUT")),20000);})]);
+      noteServerClock(result,sentAt,Date.now());
+      return result;
+    }
     finally{clearTimeout(timeout);}
   }
   function stopSending(error){failed=true;ready=false;connection(friendly(error),true);lockControls();}

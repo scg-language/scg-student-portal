@@ -153,13 +153,19 @@
   frame.src=roomUrl.href;
 
   function message(content,isError=false){const box=$("preview-message");box.textContent=content;box.classList.toggle("error",isError);box.hidden=!content;}
+  /* 2026-11-18: 先生のスマホの残り時間が教室PCより約20秒ずれた（校長らの実機確認）。
+     教室PCはサーバーが計算した残り秒を出すが、こちらは端末の時計で引き算していた。
+     遠隔デモでは teacher-demo-remote.js がサーバー時刻との差（ミリ秒）を
+     window.__twoDeviceClockOffset に置くので、それで補正した「サーバーの今」を使う。
+     ★締切の判定はサーバー側。ここは表示だけ。 */
+  function nowMs(){const off=window.__twoDeviceClockOffset;return Date.now()+(Number.isFinite(off)?off:0);}
   function projectCurrent(){
     const run=state.run;
     if(commandHandler&&run?.status==="running"){
       if(!Number.isFinite(run.closesAt)||run.closesAt<=0)return cleanProjection({schemaVersion:1,mode:"waiting",roomLabel:"確認用の教室画面"});
       // The database decides when a real run has ended. A fast phone clock must
       // not release correct answers to its embedded classroom display.
-      return cleanProjection(Core.project(state,{now:Math.min(Date.now(),run.closesAt-1)}));
+      return cleanProjection(Core.project(state,{now:Math.min(nowMs(),run.closesAt-1)}));
     }
     return cleanProjection(Core.project(state));
   }
@@ -261,7 +267,7 @@
     $("phone-heading").textContent=ended ? "小テストが終わりました" : "小テストを実施中";
     $("run-summary").textContent=(test?.title||"操作確認テスト")+" · "+(classroom?.label||"検証クラス")+" · "+(room?.label||"スマホだけ");
     $("teacher-submitted").textContent=run.submittedCount+" / "+(classroom?.target||20);
-    $("teacher-remaining").textContent=ended ? "終了" : timeLabel((run.closesAt-Date.now())/1000);
+    $("teacher-remaining").textContent=ended ? "終了" : timeLabel((run.closesAt-nowMs())/1000);
     $("teacher-average").textContent=run.average==null ? "まだ提出はありません。" : "手元のクラス平均正答率 "+Math.round(run.average)+"%";
     $("demo-submissions").hidden=Boolean(commandHandler)||ended;$("running-controls").hidden=ended;$("review-controls").hidden=!ended;
     if(commandHandler)$("reset-preview").disabled=!ended;

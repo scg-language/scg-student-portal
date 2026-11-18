@@ -171,7 +171,7 @@
     </div>
   </section>
 
-  <!-- テスト結果（段階4）：点数のリング、問題ごとの ○×（押すと答え合わせのシート） -->
+  <!-- テスト結果（段階4）：点数のリング。★2026-11-18 から ○× と答え合わせは出さない（点数だけ） -->
   <section id="scr-result" hidden>
     <div class="sv-top">
       <button class="iconbtn" id="btn-r-close" type="button" data-i18n-aria="r.home" aria-label="ホームに もどる"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -184,10 +184,6 @@
           <svg width="168" height="168" viewBox="0 0 168 168" aria-hidden="true"><circle cx="84" cy="84" r="70" class="bg"/><circle cx="84" cy="84" r="70" class="arc" id="r-arc" transform="rotate(-90 84 84)"/></svg>
           <div class="rs-num"><span class="big" id="r-score"></span><span class="of" id="r-of"></span></div>
         </div>
-      </section>
-      <section class="rs-card">
-        <div class="rs-h"><h2 data-i18n="r.check">もんだいごとの けっか</h2><span data-i18n="r.tap">おすと こたえが みられます</span></div>
-        <div class="rs-grid" id="r-list"></div>
       </section>
       <section class="rs-card rs-prev" id="r-prev" hidden>
         <span class="rs-prev-ic" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
@@ -1420,7 +1416,7 @@ function renderHome(){
   }
 }
 async function refreshQuizCount(){
-  try{ quizCount = (await fetchOpenQuizzes()).length; }catch(e){ quizCount = null; }
+  try{ quizCount = (await fetchOpenQuizzes()).filter(s=>!s.done).length; }catch(e){ quizCount = null; }
   if(!$("scr-mypage").hidden) renderHome();
 }
 
@@ -1550,8 +1546,24 @@ async function fetchOpenQuizzes(){
   const byId = new Map();
   sets.forEach(s=>byId.set(s.id, { id:s.id, title:s.title, lesson:s.lesson, run_id:null, closes_at:null }));
   runs.forEach(r=>byId.set(r.quiz_set_id, { id:r.quiz_set_id, title:r.title, lesson:r.lesson, run_id:r.run_id, closes_at:r.closes_at }));
-  // 締切が近いものを上に。締切の無いもの（is_open のみ）はうしろへ
+  /* 2026-11-18（校長らの意見）: 小テストは実施回ごとに1回だけ。もう出した回は「ていしゅつ ずみ」
+     ＋てんすう を出し、押しても受け直させない。★本当に止めるのはサーバー（submit_attempt）。
+     ここは見せ方だけ。自分の提出しか返らない（RLS）。正式な点数は最初の提出。 */
+  const runIds = [...byId.values()].filter(x=>x.run_id).map(x=>x.run_id);
+  if(runIds.length){
+    try{
+      const mine = await api.get("/rest/v1/attempts?select=run_id,score,total,submitted_at"
+                                 + "&run_id=in.(" + runIds.join(",") + ")&order=submitted_at.asc");
+      mine.forEach(a=>{
+        for(const x of byId.values()){
+          if(x.run_id === a.run_id && !x.done) x.done = { score:a.score, total:a.total, at:a.submitted_at };
+        }
+      });
+    }catch(e){ /* 読めなくても一覧は出す（受け直しはサーバーが断る） */ }
+  }
+  // まだ出していないものを上に。その中で締切が近いものを上に。締切の無いもの（is_open のみ）はうしろへ
   return [...byId.values()].sort((a,b)=>{
+    if(!!a.done !== !!b.done) return a.done ? 1 : -1;
     if(a.closes_at && b.closes_at) return new Date(a.closes_at) - new Date(b.closes_at);
     return a.closes_at ? -1 : (b.closes_at ? 1 : 0);
   });
@@ -1561,17 +1573,21 @@ $("btn-gotest").onclick = async ()=>{
   $("quiz-list").innerHTML = "<div style='color:var(--sub);padding:18px 22px;'>"+t("q.loading")+"</div>";
   try{
     const list = await fetchOpenQuizzes();
-    quizCount = list.length;
+    quizCount = list.filter(s=>!s.done).length;
     if(!list.length){ $("quiz-list").innerHTML="<div style='color:var(--sub);padding:18px 22px;'>"+t("q.none")+"</div>"; return; }
     $("quiz-list").innerHTML = "";
     list.forEach(s=>{
       const b=document.createElement("button");
-      b.className="row"; b.style.setProperty("--c","#1769aa");
-      const left = s.closes_at ? "<span class='ds'>"+t("q.left",{n:quizMinutesLeft(s.closes_at)})+"</span>" : "";
-      b.innerHTML = "<span class='bar'></span><span class='txt'>"+
-        "<span class='sb'>"+(s.lesson||"Quiz")+"</span>"+
-        "<span class='nm'>"+s.title+"</span>"+left+"</span><span class='go'></span>";
-      b.onclick = ()=>startQuiz(s);
+      b.className="row" + (s.done ? " done" : ""); b.style.setProperty("--c", s.done ? "#6b7280" : "#1769aa");
+      // ★題名・課は先生が書いたもの＝textContent で入れる
+      const txt = el("span","txt");
+      txt.appendChild(el("span","sb", s.lesson||"Quiz"));
+      txt.appendChild(el("span","nm", s.title||""));
+      if(s.done) txt.appendChild(el("span","ds", t("q.done")+" ・ "+t("q.done.score",{s:s.done.score,total:s.done.total})));
+      else if(s.closes_at) txt.appendChild(el("span","ds", t("q.left",{n:quizMinutesLeft(s.closes_at)})));
+      b.append(el("span","bar"), txt, el("span","go"));
+      if(s.done) b.setAttribute("data-done","1");
+      b.onclick = ()=> s.done ? showDone(s) : startQuiz(s);
       $("quiz-list").appendChild(b);
     });
   }catch(e){ err("list-msg", e.message); }
@@ -1710,6 +1726,7 @@ document.addEventListener("visibilitychange", ()=>{
 });
 
 async function startQuiz(s){
+  if(s && s.done){ showDone(s); return; }        // 出した回は受け直させない（見せるのは点数だけ）
   quizSet=s; answers={}; cur=0; startedAt=Date.now();
   draft = { key:draftKey(s.id), seq:0, saved:{}, pending:new Set(), flushing:false, everFailed:false };
   $("savest").hidden = true;
@@ -1871,11 +1888,21 @@ async function doSubmit(){
     // ★実施回の締切切れは assert_run_open() の生の英文メッセージが返る。
     //   閉じたかどうかの判定はサーバー側＝ここでは言い方を変えるだけ（画面の時計では止めない）
     const closed = quizSet.run_id && /^(run is closed|run has not started|run was cancelled|no such run|not a target of this run|run does not belong to this quiz set)$/.test(e.message||"");
+    // 2026-11-18: 同じ実施回への2回目はサーバーが断る（別の端末・別のタブで先に出していた場合）
+    if(/already submitted/.test(e.message||"")){
+      draftClearLocal(quizSet.id);
+      err("quiz-msg", t("q.already"));
+      $("btn-next").textContent=t("q.submit");     // 押せないまま＝×で一覧へ戻る
+      return;
+    }
     err("quiz-msg", closed ? t("q.timeup") : t("q.fail",{msg:e.message}));
     $("btn-next").disabled=false; $("btn-next").textContent=t("q.submit");
   }
 }
-/* 結果：リング（○もん / ぜんぶ）＋問題ごとの ○×。○× は もんだい本来の番号（seq）の順。
+/* 結果：リング（○もん / ぜんぶ）だけ。
+   🔴 2026-11-18 きあ決定（校長らの意見）: 提出の直後に見せるのは**点数だけ**。○× も答え合わせも出さない。
+      初級の小テストは2択が多く、○× を見せた時点で答えになる（まだ受けている友だちに回る）。
+      正解・解説は「宿題モード」（その日の16時半から・期限は半年）で見せる予定＝中身は未決。
    ★「ごうかく」は出さない（合格点の決まりが無い）。「もういちど」も出さない（再受験は無い運用）。 */
 function choiceLabel(q, idx){ const hit = q && q.choices.find(c=>c.idx===idx); return hit ? hit.label : ""; }
 function showResult(r){
@@ -1886,24 +1913,17 @@ function showResult(r){
   const C = 2*Math.PI*70, k = r.total ? Math.max(0, Math.min(1, r.score/r.total)) : 0;
   $("r-arc").style.strokeDasharray = (C*k).toFixed(1) + " " + C.toFixed(1);
   $("r-sub").textContent = [quizSet && quizSet.lesson, quizSet && quizSet.title].filter(Boolean).join(" ・ ");
-  const list=$("r-list"); list.innerHTML="";
-  r.results.slice().sort((a,b)=>a.seq-b.seq).forEach(item=>{
-    const q = questions.find(x=>x.seq===item.seq);
-    if(!q) return;                                   // 出題しなかった設問は結果にも出さない
-    const b = el("button", "rmk " + (item.is_correct ? "ok" : "ng"));
-    b.type = "button";
-    b.setAttribute("data-seq", item.seq);
-    b.setAttribute("aria-label", t("r.mk",{n:item.seq, w:t(item.is_correct ? "r.ok" : "r.ng")}));
-    b.appendChild(el("span", "n", String(item.seq)));
-    b.appendChild(el("span", "s", item.is_correct ? "○" : "×"));
-    b.onclick = ()=>openAnswerSheet(item, q);
-    list.appendChild(b);
-  });
   show("scr-result");
   window.scrollTo(0,0);
   paintPrevAttempt(r);
 }
-/* 答え合わせのシート。🔴 設問文・選択肢・解説は先生が Excel に書いたもの＝必ず rubyHtml / setRuby を通す */
+/* 一覧で「ていしゅつ ずみ」を押したとき＝そのときの点数をもう一度見せる（受け直しはさせない） */
+function showDone(s){
+  quizSet = s; questions = [];
+  showResult({ score:s.done.score, total:s.done.total });
+}
+/* 答え合わせのシート。★2026-11-18 から呼んでいない（宿題モードで使う予定なので残す）。
+   🔴 設問文・選択肢・解説は先生が Excel に書いたもの＝必ず rubyHtml / setRuby を通す */
 function openAnswerSheet(item, q){
   sheet.open(body => {
     const head = el("div", "ax-head");

@@ -41,6 +41,9 @@ const I18N = {
     "q.noq": "もんだいが ありません", "q.prompt": "（　）に なにを いれますか。 ",
     "q.next": "つぎへ", "q.submit": "ていしゅつ する", "sv.submit": "そうしん（送信）", "q.sending": "そうしん中…",
     "q.fail": "そうしんできませんでした。もういちど おしてください。（{msg}）",
+    // 2026-11-18: 小テストは1回だけ。出した テストは 一覧で「ずみ」と てんすう を見せる
+    "q.done": "ていしゅつ ずみ", "q.done.score": "{s} / {total}もん",
+    "q.already": "この テストは もう ていしゅつ しました。",
     // 下書きの保存ぐあい。「ほぞん」と「そうしん（提出）」は べつのことば にする
     "q.sv.saving": "ほぞん中…", "q.sv.saved": "✓ ここまで ほぞんしました",
     "q.sv.pend": "⚠ {n}もん まだ おくれていません（あとで じどうで おくります）",
@@ -125,6 +128,8 @@ const I18N = {
     "q.noq": "This quiz has no questions.", "q.prompt": "What goes in (  )?  ",
     "q.next": "Next", "q.submit": "Submit", "sv.submit": "Submit", "q.sending": "Sending…",
     "q.fail": "Could not send. Please try again. ({msg})",
+    "q.done": "Submitted", "q.done.score": "{s} / {total}",
+    "q.already": "You have already submitted this quiz.",
     "q.sv.saving": "Saving…", "q.sv.saved": "✓ Saved up to here",
     "q.sv.pend": "⚠ {n} answer(s) not sent yet (will be sent automatically)",
     "q.sv.resumed": "Continuing from where you left off ({n} saved)",

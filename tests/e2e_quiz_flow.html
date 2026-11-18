@@ -105,22 +105,10 @@ const CREDS = window.__E2E_CREDS || null;
   $("sheet-submit").click();
   step("提出して結果が出る", await until(() => !$("scr-result").hidden, 25000), $("quiz-msg").textContent);
   step("点数が出ている", /^\d+$/.test($("r-score").textContent), $("r-score").textContent);
-  const marks = [...d.querySelectorAll("#r-list .rmk")];
-  step("○×の札が問題数ぶん出る", marks.length === total, marks.length + "/" + total);
-  step("もんだい本来の番号の順（1 から）", marks.map(m => m.querySelector(".n").textContent).join(",") ===
-       Array.from({ length: total }, (_, i) => String(i + 1)).join(","), marks.map(m => m.querySelector(".n").textContent).join(","));
-  // ★正解の文字は札を押したシートに出る。全部押して、どれも空でないこと（番号から引けている）
-  let empty = 0;
-  for (const m of marks) {
-    m.click();
-    await until(() => !$("sheet").hidden && d.querySelector("#sheet-body .ans"));
-    const a = d.querySelector("#sheet-body .ans");
-    if (!a || !a.textContent.trim()) empty++;
-  }
-  step("★どの札を押しても正解の文字が出る（番号から引けている）", empty === 0, "empty=" + empty);
-  step("答え合わせのシートに最後の札の番号が出る",
-       ((d.querySelector("#sheet-body .ax-chip") || {}).textContent || "").includes(String(total)),
-       (d.querySelector("#sheet-body .ax-chip") || {}).textContent);
+  // 2026-11-18（校長らの意見）: 提出の直後は点数だけ。○×・答え合わせは出さない（2択だと○×が答えになる）
+  step("○×の札は出さない（点数だけ）", d.querySelectorAll("#r-list .rmk").length === 0 && !$("r-list"),
+       String(d.querySelectorAll(".rmk").length));
+  step("答え合わせのシートは開いていない", $("sheet").hidden);
 
   log.done = true;
   out.textContent = "E2E_RESULT " + JSON.stringify(log);
