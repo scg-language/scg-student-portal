@@ -1217,6 +1217,7 @@
 <script src="assets/pw-eye.js"></script>
 <script src="assets/api.js"></script>
 <script src="assets/surveys.js"></script>
+<script src="assets/survey-db.js"></script>
 <script src="assets/survey-form.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -1992,6 +1993,8 @@ async function loadSurveyRounds(){
   ]);
   respByRound = {};
   rows.forEach(r=>{ if(r.round_id) respByRound[r.round_id] = r; });
+  // 2026-11-18: マスター画面で作った定義（DB の survey_defs）は、回に出たときだけ読む（RLS で公開中だけ返る）
+  if(window.SurveyDB) await SurveyDB.ensure(rounds.map(r=>r.survey_key));
   // Draft definitions are verified in the offline preview, not offered to students.
   openRounds = rounds.map(r=>({ ...r, def: SURVEYS.find(s=>s.key===r.survey_key) })).filter(r=>r.def && !r.def.previewOnly);
 }

@@ -471,23 +471,104 @@
   }
   const quiz = { retest(attempts) { Q.last = attempts || []; retestRender(); } };
 
-  /* ════════ アンケートを作る（管理②・定義を読む） ════════ */
-  const B = { key: null, i: 0, lang: "ja" };
-  function build() {
-    const pick = byId("bld-pick");
-    if (!pick.options.length) {
-      pick.innerHTML = SURVEYS.map(s => '<option value="' + h(s.key) + '">' + h(s.title.ja) + "（" + h(s.key) + "）</option>").join("");
-      pick.onchange = () => { B.key = pick.value; B.i = 0; build(); };
-      document.querySelectorAll("[data-bld-lang]").forEach(b => { b.onclick = () => { B.lang = b.dataset.bldLang; document.querySelectorAll("[data-bld-lang]").forEach(x => x.classList.toggle("on", x === b)); bldPreview(); }; });
-      byId("bld-start").onclick = async () => {
-        const r = await openSurveyRoundDialog(B.key);
-        if (r) showMsg("bld-msg", "「" + r.title + "」を はじめました" + (r.target_count != null ? "（" + r.target_count + "人対象）" : "") + "。結果は「アンケート 結果」で見られます。");
-      };
-    }
-    if (!B.key) B.key = (typeof svKey !== "undefined" && svKey) || SURVEYS[0].key;
+  /* ════════ アンケートを作る（管理②）════════
+     2026-11-16: 定義（surveys.js）を読むだけ → 2026-11-18: 画面で作る・直す・公開する（DB の survey_defs）。
+     一覧＝SurveyDB.list()（コードの定義＋画面で作った定義）。編集フォームは assets/survey-editor.js。
+     🔴 回を1本でもはじめた定義は直せない・公開をやめられない（サーバーも断る）＝「複製して 作る」 */
+  const B = { key: null, i: 0, lang: "ja", wired: false };
+  const STATUS_JA = { draft: "下書き", published: "公開中", archived: "しまった" };
+  const bdef = () => { const x = SurveyDB.find(B.key); return x ? x.def : null; };
+  const isMaster = () => (api.profile || {}).role === "master";
+  function bldPick() {
+    const pick = byId("bld-pick"), items = SurveyDB.list();
+    pick.replaceChildren();
+    const groups = [["code", "決まった アンケート（コード）"], ["published", "画面で 作った：公開中"], ["draft", "画面で 作った：下書き"], ["archived", "画面で 作った：しまった"]];
+    groups.forEach(([g, label]) => {
+      const rows = items.filter(x => (g === "code" ? x.source === "code" : x.source === "db" && x.status === g));
+      if (!rows.length) return;
+      const og = mk("optgroup"); og.label = label;
+      rows.forEach(x => { const o = mk("option", null, x.def.title.ja || x.key); o.value = x.key; og.appendChild(o); });
+      pick.appendChild(og);
+    });
+    if (!items.some(x => x.key === B.key)) B.key = (typeof svKey !== "undefined" && svKey) || (items[0] && items[0].key);
     pick.value = B.key;
-    const def = defOf(B.key), list = byId("bld-list");
+  }
+  function bldButtons() {
+    const x = SurveyDB.find(B.key), m = isMaster(), db = !!(x && x.source === "db"), locked = db && x.rounds > 0;
+    const show = (id, on) => { byId(id).hidden = !on; };
+    show("bld-new", m); show("bld-copy", m && !!x);
+    show("bld-edit", m && db); byId("bld-edit").disabled = !!locked;
+    byId("bld-edit").title = locked ? "回を はじめたので直せません（複製して作ってください）" : "";
+    show("bld-publish", m && db && x.status !== "published");
+    show("bld-unpublish", m && db && x.status === "published" && !locked);
+    show("bld-archive", m && db && x.status !== "archived" && !locked);
+    show("bld-start", !!x && (x.source === "code" || x.status === "published"));
+    const st = byId("bld-state"); st.replaceChildren();
+    if (x) {
+      st.appendChild(mk("span", "tag " + (x.source === "code" ? "gr" : x.status === "published" ? "ok" : "or"), x.source === "code" ? "コードの定義" : STATUS_JA[x.status]));
+      if (db) st.appendChild(mk("span", "tag gr", locked ? "回 " + x.rounds + "本＝直せません" : "まだ回は ありません"));
+    }
+    byId("bld-note").textContent = !x ? "" : x.source === "code"
+      ? "この アンケートは assets/surveys.js に書いてあり、画面では直せません。中身の確認・見え方・回をはじめるができます。にた物を作るときは「複製して 作る」。"
+      : x.status === "draft" ? "下書きです。学生には まだ出ません。「公開する」を押すと「回を はじめる」で配れるようになります。"
+      : x.status === "archived" ? "しまってあります（一覧から隠しているだけ・消えていません）。使うときは「下書きに もどす」。"
+      : locked ? "公開中で、回を はじめています。答えの意味が変わらないよう、もう直せません。直すときは「複製して 作る」で新しく作ってください。"
+      : "公開中です。まだ回を はじめていないので、直すこともできます。";
+  }
+  function bldShowEditor(on) { byId("bld-view").hidden = on; byId("bld-editor").hidden = !on; byId("bld-head").hidden = on; byId("bld-note").hidden = on; }
+  function bldOpenEditor(key, def, heading) {
+    bldShowEditor(true);
+    SurveyEditor.open({ key, def, heading, onDone: async saved => {
+      bldShowEditor(false);
+      if (saved) {
+        try { await SurveyDB.loadAll(); if (typeof refreshSurveyPick === "function") refreshSurveyPick(); } catch (e) {}
+        B.key = saved; B.i = 0;
+      }
+      build();
+      if (saved) showMsg("bld-msg", "下書きとして 保存しました。学生に出すには「公開する」を押してください。");
+      window.scrollTo(0, 0);
+    } });
+    window.scrollTo(0, 0);
+  }
+  async function bldStatus(status, title, body, okText) {
+    const ok = await askDialog({ title, body, okText });
+    if (!ok) return;
+    try {
+      await SurveyDB.setStatus(B.key, status);
+      await SurveyDB.loadAll(); if (typeof refreshSurveyPick === "function") refreshSurveyPick();
+      build();
+      showMsg("bld-msg", "「" + ((bdef() || {}).title || {}).ja + "」を " + STATUS_JA[status] + " にしました。");
+    } catch (e) { build(); showMsg("bld-msg", "変えられませんでした（" + e.message + "）", true); }
+  }
+  function bldWire() {
+    if (B.wired) return; B.wired = true;
+    byId("bld-pick").onchange = () => { B.key = byId("bld-pick").value; B.i = 0; build(); };
+    document.querySelectorAll("[data-bld-lang]").forEach(b => { b.onclick = () => { B.lang = b.dataset.bldLang; document.querySelectorAll("[data-bld-lang]").forEach(x => x.classList.toggle("on", x === b)); bldPreview(); }; });
+    byId("bld-start").onclick = async () => {
+      const r = await openSurveyRoundDialog(B.key);
+      if (r) { try { await SurveyDB.loadAll(); } catch (e) {} build(); showMsg("bld-msg", "「" + r.title + "」を はじめました" + (r.target_count != null ? "（" + r.target_count + "人対象）" : "") + "。結果は「アンケート 結果」で見られます。"); }
+    };
+    byId("bld-new").onclick = () => bldOpenEditor(null, null, "新しい アンケートを 作る");
+    byId("bld-copy").onclick = () => {
+      const def = bdef(), why = SurveyEditor.copyProblem(def);
+      if (why) { showMsg("bld-msg", why, true); return; }
+      const copy = JSON.parse(JSON.stringify(def));
+      copy.title = Object.assign({}, copy.title, { ja: (copy.title.ja || "") + "（コピー）" });
+      bldOpenEditor(null, copy, "「" + def.title.ja + "」を 複製して 作る");
+    };
+    byId("bld-edit").onclick = () => { const x = SurveyDB.find(B.key); if (x && x.source === "db" && !x.rounds) bldOpenEditor(B.key, x.def, "「" + x.def.title.ja + "」を 直す"); };
+    byId("bld-publish").onclick = () => bldStatus("published", "公開しますか？", "公開すると「回を はじめる」で学生に配れるようになります（回を はじめるまでは、学生には出ません）。回を はじめたあとは、もう直せません。", "公開する");
+    byId("bld-unpublish").onclick = () => bldStatus("draft", "下書きに もどしますか？", "下書きの間は、回を はじめられません。", "下書きに もどす");
+    byId("bld-archive").onclick = () => bldStatus("archived", "しまいますか？", "一覧の下に隠すだけで、消えません。あとで「下書きに もどす」で使えます。", "しまう");
+  }
+  function build() {
+    bldWire();
+    bldShowEditor(false);
+    bldPick();
+    bldButtons();
+    const def = bdef(), list = byId("bld-list");
     list.replaceChildren();
+    if (!def) { byId("bld-detail").replaceChildren(); byId("bld-preview").replaceChildren(); return; }
     let sec = null;
     (def.q || []).forEach((q, i) => {
       if ((q.section || "") !== sec) {
@@ -526,7 +607,7 @@
     box.innerHTML = html;
   }
   function bldPreview() {
-    const def = defOf(B.key), box = byId("bld-preview");
+    const def = bdef(), box = byId("bld-preview");
     try {
       SurveyForm.mount(box, def, { lang: B.lang, profile: { student_no: "2604999", display_name: "テスト太郎", class_name: "A①クラス" } });
     } catch (e) { box.textContent = "見本を出せませんでした（" + e.message + "）"; }

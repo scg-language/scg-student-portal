@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>e2e survey builder</title></head>
+<body>
+<iframe id="f" src="../src/master.html" width="1600" height="1000"></iframe>
+<pre id="out">RUNNING</pre>
+<script src="../tmp/e2e_creds.js"></script>
+<script>
+/* 「アンケートを 作る」（画面で定義を作る・2026-11-18）の回帰テスト。tests/run_e2e_survey_builder.py から起動する。
+ *
+ * マスター（m001）で:
+ *   検査用の下書き「🧪検査用 下書き（画面で作る）」を作る（2回目からは同じものを「直す」）→ 入力の検査 → 保存
+ *   → 公開する → 下書きに もどす（★回を はじめないので毎回元の状態に戻る＝行が溜まらない）
+ *   → 区切りのあるコードの定義は複製を断る／簡単な定義は複製でフォームが開く（保存しない）
+ * 学生（s039）で:
+ *   検査用の公開版「🧪検査用 公開（画面で作る）」の回（題名「検査用」・s039 だけが対象）が一覧に出て、答えられる
+ *   ★公開版と回は1回目だけ作り、2回目からは使い回す（survey_defs も survey_rounds も消せないので、溜めない）
+ *   ★s039 だけを対象にしているのは、ほかの検査（l150 の一覧の数・s001 の 2台運用）に混ざらないようにするため
+ * 🔴 資格情報は tmp/e2e_creds.js（.env 由来）。値は出力しない。 */
+const out = document.getElementById("out"), log = { steps: [] };
+const step = (name, ok, detail) => log.steps.push({ name, ok: !!ok, detail: detail === undefined ? "" : String(detail).slice(0, 240) });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function until(fn, ms = 20000) { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (fn()) return true; } catch (e) {} await sleep(150); } return false; }
+const CREDS = window.__E2E_CREDS || null;
+const DRAFT_T = "🧪検査用 下書き（画面で作る）", PUB_T = "🧪検査用 公開（画面で作る）", STUDENT = "s039";
+function setVal(w, el, v) { el.value = v; el.dispatchEvent(new w.Event("input", { bubbles: true })); }
+async function loadFrame(f, src) {
+  f.src = src;
+  // ★master.html にも btn-login があるので、ページが入れ替わったこと（パスの末尾）も確かめる
+  const page = src.split("/").pop();
+  await until(() => { const d = f.contentDocument, b = d && d.getElementById("btn-login");
+    return d && decodeURIComponent(d.location.pathname).endsWith(page) && !!b && typeof b.onclick === "function"; }, 30000);
+  return [f.contentWindow, f.contentDocument];
+}
+(async () => {
+  try {
+    if (!CREDS || !CREDS.masterPw || !CREDS.studentPw) { log.error = "資格情報が読めません（tmp/e2e_creds.js）"; return; }
+    const f = document.getElementById("f");
+    let [w, d] = await loadFrame(f, "../src/master.html");
+    try { w.localStorage.clear(); } catch (e) {}
+    let $ = id => d.getElementById(id);
+    $("in-no").value = CREDS.masterNo; $("in-pw").value = CREDS.masterPw; $("btn-login").click();
+    step("マスターでログインできる", await until(() => !$("scr-dash").hidden, 30000), ($("login-msg") || {}).textContent);
+    d.querySelector('[data-view="svbuild"]').click();
+    step("「アンケートを 作る」が開く", await until(() => !$("view-svbuild").hidden && $("bld-pick").options.length > 0, 15000));
+    step("マスターには「＋ 新しく 作る」が出る", !$("bld-new").hidden);
+
+    // ── 1. 下書きを作る（2回目からは同じ下書きを直す）──
+    const opt = [...$("bld-pick").options].find(o => o.textContent === DRAFT_T);
+    if (opt) { $("bld-pick").value = opt.value; $("bld-pick").dispatchEvent(new w.Event("change")); await sleep(200); $("bld-edit").click(); }
+    else $("bld-new").click();
+    step("編集フォームが開く（一覧は隠れる）", await until(() => !$("bld-editor").hidden && $("bld-view").hidden, 5000));
+    const form = $("ed-form");
+    const titleJa = form.querySelector('input[placeholder="れい：12月の せいかつ アンケート"]');
+    const qJa = form.querySelector('textarea[placeholder="れい：いま どこに すんでいますか"]');
+    const o1 = form.querySelector('input[aria-label="1つ目の選択肢 ja"]'), o2 = form.querySelector('input[aria-label="2つ目の選択肢 ja"]');
+    step("名前・質問文・選択肢の欄がある", titleJa && qJa && o1 && o2);
+    setVal(w, titleJa, "");
+    $("ed-save").click(); await sleep(200);
+    step("名前が空なら保存の前に止める（理由が出る）", !$("ed-errs").hidden && $("ed-errs").textContent.includes("名前"), $("ed-errs").textContent);
+    setVal(w, titleJa, DRAFT_T);
+    const stamp = new Date().toISOString().slice(0, 16);
+    setVal(w, qJa, "けんさの しつもん " + stamp);
+    setVal(w, o1, "はい"); setVal(w, o2, "いいえ");
+    step("右の見本に、いま書いた質問がその場で出る", await until(() => $("ed-preview").textContent.includes("けんさの しつもん " + stamp), 3000), $("ed-preview").textContent.slice(0, 120));
+    $("ed-save").click();
+    step("保存すると一覧に戻り、知らせが出る", await until(() => $("bld-editor").hidden && $("bld-msg").textContent.includes("保存しました"), 15000), $("bld-msg").textContent);
+    step("保存した下書きが選ばれていて「下書き」の札", ($("bld-pick").selectedOptions[0] || {}).textContent === DRAFT_T && $("bld-state").textContent.includes("下書き"), $("bld-state").textContent);
+    step("下書きは「回を はじめる」が出ない", $("bld-start").hidden);
+    step("一覧の見本にも保存した中身が出る", $("bld-preview").textContent.includes("けんさの しつもん " + stamp));
+
+    // ── 2. 公開する → 下書きに もどす（回は はじめない＝元の状態に戻る）──
+    $("bld-publish").click();
+    await until(() => $("cfm-ok") && $("cfm-ok").offsetParent !== null, 5000); $("cfm-ok").click();
+    step("公開すると「公開中」になり、回を はじめられる", await until(() => $("bld-state").textContent.includes("公開中") && !$("bld-start").hidden, 15000), $("bld-state").textContent);
+    step("公開したものは「アンケート 結果」の選択肢にも出る", [...$("sv-pick").options].some(o => o.textContent === DRAFT_T));
+    $("bld-unpublish").click();
+    await until(() => $("cfm-ok") && $("cfm-ok").offsetParent !== null, 5000); $("cfm-ok").click();
+    step("下書きに もどせる", await until(() => $("bld-state").textContent.includes("下書き") && $("bld-start").hidden, 15000), $("bld-state").textContent);
+    step("下書きに戻したら結果の選択肢から消える", ![...$("sv-pick").options].some(o => o.textContent === DRAFT_T));
+
+    // ── 3. 複製 ──
+    const pick = k => { $("bld-pick").value = k; $("bld-pick").dispatchEvent(new w.Event("change")); };
+    pick("shinro_2027_jan_v1"); await sleep(200);
+    $("bld-copy").click(); await sleep(200);
+    step("区切りのある定義は複製を断る（理由が出る）", $("bld-editor").hidden && $("bld-msg").textContent.includes("複製できません"), $("bld-msg").textContent);
+    pick("seikatsu_sumai_2026"); await sleep(200);
+    $("bld-copy").click();
+    step("簡単な定義は複製でフォームが開き、名前に（コピー）", await until(() => !$("bld-editor").hidden, 3000)
+         && $("ed-form").querySelector('input[placeholder="れい：12月の せいかつ アンケート"]').value.endsWith("（コピー）"));
+    $("ed-cancel").click();
+    step("やめると一覧に戻る（保存しない）", await until(() => $("bld-editor").hidden, 3000));
+
+    // ── 4. 学生が答えられる（公開版＋s039 だけの回。1回目だけ作る）──
+    await w.SurveyDB.loadAll();
+    let pub = w.SurveyDB.list().find(x => x.source === "db" && x.def.title.ja === PUB_T);
+    if (!pub) {
+      const r = await w.SurveyDB.save(null, { title: { ja: PUB_T, en: "Self-check (built on screen)" }, sb: "Test", color: "#5c677d",
+        q: [{ k: "q1", t: "select", l: { ja: "がめんで つくった しつもん", en: "Built question" }, o: [{ v: "o1", ja: "はい", en: "Yes" }, { v: "o2", ja: "いいえ", en: "No" }] }] });
+      await w.SurveyDB.setStatus(r.survey_key, "published");
+      await w.SurveyDB.loadAll();
+      pub = w.SurveyDB.find(r.survey_key);
+    }
+    step("検査用の公開版がある", pub && pub.status === "published", pub && pub.status);
+    const rounds = await w.eval("api").get("/rest/v1/survey_rounds?select=id&survey_key=eq." + pub.key + "&title=eq." + encodeURIComponent("検査用"));
+    if (!rounds.length) {
+      const me = await w.eval("api").get("/rest/v1/profiles?select=id&student_no=eq." + STUDENT);
+      await w.eval("api").rpc("start_survey_round", { p_survey_key: pub.key, p_title: "検査用", p_student_ids: [me[0].id] });
+    }
+    step("公開版の回（s039 だけ）がある", true);
+    $("btn-logout").click(); await sleep(500);
+    try { w.localStorage.clear(); } catch (e) {}
+
+    [w, d] = await loadFrame(f, "../src/index.html");
+    $ = id => d.getElementById(id);
+    try { w.localStorage.clear(); } catch (e) {}
+    await until(() => !$("scr-login").hidden, 8000);
+    $("in-no").value = STUDENT; $("in-pw").value = CREDS.studentPw; $("btn-login").click();
+    step("学生（s039）でログインできる", await until(() => !$("scr-mypage").hidden, 25000), ($("login-msg") || {}).textContent);
+    $("btn-gosurvey").click();
+    await until(() => d.querySelectorAll("#survey-list .row").length > 0, 15000);
+    const row = [...d.querySelectorAll("#survey-list .row")].find(r => r.textContent.includes(PUB_T));
+    step("★画面で作ったアンケートが学生の一覧に出る（DB から定義を読めている）", !!row,
+         [...d.querySelectorAll("#survey-list .nm")].map(x => x.textContent).join(" | "));
+    if (row) {
+      row.click();
+      step("開くと質問が出る", await until(() => !$("scr-survey").hidden && $("scr-survey").textContent.includes("がめんで つくった しつもん"), 10000));
+      const sel = d.querySelector("#survey-fields select");
+      if (sel) { sel.selectedIndex = 1; sel.dispatchEvent(new w.Event("change", { bubbles: true })); }
+      else { const r1 = d.querySelector('#survey-fields input[type="radio"]'); if (r1) r1.click(); }
+      $("btn-survey-submit").click();
+      step("答えて送信できる（DB の書込制御を通る）", await until(() => !$("scr-survey-done").hidden, 25000), ($("survey-msg") || {}).textContent);
+    }
+    log.done = true;
+  } catch (e) { log.error = String(e && e.message || e); }
+  finally { out.textContent = "E2E_RESULT " + JSON.stringify(log); }
+})();
+</script>
+</body></html>

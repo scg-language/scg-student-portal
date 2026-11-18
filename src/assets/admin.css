@@ -239,3 +239,33 @@ body.admui .mockflag{display:block;background:var(--or-l);color:var(--or-ink);bo
   .bld{grid-template-columns:1fr;}
   .qgrid{grid-template-columns:1fr;}
 }
+
+/* ── アンケートを作る：編集フォーム（2026-11-18・assets/survey-editor.js）──
+   ★見た目はあとで Claude Design で整える前提。既存の部品（.abtn .chip .tag .phone）と同じ色だけで組んである */
+.sved{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;align-items:start;}
+.sved-form{background:#fff;border-radius:20px;box-shadow:var(--sh);padding:18px 20px;min-width:0;}
+.sved-pv{background:#fff;border-radius:20px;box-shadow:var(--sh);padding:14px;position:sticky;top:12px;}
+.sved h2{font-size:1.05rem;font-weight:800;margin:0 0 12px;}
+.sved h3{font-size:.92rem;font-weight:800;margin:18px 0 10px;}
+.sved .fld{display:flex;flex-direction:column;gap:4px;margin:0 0 12px;min-width:0;}
+.sved .fld>span{font-size:.78rem;font-weight:800;color:var(--sub);}
+.sved .fld>span .rq{color:#b42318;margin-left:4px;}
+.sved input[type="text"],.sved textarea,.sved select{font:inherit;font-size:.9rem;padding:8px 10px;border:1px solid #E5E0EA;border-radius:10px;width:100%;box-sizing:border-box;background:#fff;color:var(--ink);}
+.sved textarea{min-height:64px;resize:vertical;}
+.sved input:focus,.sved textarea:focus,.sved select:focus{outline:2px solid var(--pp-l);border-color:var(--pp);}
+.sved .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sved .qcard{border:1px solid #EEE9F2;border-radius:14px;padding:12px 14px;margin:0 0 12px;background:#FCFBFD;}
+.sved .qhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;}
+.sved .qhead .no{font-weight:800;color:var(--pp);margin-right:4px;}
+.sved .qhead select{width:auto;}
+.sved .qhead .sp{flex:1;}
+.sved .chk{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;}
+.sved .orow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.9fr) auto;gap:6px;margin:0 0 6px;align-items:center;}
+.sved .ohd{font-size:.72rem;font-weight:800;color:var(--sub);}
+.sved .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.sved .foot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid #EEE9F2;}
+.sved .errs{color:#b42318;font-size:.85rem;margin:8px 0 0;padding-left:1.2em;}
+.sved .swatches{display:flex;gap:8px;flex-wrap:wrap;}
+.sved .swatch{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #E5E0EA;cursor:pointer;padding:0;}
+.sved .swatch.on{box-shadow:0 0 0 2px var(--ink);}
+@media (max-width:1100px){.sved{grid-template-columns:1fr;}.sved-pv{position:static;}}

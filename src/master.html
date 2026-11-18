@@ -621,18 +621,27 @@
         </div>
       </div>
 
-      <!-- ══ アンケートを作る（2026-11-16 管理②）══
-           ★定義は assets/surveys.js（コード）にある。画面で書き換える仕組みは無い＝ここは「読む・見え方を確かめる・回をはじめる」。
-             画面で作れるようにするには定義を DB に置く判断が要る（指示書§4）。 -->
+      <!-- ══ アンケートを作る（2026-11-16 管理② → 2026-11-18 画面で作れるように）══
+           ★surveys.js（コード）の定義は読むだけ。画面で作ったものは DB の survey_defs（db/2026-11-18_survey_defs.sql）。
+             作る・直す・公開はマスターだけ（サーバーが is_master() で断る）。回を1本でもはじめた定義は直せない＝複製して作る。
+             編集フォームは assets/survey-editor.js。見た目はあとで整える前提で、admin.css の部品だけで組んである。 -->
       <div id="view-svbuild" data-viewpane hidden>
-        <div class="a-head">
+        <div class="a-head" id="bld-head">
           <div class="l"><h1 class="ah1">アンケートを 作る</h1>
-            <select id="bld-pick" class="abtn" aria-label="アンケート"></select></div>
-          <div class="r"><button class="abtn pri" type="button" id="bld-start">この アンケートの 回を はじめる</button></div>
+            <select id="bld-pick" class="abtn" aria-label="アンケート"></select>
+            <div class="tags" id="bld-state"></div></div>
+          <div class="r">
+            <button class="abtn" type="button" id="bld-new">＋ 新しく 作る</button>
+            <button class="abtn" type="button" id="bld-copy">複製して 作る</button>
+            <button class="abtn" type="button" id="bld-edit">直す</button>
+            <button class="abtn" type="button" id="bld-publish">公開する</button>
+            <button class="abtn" type="button" id="bld-unpublish">下書きに もどす</button>
+            <button class="abtn" type="button" id="bld-archive">しまう</button>
+            <button class="abtn pri" type="button" id="bld-start">この アンケートの 回を はじめる</button>
+          </div>
         </div>
-        <div class="mockflag">質問の中身は <b>assets/surveys.js</b> に書いてあり、この画面では書き換えられません（直すときは定義を直して公開します）。
-          ここでは<b>中身の確認・学生の画面での見え方・回をはじめる</b>ができます。オレンジは「結果で目立たせる」旗の付いた選択肢です。</div>
-        <div class="bld">
+        <div class="mockflag" id="bld-note"></div>
+        <div class="bld" id="bld-view">
           <div class="col"><div id="bld-list"></div></div>
           <div class="col" id="bld-detail"></div>
           <div class="col pv">
@@ -640,6 +649,16 @@
               <div class="chips"><button class="chip on" type="button" data-bld-lang="ja">日本語</button><button class="chip" type="button" data-bld-lang="en">English</button></div></div>
             <div class="phone"><div id="bld-preview"></div></div>
             <div class="note">見本です。ここで入力しても保存されません。</div>
+          </div>
+        </div>
+        <!-- 編集（新しく作る・複製・直す）。保存は「下書き」。公開は保存のあと一覧で押す -->
+        <div class="sved" id="bld-editor" hidden>
+          <div class="sved-form" id="ed-form"></div>
+          <div class="col pv sved-pv">
+            <div class="a-head" style="margin:0 0 10px;"><b>学生の画面での見え方</b>
+              <div class="chips"><button class="chip on" type="button" data-ed-lang="ja">日本語</button><button class="chip" type="button" data-ed-lang="en">English</button></div></div>
+            <div class="phone"><div id="ed-preview"></div></div>
+            <div class="note">入力すると すぐに ここへ 出ます（まだ保存していません）。</div>
           </div>
         </div>
         <div class="msg" id="bld-msg" style="display:none;"></div>
@@ -819,6 +838,8 @@
 <script src="assets/fmt-import.js"></script>
 <script src="assets/exam-dates.js"></script>
 <script src="assets/survey-form.js"></script>
+<script src="assets/survey-db.js"></script>
+<script src="assets/survey-editor.js"></script>
 <script src="assets/admin.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -2206,6 +2227,8 @@ function showWhoAmI(){
 async function start(){
   showWhoAmI();
   document.body.classList.add("authed");
+  // 2026-11-18: 画面で作ったアンケート定義（DB）を読む。公開中のものは SURVEYS に足される＝結果・回をはじめる で選べる
+  try{ await SurveyDB.loadAll(); refreshSurveyPick(); }catch(e){ console.warn("survey_defs", e.message); }
   Admin.init();
   await ensureQpFilters();
   const sets = await loadQuizPickOptions();
@@ -2538,7 +2561,12 @@ $("csv-btn-question").onclick  = ()=>exportQuizCsv("question");
 /* どのアンケートを見るか（定義は assets/surveys.js・学生画面と共通。先生向けなので日本語の名前で出す） */
 let svKey = SURVEYS[0].key;
 function svDef(){ return SURVEYS.find(s=>s.key===svKey) || SURVEYS[0]; }
-$("sv-pick").innerHTML = SURVEYS.map(s=>"<option value='"+s.key+"'>"+esc(s.title.ja)+"</option>").join("");
+/* 2026-11-18: DB の定義を読んだあとにも作り直すので関数にした（SURVEYS に公開中の DB 定義が足される） */
+function refreshSurveyPick(){
+  $("sv-pick").innerHTML = SURVEYS.map(s=>"<option value='"+esc(s.key)+"'>"+esc(s.title.ja)+"</option>").join("");
+  if(SURVEYS.some(s=>s.key===svKey)) $("sv-pick").value = svKey;
+}
+refreshSurveyPick();
 $("sv-pick").onchange = ()=>{
   svKey = $("sv-pick").value;
   Admin.survey.pickKey(svKey);
