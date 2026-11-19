@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCG 学生ポータル — マスター（スマホ）</title>
+<meta name="theme-color" content="#7B2A70">
+<!--
+  マスターのスマホ画面：HR で「アンケートを出したか」を確かめる — 2026-11-19
+  デザイン案＝Artifacts「マスター スマホ画面（HRの提出確認）」①ホーム ②クラスをえらぶ ③提出の状況 ④ぜんたい
+
+  🔴 守ること（CLAUDE.md「アカウントの役割と、マスターでログインしてよい場所」2026-11-18）
+    - 常勤（マスター）が**自分のスマホ**で開く画面。教室PCで開く前提にしない
+    - 出すのは「出した／まだ」と時刻だけ。**回答の中身は読まない・出さない**
+      （教室で横から見えるため。survey_responses は answers 列を select しない）
+    - 名前はクラスを開いたときだけ。ぜんたい・クラス一覧は数だけ
+    - 文字は textContent で入れる（名前は学生のデータ）
+    - クラスは毎回えらぶ。前に見たクラスを自動で開かない
+  ★担任のクラスを上に出す案は、担任のデータが DB に無いので今は出さない（つなぎこみ待ち）
+  ★?demo=1 … 見本データで動く（ログインしない・DBを読まない）。見た目の確認と Claude Design 用
+-->
+<style>
+:root{
+  --pp:#7B2A70; --pp-d:#5C1F54; --pp-l:#F3E6F1; --pp-ink:#3A1F3E; --pp-sub:#F1C9E7;
+  --bg:#F5F3F7; --card:#fff; --ink:#1F1A24; --sub:#6B6475; --line:#F1EDF4; --edge:#D6CFDD;
+  --ok:#1E7B34; --ok-l:#E6F4EA; --rest:#9A3412; --rest-l:#FFF4E5; --rest-dot:#EA580C;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit}
+[hidden]{display:none!important}
+.app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+
+/* ヘッダー */
+.hd{background:var(--pp);color:#fff;padding:12px 12px 14px;position:sticky;top:0;z-index:5}
+.hd-row{display:flex;align-items:center;gap:8px}
+.logo{width:36px;height:36px;border-radius:11px;background:#fff;display:grid;place-items:center;flex:none;margin-left:4px}
+.hd-tt{flex:1;min-width:0}
+.hd-tt .s{font-size:12px;color:var(--pp-sub);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-tt .m{font-size:18px;font-weight:800;line-height:1.25}
+.hd-tt .tag{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--pp-sub)}
+.ibtn{width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#fff;display:grid;place-items:center;cursor:pointer;flex:none}
+.ibtn.soft{background:rgba(255,255,255,.14)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--pp-sub);padding-right:6px;white-space:nowrap}
+.live i{width:8px;height:8px;border-radius:50%;background:#86EFAC;display:inline-block}
+.live.stop i{background:#bbb}
+.hd-big{display:flex;align-items:flex-end;gap:10px;padding:10px 8px 0}
+.hd-big .n{font-size:44px;font-weight:800;line-height:1}
+.hd-big .of{font-size:16px;font-weight:700;color:var(--pp-sub);padding-bottom:5px}
+.hd-big .rest{margin-left:auto;text-align:right;padding-bottom:4px}
+.hd-big .rest .k{font-size:12px;color:var(--pp-sub)}
+.hd-big .rest .v{font-size:22px;font-weight:800;line-height:1}
+.hd-bar{margin:10px 8px 0;height:8px;border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden}
+.hd-bar i{display:block;height:100%;background:#fff;border-radius:999px}
+
+/* 本体 */
+main{flex:1;padding:18px 16px 32px;display:flex;flex-direction:column;gap:16px}
+.date{font-size:13px;color:var(--sub);font-weight:500}
+h1.pg{margin:2px 0 0;font-size:24px;font-weight:800}
+h2.sec{margin:4px 2px 0;font-size:14px;font-weight:800;color:var(--sub)}
+.card{background:var(--card);border-radius:20px;padding:18px;box-shadow:0 1px 2px rgba(17,24,39,.05);display:flex;flex-direction:column;gap:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+.pill.on{color:var(--ok);background:var(--ok-l)}
+.pill.on i{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.due{font-size:12px;color:var(--sub)}
+.svt{font-size:19px;font-weight:800;line-height:1.35}
+.svs{font-size:13px;color:var(--sub);margin-top:2px}
+.cnt{display:flex;align-items:baseline;gap:6px}
+.cnt .n{font-size:34px;font-weight:800;color:var(--pp-ink);line-height:1}
+.cnt .of{font-size:15px;color:var(--sub);font-weight:700}
+.cnt .p{margin-left:auto;font-size:15px;font-weight:800;color:var(--pp)}
+.cnt .r{margin-left:auto;font-size:15px;font-weight:800;color:var(--rest)}
+.bar{height:10px;border-radius:999px;background:var(--pp-l);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--pp);border-radius:999px}
+.go{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:14px;background:var(--pp);color:#fff;
+  font-size:16px;font-weight:800;border:0;cursor:pointer;width:100%}
+.sub-go{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-radius:14px;border:1px solid var(--edge);background:#fff;
+  color:var(--ink);font-size:15px;font-weight:700;cursor:pointer;width:100%;text-align:left}
+.sub-go .chev{margin-left:auto}
+.note{margin:2px;font-size:12px;color:var(--sub);line-height:1.7}
+.empty{background:#fff;border-radius:16px;padding:18px;color:var(--sub);font-size:14px;line-height:1.7}
+
+/* クラスをえらぶ */
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cls{background:#fff;border:0;border-radius:14px;padding:12px 10px;color:var(--ink);display:flex;flex-direction:column;gap:4px;min-height:72px;
+  box-shadow:0 1px 2px rgba(17,24,39,.05);cursor:pointer;text-align:left}
+.cls .c{font-size:16px;font-weight:800}
+.cls .l{font-size:12px;font-weight:700}
+.rest-t{color:var(--rest)} .ok-t{color:var(--ok)}
+
+/* しぼりこみ */
+.tabs{display:flex;gap:8px;padding:12px 16px 0;max-width:520px}
+.tab{flex:1;min-height:44px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;background:#fff;color:var(--ink);border:1px solid var(--edge)}
+.tab[aria-pressed="true"]{background:var(--pp);color:#fff;border-color:var(--pp)}
+
+/* 名前の一覧 */
+.list{list-style:none;margin:0;padding:0;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(17,24,39,.05);overflow:hidden}
+.list li{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:56px;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.list .dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--rest-dot);flex:none}
+.list .nm{flex:1;min-width:0}
+.list .nm b{display:block;font-size:16px;font-weight:700;overflow-wrap:anywhere}
+.list .nm span{display:block;font-size:12px;color:var(--sub)}
+.list .badge{font-size:12px;font-weight:800;color:var(--rest);background:var(--rest-l);border-radius:999px;padding:4px 10px;flex:none}
+.list li.done{min-height:52px}
+.list li.fresh{background:var(--pp-l)}
+.list .nm2{flex:1;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.list .now{font-size:12px;font-weight:800;color:var(--pp)}
+.list .tm{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums;flex:none}
+h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
+
+/* ぜんたい */
+.rows li{padding:0}
+.rows button{display:grid;grid-template-columns:52px minmax(0,1fr) 72px;align-items:center;gap:12px;padding:0 14px;min-height:52px;width:100%;
+  background:none;border:0;color:var(--ink);cursor:pointer;text-align:left}
+.rows .c{font-size:15px;font-weight:800}
+.rows .b{height:8px;border-radius:999px;background:var(--pp-l);overflow:hidden;display:block}
+.rows .b i{display:block;height:100%;background:var(--pp);border-radius:999px}
+.rows .l{font-size:13px;font-weight:800;text-align:right}
+
+/* ログイン */
+.login{background:#fff;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.login label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
+.login input{width:100%;min-height:48px;border:1px solid var(--edge);border-radius:12px;padding:0 14px;font-size:16px}
+.msg{font-size:14px;line-height:1.6}
+.msg.err{color:#b42318}
+.demo{background:#FFF4E5;color:#7a2e0b;font-size:13px;font-weight:700;padding:8px 16px;text-align:center}
+.menu{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:flex-end;z-index:20}
+.menu .in{background:#fff;width:min(300px,86vw);height:100%;padding:18px;display:flex;flex-direction:column;gap:10px}
+.menu .who{font-size:13px;color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="demo" id="demo-bar" hidden>見本データで表示しています（本物の学生ではありません）</div>
+  <header class="hd" id="hd"></header>
+  <nav class="tabs" id="tabs" hidden aria-label="しぼりこみ"></nav>
+  <main id="main"></main>
+</div>
+<div class="menu" id="menu" hidden>
+  <div class="in" role="dialog" aria-label="メニュー">
+    <div class="who" id="menu-who"></div>
+    <button class="sub-go" type="button" id="menu-reload">最新にする</button>
+    <a class="sub-go" href="master.html" style="text-decoration:none">PC のマスター画面へ</a>
+    <button class="sub-go" type="button" id="menu-logout">ログアウト</button>
+    <button class="sub-go" type="button" id="menu-close">とじる</button>
+  </div>
+</div>
+
+<script src="assets/api.js"></script>
+<script src="assets/surveys.js"></script>
+<script src="assets/survey-db.js"></script>
+<script>
+(function(){
+"use strict";
+const DEMO = /[?&]demo=1\b/.test(location.search);
+const REFRESH_MS = 10000;      // クラスを開いているあいだ、10秒ごとに取り直す
+const FRESH_MS = 2 * 60000;    // 2分以内の提出に「いま」を付ける
+const WD = ["日","月","火","水","木","金","土"];
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
+const svg = (d, size, stroke, w) => {
+  const ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg");
+  s.setAttribute("width", size||20); s.setAttribute("height", size||20); s.setAttribute("viewBox", "0 0 24 24");
+  s.setAttribute("fill", "none"); s.setAttribute("stroke", stroke||"currentColor"); s.setAttribute("stroke-width", w||2);
+  s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round"); s.setAttribute("aria-hidden", "true");
+  d.split("|").forEach(p => { const e = document.createElementNS(ns, "path"); e.setAttribute("d", p); s.appendChild(e); });
+  return s;
+};
+const ICON = { back:"M15 6l-6 6 6 6", next:"M9 6l6 6-6 6", menu:"M4 7h16|M4 12h16|M4 17h16", check:"M5 12.5l4.5 4.5L19 7",
+  cap:"M3 9l9-5 9 5-9 5-9-5z|M7 11.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-4.5", chart:"M4 20V10|M10 20V4|M16 20v-7|M22 20H2" };
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const short = c => String(c || "").replace(/クラス$/, "");
+const md = d => (d.getMonth()+1) + "月" + d.getDate() + "日（" + WD[d.getDay()] + "）";
+const hm = d => d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0");
+const sameDay = (a, b) => a.toDateString() === b.toDateString();
+const when = iso => { const d = new Date(iso); return sameDay(d, new Date()) ? hm(d) : (d.getMonth()+1) + "/" + d.getDate() + " " + hm(d); };
+const isLive = r => !r.is_void && (!r.closes_at || new Date(r.closes_at).getTime() > Date.now());
+const defOf = key => (typeof SURVEYS !== "undefined" && SURVEYS.find(s => s.key === key)) || null;
+const roundName = r => { const d = defOf(r.survey_key), t = d && d.title ? (d.title.ja || "") : "";
+  return t + (r.title && r.title !== "常設" ? (t ? " " : "") + r.title : "") || "（無題のアンケート）"; };
+/* 回の対象＝class_names と student_ids（どちらも空なら全員）。★admin.js targetsOf・サーバーの run_target_count と同じ */
+function targetsOf(r, all){
+  const cls = r.class_names || [], ids = r.student_ids || [];
+  if(!cls.length && !ids.length) return all;
+  return all.filter(s => cls.includes(s.class_name) || ids.includes(s.id));
+}
+
+/* ════════ データ ════════ */
+const D = { students: [], stuAt: 0, rounds: [], resp: {}, loadedAt: 0 };
+
+async function loadStudents(force){
+  if(!force && D.students.length && Date.now() - D.stuAt < 60000) return;
+  D.students = await api.get("/rest/v1/profiles?select=id,student_no,display_name,class_name&role=eq.student&order=student_no");
+  D.stuAt = Date.now();
+}
+/* ★answers は読まない（このスマホ画面に回答の中身を持ち込まない） */
+async function loadResp(ids){
+  if(!ids.length) return;
+  const rows = await api.get("/rest/v1/survey_responses?select=student_id,round_id,submitted_at&round_id=in.(" + ids.join(",") + ")&order=submitted_at.desc");
+  ids.forEach(id => { D.resp[id] = []; });
+  rows.forEach(x => { (D.resp[x.round_id] = D.resp[x.round_id] || []).push(x); });
+}
+async function loadAll(){
+  if(DEMO){ demoData(); return; }
+  try{ await SurveyDB.loadAll(); }catch(e){ /* 画面で作った定義が読めなくても、コードの定義の回は出す */ }
+  await loadStudents(true);
+  const rounds = await api.get("/rest/v1/survey_rounds?select=id,survey_key,title,class_names,student_ids,opens_at,closes_at,is_void"
+    + "&is_void=eq.false&order=closes_at.asc.nullslast");
+  D.rounds = rounds.filter(r => isLive(r) && defOf(r.survey_key));
+  D.resp = {};
+  await loadResp(D.rounds.map(r => r.id));
+  D.loadedAt = Date.now();
+}
+async function reloadRound(rid){
+  if(DEMO){ demoTick(rid); return; }
+  await loadStudents(false);
+  await loadResp([rid]);
+  D.loadedAt = Date.now();
+}
+/* 1つの回の数字。cls を渡すとそのクラスだけ */
+function scope(r, cls){
+  let tg = targetsOf(r, D.students);
+  if(cls != null) tg = tg.filter(s => (s.class_name || "") === cls);
+  const ids = new Set(tg.map(s => s.id));
+  const done = (D.resp[r.id] || []).filter(x => ids.has(x.student_id));
+  const doneIds = new Set(done.map(x => x.student_id));
+  const rest = tg.filter(s => !doneIds.has(s.id));
+  return { tg, done, rest };
+}
+function classesOf(r){
+  const tg = targetsOf(r, D.students);
+  return [...new Set(tg.map(s => s.class_name || ""))].sort((a, b) => a.localeCompare(b, "ja", {numeric:true}));
+}
+
+/* ════════ 見本データ（?demo=1）★実在の学生は入れない ════════ */
+function demoData(){
+  if(D.students.length) return;
+  const cls = ["A1","A2","A3","A4","B1","B2","B3","C1","C2","C3"], sizes = [25,26,25,25,24,26,27,27,25,26], rests = [3,0,7,11,0,5,2,9,0,14];
+  let n = 0;
+  cls.forEach((c, ci) => { for(let i = 0; i < sizes[ci]; i++){ n++;
+    D.students.push({ id: "s"+n, student_no: "2604" + String(900 + n).slice(-3), display_name: "見本 学生" + String(n).padStart(3,"0"), class_name: c + "クラス" }); } });
+  const r = { id: "demo1", survey_key: (SURVEYS[0] || {}).key, title: "12月", class_names: [], student_ids: [],
+    opens_at: new Date(Date.now() - 2*86400000).toISOString(), closes_at: new Date(Date.now() + 2*86400000).toISOString(), is_void: false };
+  D.rounds = [r]; D.resp = { demo1: [] };
+  let t = Date.now() - 30000;
+  cls.forEach((c, ci) => {
+    const mem = D.students.filter(s => s.class_name === c + "クラス");
+    mem.slice(0, mem.length - rests[ci]).forEach((s, i) => { D.resp.demo1.push({ student_id: s.id, round_id: "demo1", submitted_at: new Date(t - (ci * 7 + i) * 97000).toISOString() }); });
+  });
+  D.resp.demo1.sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
+  D.loadedAt = Date.now();
+}
+function demoTick(rid){ D.loadedAt = Date.now(); }
+
+/* ════════ 画面の切り替え（# で持つ＝スマホの「戻る」が効く） ════════ */
+let timer = null;
+function route(){
+  clearInterval(timer); timer = null;
+  const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+  const r = D.rounds.find(x => x.id === p[1]);
+  if(p[0] === "pick" && r) return viewPick(r);
+  if(p[0] === "class" && r && p[2] != null) return viewClass(r, p[2]);
+  if(p[0] === "all" && r) return viewAll(r);
+  return viewHome();
+}
+const go = h => { location.hash = h; };
+function header(opts){
+  const hd = $("hd"); hd.replaceChildren();
+  const row = el("div", "hd-row");
+  if(opts.back){
+    const b = el("button", "ibtn"); b.type = "button"; b.setAttribute("aria-label", opts.backLabel || "もどる");
+    b.appendChild(svg(ICON.back, 22, null, 2.2)); b.onclick = () => go(opts.back); row.appendChild(b);
+  } else {
+    const lg = el("div", "logo"); lg.appendChild(svg(ICON.cap, 20, "#7B2A70")); row.appendChild(lg);
+  }
+  const tt = el("div", "hd-tt");
+  if(opts.sub) tt.appendChild(el("div", "s", opts.sub));
+  tt.appendChild(el("div", "m", opts.title));
+  if(opts.tag) tt.appendChild(el("div", "tag", opts.tag));
+  row.appendChild(tt);
+  if(opts.live){ const lv = el("div", "live" + (opts.live === "stop" ? " stop" : "")); lv.id = "live";
+    lv.appendChild(el("i")); lv.appendChild(document.createTextNode(opts.live === "stop" ? "止まっています" : "10秒ごと")); row.appendChild(lv); }
+  if(opts.menu){ const m = el("button", "ibtn soft"); m.type = "button"; m.setAttribute("aria-label", "メニュー");
+    m.appendChild(svg(ICON.menu, 20)); m.onclick = openMenu; row.appendChild(m); }
+  hd.appendChild(row);
+  return hd;
+}
+const bar = (p, cls) => { const b = el("div", cls || "bar"); b.setAttribute("role", "img"); b.setAttribute("aria-label", "提出 " + p + "%");
+  const i = el("i"); i.style.width = p + "%"; b.appendChild(i); return b; };
+const chevBtn = (cls, label, icon, onclick) => { const b = el("button", cls); b.type = "button";
+  if(icon) b.appendChild(svg(icon, 18, "#7B2A70")); b.appendChild(document.createTextNode(label));
+  const c = svg(ICON.next, 18, cls === "go" ? null : "#6B6475", cls === "go" ? 2.2 : 2); c.classList.add("chev"); b.appendChild(c);
+  b.onclick = onclick; return b; };
+
+/* ① ホーム（今日のHR） */
+function viewHome(){
+  header({ title: "学生ポータル", tag: "MASTER", menu: true });
+  $("tabs").hidden = true;
+  const m = $("main"); m.replaceChildren();
+  const top = el("div"); top.appendChild(el("div", "date", md(new Date()))); top.appendChild(el("h1", "pg", "今日の HR")); m.appendChild(top);
+  if(!D.rounds.length){
+    m.appendChild(el("div", "empty", "いま受付中のアンケートはありません。回をはじめるのは PC のマスター画面からです。"));
+  }
+  D.rounds.forEach(r => {
+    const sc = scope(r), p = pct(sc.done.length, sc.tg.length), nc = classesOf(r).length;
+    const card = el("section", "card"); card.setAttribute("aria-label", roundName(r));
+    const hrow = el("div"); hrow.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap";
+    const pill = el("span", "pill on"); pill.appendChild(el("i")); pill.appendChild(document.createTextNode("受付中")); hrow.appendChild(pill);
+    hrow.appendChild(el("span", "due", r.closes_at ? "しめきり " + md(new Date(r.closes_at)) + " " + hm(new Date(r.closes_at)) : "しめきり なし（常設）"));
+    card.appendChild(hrow);
+    const tt = el("div"); tt.appendChild(el("div", "svt", roundName(r))); tt.appendChild(el("div", "svs", "対象 " + sc.tg.length + "人（" + nc + "クラス）")); card.appendChild(tt);
+    const cnt = el("div", "cnt"); cnt.appendChild(el("span", "n", String(sc.done.length))); cnt.appendChild(el("span", "of", "/ " + sc.tg.length + "人 が提出"));
+    cnt.appendChild(el("span", "p", p + "%")); card.appendChild(cnt);
+    card.appendChild(bar(p));
+    card.appendChild(chevBtn("go", "クラスを えらんで 確かめる", null, () => go("/pick/" + r.id)));
+    card.appendChild(chevBtn("sub-go", "ぜんたいの すすみ", ICON.chart, () => go("/all/" + r.id)));
+    m.appendChild(card);
+  });
+  m.appendChild(el("p", "note", "回答の中身・CSV・回の取り消しは、PC のマスター画面で行います。"));
+}
+
+/* ② クラスをえらぶ */
+function viewPick(r){
+  header({ back: "/", sub: roundName(r), title: "クラスを えらぶ" });
+  $("tabs").hidden = true;
+  const m = $("main"); m.replaceChildren();
+  m.appendChild(el("h2", "sec", "クラス"));
+  const g = el("div", "grid3");
+  classesOf(r).forEach(c => {
+    const sc = scope(r, c), b = el("button", "cls"); b.type = "button";
+    b.appendChild(el("span", "c", short(c) || "（クラスなし）"));
+    b.appendChild(el("span", "l " + (sc.rest.length ? "rest-t" : "ok-t"), sc.rest.length ? "まだ " + sc.rest.length + "人" : "ぜんいん"));
+    b.setAttribute("aria-label", (short(c) || "クラスなし") + "　" + (sc.rest.length ? "まだ " + sc.rest.length + "人" : "ぜんいん提出"));
+    b.onclick = () => go("/class/" + r.id + "/" + encodeURIComponent(c));
+    g.appendChild(b);
+  });
+  m.appendChild(g);
+  m.appendChild(el("p", "note", "クラスは毎回えらびます。前に見たクラスは自動では開きません。"));
+}
+
+/* ③ 提出の状況（HR中・10秒ごと） */
+let tab = "rest";
+function viewClass(r, c){
+  tab = "rest";
+  drawClass(r, c);
+  timer = setInterval(async () => {
+    if(document.hidden) return;
+    try{ await reloadRound(r.id); drawClass(r, c, true); }
+    catch(e){ const lv = $("live"); if(lv){ lv.classList.add("stop"); lv.lastChild.textContent = "止まっています"; } }
+  }, REFRESH_MS);
+}
+function drawClass(r, c, keepScroll){
+  const y = window.scrollY;
+  const sc = scope(r, c), p = pct(sc.done.length, sc.tg.length);
+  const hd = header({ back: "/pick/" + r.id, backLabel: "クラスを えらびなおす", sub: roundName(r), title: (short(c) || "クラスなし") + " クラス", live: "on" });
+  const big = el("div", "hd-big");
+  big.appendChild(el("div", "n", String(sc.done.length))); big.appendChild(el("div", "of", "/ " + sc.tg.length + "人 が提出"));
+  const rs = el("div", "rest"); rs.appendChild(el("div", "k", "まだ")); rs.appendChild(el("div", "v", sc.rest.length + "人")); big.appendChild(rs);
+  hd.appendChild(big); hd.appendChild(bar(p, "hd-bar"));
+  // しぼりこみ
+  const tabs = $("tabs"); tabs.hidden = false; tabs.replaceChildren();
+  [["rest", "まだ " + sc.rest.length], ["done", "出した " + sc.done.length], ["all", "ぜんいん " + sc.tg.length]].forEach(([k, label]) => {
+    const b = el("button", "tab", label); b.type = "button"; b.setAttribute("aria-pressed", k === tab ? "true" : "false");
+    b.onclick = () => { tab = k; drawClass(r, c); }; tabs.appendChild(b);
+  });
+  const m = $("main"); m.replaceChildren();
+  if(tab !== "done"){
+    const sec = el("section"); sec.style.cssText = "display:flex;flex-direction:column;gap:8px";
+    sec.appendChild(el("h2", "sec h-rest", "まだ（" + sc.rest.length + "人）"));
+    if(!sc.rest.length) sec.appendChild(el("div", "empty", "ぜんいん 提出しました。"));
+    else { const ul = el("ul", "list");
+      sc.rest.forEach(s => { const li = el("li"); const d = el("span", "dot"); d.setAttribute("aria-hidden", "true"); li.appendChild(d);
+        const nm = el("span", "nm"); nm.appendChild(el("b", null, s.display_name || "（名前なし）")); nm.appendChild(el("span", null, s.student_no || ""));
+        li.appendChild(nm); li.appendChild(el("span", "badge", "まだ")); ul.appendChild(li); });
+      sec.appendChild(ul); }
+    m.appendChild(sec);
+  }
+  if(tab !== "rest"){
+    const byId = new Map(sc.tg.map(s => [s.id, s]));
+    const sec = el("section"); sec.style.cssText = "display:flex;flex-direction:column;gap:8px";
+    sec.appendChild(el("h2", "sec h-ok", "提出した（" + sc.done.length + "人）・新しい順"));
+    if(!sc.done.length) sec.appendChild(el("div", "empty", "まだ 誰も 提出していません。"));
+    else { const ul = el("ul", "list");
+      sc.done.forEach(x => { const s = byId.get(x.student_id) || {}, fresh = Date.now() - new Date(x.submitted_at).getTime() < FRESH_MS;
+        const li = el("li", "done" + (fresh ? " fresh" : "")); li.appendChild(svg(ICON.check, 18, "#1E7B34", 2.6));
+        li.appendChild(el("span", "nm2", s.display_name || "（名前なし）"));
+        if(fresh) li.appendChild(el("span", "now", "いま"));
+        li.appendChild(el("span", "tm", when(x.submitted_at))); ul.appendChild(li); });
+      sec.appendChild(ul); }
+    m.appendChild(sec);
+  }
+  m.appendChild(el("p", "note", "ここには「出した／まだ」と時刻だけを出します。回答の中身は PC のマスター画面で見てください。"));
+  if(keepScroll) window.scrollTo(0, y);
+}
+
+/* ④ ぜんたいの すすみ（数だけ） */
+function viewAll(r){
+  const sc = scope(r), p = pct(sc.done.length, sc.tg.length);
+  header({ back: "/", sub: roundName(r), title: "ぜんたいの すすみ" });
+  $("tabs").hidden = true;
+  const m = $("main"); m.replaceChildren();
+  const card = el("section", "card"); card.setAttribute("aria-label", "合計");
+  const cnt = el("div", "cnt"); cnt.appendChild(el("span", "n", String(sc.done.length))); cnt.appendChild(el("span", "of", "/ " + sc.tg.length + "人"));
+  cnt.appendChild(el("span", "r", "まだ " + sc.rest.length + "人")); card.appendChild(cnt);
+  card.appendChild(bar(p));
+  if(r.closes_at){ const n = Math.ceil((new Date(r.closes_at).getTime() - Date.now()) / 86400000);
+    card.appendChild(el("div", "due", "しめきり " + md(new Date(r.closes_at)) + " " + hm(new Date(r.closes_at)) + " ／ のこり " + n + "日")); }
+  m.appendChild(card);
+  m.appendChild(el("h2", "sec", "クラスごと（まだが多い順）"));
+  const rows = classesOf(r).map(c => ({ c, s: scope(r, c) })).sort((a, b) => b.s.rest.length - a.s.rest.length || a.c.localeCompare(b.c, "ja", {numeric:true}));
+  const ul = el("ul", "list rows");
+  rows.forEach(({ c, s }) => { const li = el("li"), b = el("button"); b.type = "button";
+    b.appendChild(el("span", "c", short(c) || "なし"));
+    const bb = el("span", "b"); bb.setAttribute("aria-hidden", "true"); const i = el("i"); i.style.width = pct(s.done.length, s.tg.length) + "%"; bb.appendChild(i); b.appendChild(bb);
+    b.appendChild(el("span", "l " + (s.rest.length ? "rest-t" : "ok-t"), s.rest.length ? "まだ " + s.rest.length : "ぜんいん"));
+    b.onclick = () => go("/class/" + r.id + "/" + encodeURIComponent(c)); li.appendChild(b); ul.appendChild(li); });
+  m.appendChild(ul);
+  m.appendChild(el("p", "note", "ここは数だけです。名前はクラスを開いたときに出ます。"));
+}
+
+/* ════════ メニュー・ログイン ════════ */
+function openMenu(){ $("menu").hidden = false; $("menu-who").textContent = DEMO ? "見本データ" : ((api.profile && api.profile.display_name) || "") + " でログイン中"; }
+$("menu-close").onclick = () => { $("menu").hidden = true; };
+$("menu").onclick = e => { if(e.target === $("menu")) $("menu").hidden = true; };
+$("menu-reload").onclick = async () => { $("menu").hidden = true; try{ await loadAll(); route(); }catch(e){ showErr(e); } };
+$("menu-logout").onclick = () => { clearInterval(timer); if(!DEMO) api.logout(); location.hash = ""; location.reload(); };
+
+function showErr(e){ const m = $("main"); m.replaceChildren(el("div", "empty", "読み込みに失敗しました（" + e.message + "）。メニューの「最新にする」で やりなおせます。")); }
+
+function viewLogin(msg){
+  header({ title: "学生ポータル", tag: "MASTER" });
+  $("tabs").hidden = true;
+  const m = $("main"); m.replaceChildren();
+  const box = el("div", "login");
+  box.appendChild(el("h1", "pg", "マスター ログイン"));
+  const f1 = el("div"), l1 = el("label", null, "マスターID"); l1.htmlFor = "in-no"; const i1 = el("input"); i1.id = "in-no"; i1.type = "text";
+  i1.autocapitalize = "none"; i1.autocomplete = "username"; i1.placeholder = "m001"; f1.appendChild(l1); f1.appendChild(i1); box.appendChild(f1);
+  const f2 = el("div"), l2 = el("label", null, "パスワード"); l2.htmlFor = "in-pw"; const i2 = el("input"); i2.id = "in-pw"; i2.type = "password";
+  i2.autocomplete = "current-password"; f2.appendChild(l2); f2.appendChild(i2); box.appendChild(f2);
+  const btn = el("button", "go", "ログイン"); btn.type = "button"; box.appendChild(btn);
+  const ms = el("div", "msg err"); if(msg) ms.textContent = msg; box.appendChild(ms);
+  m.appendChild(box);
+  m.appendChild(el("p", "note", "自分のスマホで開く画面です。教室の PC ではマスターにログインしないでください。"));
+  btn.onclick = async () => {
+    btn.disabled = true; ms.textContent = "";
+    try{
+      const p = await api.login(i1.value.trim(), i2.value);
+      /* ★master.html と同じ門番（案内であって権限ではない。権限は RLS） */
+      if(p.role === "teacher"){ api.logout(); throw new Error("ここはマスター用の画面です。先生は teacher.html を開いてください。"); }
+      if(p.role !== "master"){ api.logout(); throw new Error("マスターのアカウントでログインしてください"); }
+      await boot();
+    }catch(e){ ms.textContent = e.message; }
+    finally{ btn.disabled = false; }
+  };
+  i2.addEventListener("keydown", e => { if(e.key === "Enter") btn.click(); });
+}
+
+async function boot(){
+  $("main").replaceChildren(el("div", "empty", "よみこみ中…"));
+  await loadAll();
+  window.onhashchange = route;
+  route();
+}
+
+(async function(){
+  if(DEMO){ $("demo-bar").hidden = false; await boot(); return; }
+  if(api.token && api.profile && api.profile.role === "master"){
+    try{ await boot(); return; }catch(e){ api.logout(); }
+  }
+  viewLogin();
+})();
+})();
+</script>
+</body>
+</html>
