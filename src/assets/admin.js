@@ -707,7 +707,8 @@
       else body.appendChild(mk("div", "muted", "まだ小テストを受けていません。"));
       body.appendChild(mk("div", "dsec", "アンケート"));
       const box = mk("div", "", "読み込み中…"); body.appendChild(box);
-      body.appendChild(mk("div", "note", "出席率・同意の記録・パスワード再発行・アカウントを止める は、学生マスタDBとのつなぎこみと管理用の権限ができてから足します。"));
+      if (isMaster()) pwSection(body, o.s);
+      body.appendChild(mk("div", "note", "出席率・同意の記録・アカウントを止める は、学生マスタDBとのつなぎこみと管理用の権限ができてから足します。"));
       api.get("/rest/v1/survey_responses?select=survey_key,round_id,answers,submitted_at,survey_rounds(title)&student_id=eq." + o.s.id + "&order=submitted_at.desc")
         .catch(() => api.get("/rest/v1/survey_responses?select=survey_key,round_id,answers,submitted_at&student_id=eq." + o.s.id + "&order=submitted_at.desc"))
         .then(rows => {
@@ -729,6 +730,42 @@
           });
         }).catch(e => { box.textContent = "読み込めませんでした（" + e.message + "）"; });
     });
+  }
+  /* パスワードを「はじめに もどす」（2026-11-20・マスターだけ・db/2026-11-20_password_reset.sql）
+     戻す先は「scg＋学籍番号」。戻すとその学生の端末はすべてログアウトし、次のログインで決め直しの画面が出る。
+     🔴 本人が目の前にいるときだけ押す（運用ルール）。だれがいつ戻したかは password_reset_log に残る（直せない・消せない） */
+  function pwSection(body, s) {
+    body.appendChild(mk("div", "dsec", "パスワード"));
+    const box = mk("div"); box.style.display = "flex"; box.style.flexDirection = "column"; box.style.gap = "8px";
+    const last = mk("div", "muted", "もどした記録を読み込み中…");
+    const btn = mk("button", "abtn", "パスワードを はじめに もどす"); btn.type = "button"; btn.id = "st-pw-reset";
+    const msg = mk("div", "muted"); msg.id = "st-pw-msg";
+    box.append(mk("div", "note", "わすれた学生が目の前にいるときだけ押してください。「scg＋学籍番号」にもどり、その学生のスマホ・PCはすべてログアウトします。次にログインすると、新しいパスワードを決める画面が出ます。"), btn, msg, last);
+    body.appendChild(box);
+    const paintLast = () => api.get("/rest/v1/password_reset_log?select=at&student_id=eq." + s.id + "&order=at.desc&limit=1")
+      .then(rows => { last.textContent = rows.length ? "前に もどした日時：" + mdhm(rows[0].at) : "まだ もどしたことは ありません。"; })
+      .catch(() => { last.textContent = "もどした記録は まだ読めません（データベースの準備待ち）。"; });
+    paintLast();
+    btn.onclick = async () => {
+      const ok = await askDialog({
+        title: "パスワードを はじめに もどしますか？",
+        body: (s.display_name || "") + "（" + (s.student_no || "") + "）\n\n・パスワードが「scg＋学籍番号」にもどります\n・この学生のスマホ・PCは すべてログアウトします\n・本人が目の前にいるときだけ押してください",
+        okText: "もどす", danger: true,
+      });
+      if (!ok) return;
+      btn.disabled = true; msg.className = "muted"; msg.textContent = "もどしています…";
+      try {
+        await api.rpc("reset_student_password", { p_student_id: s.id });
+        msg.className = ""; msg.style.color = "#047857"; msg.style.fontWeight = "700";
+        msg.textContent = "もどしました。本人に「scg＋学籍番号」でログインしてもらい、その場で新しいパスワードを決めてもらってください。";
+        paintLast();
+      } catch (e) {
+        msg.className = ""; msg.style.color = "#B91C1C";
+        msg.textContent = /reset_student_password|schema cache|404/.test(e.message)
+          ? "まだ使えません（データベースの準備待ち）。"
+          : "もどせませんでした（" + e.message + "）";
+      } finally { btn.disabled = false; }
+    };
   }
   function stInit() {
     byId("st-q").oninput = () => { ST.q = byId("st-q").value.trim(); stRender(); };

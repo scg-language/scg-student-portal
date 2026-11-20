@@ -80,6 +80,28 @@ const api = {
     return this.profile;
   },
 
+  /* パスワードが初期（scg＋学籍番号）のままか（2026-11-20・RPC my_password_is_initial）。
+   * ★RPC がまだ無い DB（適用前）や通信の失敗では false＝今までどおりホームへ進む（ログインを止めない） */
+  async passwordIsInitial() {
+    try {
+      const res = await this._authed("/rest/v1/rpc/my_password_is_initial", { method: "POST", body: "{}" });
+      if (!res.ok) return false;
+      return (await res.json()) === true;
+    } catch (e) { return false; }
+  },
+
+  /* 自分のパスワードを変える（Supabase Auth の PUT /auth/v1/user）。
+   * 断られたら { code, reasons } を持つ Error を投げる＝画面が学生の言葉に置き換える（サーバーの英文を見せない） */
+  async changePassword(newPw) {
+    const res = await this._authed("/auth/v1/user", { method: "PUT", body: JSON.stringify({ password: newPw }) });
+    if (res.ok) return true;
+    const b = await res.json().catch(() => ({}));
+    const e = new Error("password change failed: " + res.status);
+    e.code = b.error_code || b.code || String(res.status);
+    e.reasons = (b.weak_password && b.weak_password.reasons) || b.reasons || [];
+    throw e;
+  },
+
   logout() {
     this.token = null; this.profile = null;
     _store.removeItem("sp_token");
