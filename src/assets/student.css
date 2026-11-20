@@ -340,3 +340,10 @@ body.sp .rs-num .of{font-size:.88rem;color:#C8DBEE;font-weight:700;}
 .ax-row .v{font-size:1.05rem;}
 .ax-tip{background:#F3F4F6;border-radius:16px;padding:12px 14px;font-size:.88rem;color:#374151;line-height:1.85;}
 .ax-tip b{color:var(--ink2);margin-right:8px;}
+
+/* パスワードを かえる（2026-11-20）。見た目は最小＝あとで /design で磨く */
+body.sp #scr-password .pw-lead{font-size:.92rem;line-height:1.7;margin:0 0 10px;}
+body.sp #scr-password .pw-rules{margin:0 0 14px;padding:10px 12px 10px 28px;background:#FEF3C7;border-radius:12px;font-size:.88rem;line-height:1.7;font-weight:700;color:#78350F;}
+body.sp #scr-password .pw-forget{font-size:.85rem;color:#374151;margin:14px 0 0;line-height:1.7;}
+body.sp #scr-password .set-out{margin-top:14px;}
+body.sp #scr-password .set-out{width:100%;}

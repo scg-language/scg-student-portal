@@ -129,9 +129,43 @@
             <span class="ic" style="background:#0D9488"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 8v6"/><path d="M9 11h6"/></svg></span>
             <span class="lb" data-i18n="set.a2hs"></span><span class="chev"></span>
           </button>
+          <button type="button" class="set-row" id="set-pw">
+            <span class="ic" style="background:#B45309"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+            <span class="lb" data-i18n="set.pw"></span><span class="chev"></span>
+          </button>
         </div>
       </section>
       <button type="button" class="set-out" id="set-logout" data-i18n="my.logout">ログアウト</button>
+    </div>
+  </section>
+
+  <!-- パスワードを かえる（2026-11-20）。
+       ・はじめて／先生が もどした あと（初期パスワード＝scg＋学籍番号のまま）は、ログインのあと ここが必ず出る（もどるボタンなし）
+       ・マイから開いたときは もどれる
+       ・決まりを先に見せる。断られたら理由を学生の言葉で出す（CLAUDE.md「認証・アカウント」の約束） -->
+  <section id="scr-password" hidden>
+    <div class="panel">
+      <h2 id="pw-title">パスワードを かえる</h2>
+      <p class="pw-lead" id="pw-lead"></p>
+      <ul class="pw-rules">
+        <li data-i18n="pw.rule1"></li>
+        <li data-i18n="pw.rule2"></li>
+      </ul>
+      <!-- ★ブラウザの「パスワードを保存」が どのアカウントか分かるように、番号を隠して持たせる -->
+      <input id="pw-user" type="text" autocomplete="username" hidden readonly>
+      <div class="field">
+        <label for="pw-new" data-i18n="pw.new">あたらしい パスワード</label>
+        <input id="pw-new" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="pw-new2" data-i18n="pw.new2">もういちど</label>
+        <input id="pw-new2" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+      </div>
+      <button class="btn" id="btn-pw-save" data-i18n="pw.save">きめる</button>
+      <div class="msg" id="pw-msg"></div>
+      <p class="pw-forget" data-i18n="pw.forget"></p>
+      <button type="button" class="set-out" id="btn-pw-back" data-i18n="pw.back" hidden>もどる</button>
+      <button type="button" class="set-out" id="btn-pw-logout" data-i18n="my.logout" hidden>ログアウト</button>
     </div>
   </section>
 
@@ -1221,7 +1255,7 @@
 <script src="assets/survey-form.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const screens = ["scr-login","scr-mypage","scr-settings","scr-quizlist","scr-quiz","scr-result","scr-surveylist","scr-survey","scr-survey-done"];
+const screens = ["scr-login","scr-mypage","scr-settings","scr-quizlist","scr-quiz","scr-result","scr-surveylist","scr-survey","scr-survey-done","scr-password"];
 /* 下のタブ: 一覧系の画面だけに出す。回答中（テスト・アンケート）と結果は隠して集中させる */
 const TAB_OF = { "scr-mypage":"home", "scr-surveylist":"home", "scr-quizlist":"learn", "scr-settings":"me" };
 function setTab(name){
@@ -1336,7 +1370,7 @@ $("btn-login").onclick = async () => {
   const no=$("in-no").value.trim(), pw=$("in-pw").value;
   if(!no||!pw){ err("login-msg",t("login.need")); return; }
   $("btn-login").disabled=true; $("btn-login").textContent=t("login.busy");
-  try{ await api.login(no,pw); await goMyPage(); }
+  try{ await api.login(no,pw); await afterLogin(); }
   catch(e){ err("login-msg", e.message); }
   finally{ $("btn-login").disabled=false; $("btn-login").textContent=t("login.btn"); }
 };
@@ -1510,6 +1544,77 @@ $("set-a2hs").onclick = () => sheet.open(body => {
   const st = el("div","sh-steps"); st.append(el("div",null,t("set.a2hs.ios")), el("div",null,t("set.a2hs.android")));
   body.append(st, sheetButton("quiet", t("sheet.close")));
 });
+/* ---- パスワードを かえる（2026-11-20）----
+   forced＝初期パスワード（scg＋学籍番号）のまま＝ホームへ進ませない。マイから開いたときは もどれる。
+   ★画面の決まり（8もじ以上・えいごと すうじ）は Supabase の Password requirements と同じにする（CLAUDE.md の約束1）。
+   ★断られた理由はサーバーの英文を出さず、i18n の文言に置き換える（約束2）。 */
+let pwForced = false;
+async function afterLogin(){
+  if(await api.passwordIsInitial()){ openPassword(true); return; }
+  await goMyPage();
+}
+function openPassword(forced){
+  pwForced = !!forced;
+  const p = api.profile || {};
+  $("pw-user").value = p.student_no || "";
+  $("pw-new").value = ""; $("pw-new2").value = "";
+  $("pw-title").textContent = t(forced ? "pw.title.first" : "pw.title");
+  $("pw-lead").textContent = forced ? t("pw.lead.first") : "";
+  $("pw-lead").hidden = !forced;
+  $("btn-pw-back").hidden = forced;
+  $("btn-pw-logout").hidden = !forced;
+  clearMsg("pw-msg");
+  show("scr-password");
+}
+/* 送る前に手元で見る。null＝問題なし／文字列＝i18n のキー */
+function pwProblem(pw, pw2){
+  if(!pw) return "pw.err.empty";
+  if(/[^\x21-\x7E]/.test(pw)) return "pw.err.ascii";            // 全角・空白（日本語入力のまま打った）
+  if(pw.length < 8) return "pw.err.len";
+  if(!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return "pw.err.chars";
+  const no = String((api.profile || {}).student_no || "").trim().toLowerCase();
+  if(no && pw.toLowerCase() === "scg" + no) return "pw.err.initial";
+  if(pw !== pw2) return "pw.err.match";
+  return null;
+}
+/* サーバーに断られたとき → i18n のキー */
+function pwServerError(e){
+  const rs = e.reasons || [];
+  if(e.code === "weak_password" || rs.length){
+    if(rs.includes("pwned")) return "pw.err.pwned";
+    if(rs.includes("length")) return "pw.err.len";
+    if(rs.includes("characters")) return "pw.err.chars";
+    return "pw.err.weak";
+  }
+  if(e.code === "same_password") return "pw.err.same";
+  if(e.code === "reauthentication_needed" || e.code === "reauthentication_not_valid") return "pw.err.reauth";
+  return "pw.err.other";
+}
+$("btn-pw-save").onclick = async () => {
+  clearMsg("pw-msg");
+  const pw = $("pw-new").value, pw2 = $("pw-new2").value;
+  const bad = pwProblem(pw, pw2);
+  if(bad){ err("pw-msg", t(bad)); return; }
+  const b = $("btn-pw-save"); b.disabled = true; b.textContent = t("pw.busy");
+  try{
+    await api.changePassword(pw);
+    $("pw-new").value = ""; $("pw-new2").value = "";
+    const wasForced = pwForced;
+    if(wasForced) await goMyPage(); else goSettings();
+    sheet.open(body => {
+      const h = el("div","sh-title", t("pw.done")); h.id = "sheet-title";
+      body.append(h, el("p","sh-text", t("pw.done.save")), el("p","sh-text", t("pw.forget")),
+                  sheetButton("quiet", t("sheet.close")));
+    });
+  }catch(e){
+    err("pw-msg", t(pwServerError(e), { s: e.code || "" }));
+  }finally{ b.disabled = false; b.textContent = t("pw.save"); }
+};
+$("pw-new2").addEventListener("keydown", e => { if(e.key === "Enter") $("btn-pw-save").click(); });
+$("btn-pw-back").onclick = goSettings;
+$("btn-pw-logout").onclick = doLogout;
+$("set-pw").onclick = () => openPassword(false);
+
 $("set-logout").onclick = () => sheet.open(body => {
   const h = el("div","sh-title", t("set.logout.q")); h.id = "sheet-title";
   body.append(h, el("p","sh-text", t("set.logout.body")));
@@ -2189,6 +2294,7 @@ window.addEventListener("sp:lang", ()=>{
     renderSurveyBadge();
     if(!$("scr-mypage").hidden) renderHome();
     if(!$("scr-settings").hidden) goSettings();
+    if(!$("scr-password").hidden){ $("pw-title").textContent = t(pwForced ? "pw.title.first" : "pw.title"); $("pw-lead").textContent = pwForced ? t("pw.lead.first") : ""; }
   }
   if(!$("scr-quiz").hidden && questions.length) render();
   if(!$("scr-result").hidden && lastResult) showResult(lastResult);
@@ -2215,6 +2321,7 @@ window.addEventListener("sp:lang", ()=>{
 
   if(api.token && api.profile){
     try{
+      if(await api.passwordIsInitial()){ openPassword(true); return; }
       await goMyPage();
       // ハッシュ直リンク: #survey / #test（QRからの深リンク用）
       if(location.hash==="#survey") $("btn-gosurvey").click();
