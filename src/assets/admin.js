@@ -179,22 +179,22 @@
     const cur = S.rounds.filter(x => rst(x) === "now"), past = S.rounds.filter(x => rst(x) === "past").sort(RoundState.pastOrder);
     const nVoid = S.rounds.filter(x => rst(x) === "void").length;
     if (!cur.length && !past.length) chips.appendChild(mk("span", "muted", nVoid
-      ? "出している回はありません（取り消した回 " + nVoid + "本は 出していません）。「＋ 新しい回を はじめる」から作れます。"
+      ? "表示できる回はありません（取り消した回 " + nVoid + "本は表示しません）。「＋ 新しい回を はじめる」から作れます。"
       : "まだ回がありません。「＋ 新しい回を はじめる」から作れます。"));
     const chip = x => {
       const b = mk("button", "chip");
       b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", x.id === S.rid ? "true" : "false");
       if (isLive(x)) b.appendChild(mk("span", "dot"));
       b.appendChild(document.createTextNode(x.title || "（無題）"));
-      b.title = isLive(x) ? (rst(x) === "past" ? "締切なし・はじめてから" + RoundState.ARCHIVE_DAYS + "日たった回（いまも答えられます）" : "受付中") : "しめきった回";
+      b.title = isLive(x) ? (rst(x) === "past" ? "締切なし・開始から" + RoundState.ARCHIVE_DAYS + "日たった回（回答は受付中）" : "受付中") : "締切済みの回";
       b.onclick = async () => { S.rid = x.id; await svLoadResp(); svRender(); };
       chips.appendChild(b);
     };
     cur.forEach(chip);
     if (past.length) {
-      const t = mk("button", "chip", "おわった回（" + past.length + "）" + (S.pastOpen ? " ▾" : " ▸"));
+      const t = mk("button", "chip", "終了した回（" + past.length + "）" + (S.pastOpen ? " ▾" : " ▸"));
       t.type = "button"; t.id = "sv-past-toggle"; t.setAttribute("aria-expanded", S.pastOpen ? "true" : "false");
-      t.title = "しめきった回と、締切のない回で はじめてから" + RoundState.ARCHIVE_DAYS + "日たった回";
+      t.title = "締切を過ぎた回と、締切がなく開始から" + RoundState.ARCHIVE_DAYS + "日たった回";
       t.onclick = () => { S.pastOpen = !S.pastOpen; svRender(); };
       chips.appendChild(t);
       if (S.pastOpen) past.forEach(chip);
