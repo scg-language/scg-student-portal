@@ -1,10 +1,12 @@
-/* マスター画面の「パスワードを はじめに もどす」の通し検査 — 2026-11-20
+/* マスター画面の「パスワードを初期値に戻す」の通し検査 — 2026-11-20
  * ★通信なし（Supabase への要求は CDP で横取りして見本を返す）
- *   1 マスターで学生の詳細を開くと「はじめに もどす」がある
+ *   1 マスターで学生の詳細を開くと「パスワードを初期値に戻す」がある
  *   2 押すと確認ダイアログ（本人が目の前に・ログアウトする旨）→ やめる なら送らない
- *   3 もどす → RPC reset_student_password に p_student_id だけを送る → 完了の文言
+ *   3 初期値に戻す → RPC reset_student_password に p_student_id だけを送る → 完了の文言
  *   4 RPC が無い（DB 適用前）→「準備待ち」の文言（英文を出さない）
  *   5 先生（role=teacher）には出さない
+ *   6 文言：マスター側（pwSection）にひらがな書き（もどす・わすれ・はじめに）が戻っていない
+ *     ＝やさしい日本語は学生画面だけ。社員が使う画面はふつうの日本語（2026-11-20 きあ）
  *   node tests/run_e2e_password_master.cjs */
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { spawn } = require('node:child_process');
@@ -79,17 +81,17 @@ async function main() {
     await cdp('Emulation.setDeviceMetricsOverride', { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false });
 
     await open('master');
-    await check('1 マスター：もどすボタンがある', until('!!document.getElementById("st-pw-reset")'));
-    await check('1 まだ もどしたことは ありません', until('document.body.textContent.includes("まだ もどしたことは")'));
+    await check('1 マスター：「パスワードを初期値に戻す」ボタンがある', until('(()=>{const b=document.getElementById("st-pw-reset");return !!b&&b.textContent==="パスワードを初期値に戻す"})()'));
+    await check('1 初期値に戻した記録はまだない', until('document.body.textContent.includes("初期値に戻した記録はありません")'));
     await click('#st-pw-reset');
     await check('2 確認ダイアログ', until('document.getElementById("cfm-dlg").open && document.getElementById("cfm-body").textContent.includes("目の前") && document.getElementById("cfm-body").textContent.includes("ログアウト")'));
     await shot('master-confirm.png');
     await click('#cfm-cancel');
     await check('2 やめる なら送らない', mock.resets.length === 0);
     await click('#st-pw-reset'); await until('document.getElementById("cfm-dlg").open'); await click('#cfm-ok');
-    await check('3 もどした', until('document.getElementById("st-pw-msg").textContent.includes("もどしました")'));
+    await check('3 初期値に戻した', until('document.getElementById("st-pw-msg").textContent.includes("初期値に戻しました")'));
     await check('3 送ったのは p_student_id だけ', JSON.stringify(mock.lastBody) === JSON.stringify({ p_student_id: SID }));
-    await check('3 前に もどした日時 が出る', until('document.body.textContent.includes("前に もどした日時")'));
+    await check('3 前回初期値に戻した日時 が出る', until('document.body.textContent.includes("前回初期値に戻した日時")'));
     await shot('master-done.png');
 
     mock.rpcMissing = true;
@@ -103,6 +105,13 @@ async function main() {
     await open('teacher');
     await pause(1500);
     await check('5 先生には出さない', '!document.getElementById("st-pw-reset")');
+
+    const adminSrc = fs.readFileSync(path.join(repo, 'src', 'assets', 'admin.js'), 'utf8');
+    const pwSrc = ((adminSrc.match(/function pwSection[\s\S]*?\r?\n  \}\r?\n/) || [''])[0])
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    const leaked = ['もど', 'わすれ', 'はじめに'].filter(w => pwSrc.includes(w));
+    if (leaked.length) console.log('ひらがな書きが残っている:', leaked.join('・'));
+    await check('6 文言：マスター側にひらがな書きが戻っていない', pwSrc.length > 0 && leaked.length === 0);
     await check('JS の例外なし', exceptions.length === 0);
   } finally {
     for (const c of checks) console.log((c.ok ? 'OK  ' : 'NG  ') + c.name);

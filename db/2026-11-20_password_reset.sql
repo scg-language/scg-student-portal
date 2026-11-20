@@ -1,4 +1,5 @@
--- パスワードを「はじめに もどす」と、初期パスワードのままかを本人が知る口（2026-11-20）
+-- パスワードを初期値に戻す口と、初期パスワードのままかを本人が知る口（2026-11-20）
+-- ※ エラーの文はマスター画面に出る＝ふつうの日本語で書く（やさしい日本語は学生画面だけ）
 --
 -- ★決めたこと（CLAUDE.md「認証・アカウント」の 11/18 きあ決定どおり）
 --   ・初期パスワード＝「scg＋学籍番号」。戻す先もこれ
@@ -55,7 +56,7 @@ declare
   v_at  timestamptz := now();
 begin
   if auth.uid() is null or not app_hidden.is_master() then
-    raise exception 'マスターだけが パスワードを もどせます' using errcode = '42501';
+    raise exception 'パスワードを初期値に戻せるのはマスターだけです' using errcode = '42501';
   end if;
 
   select p.student_no into v_no
