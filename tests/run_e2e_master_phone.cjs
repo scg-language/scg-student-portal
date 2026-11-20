@@ -86,24 +86,29 @@ async function main() {
     check('選択：横にはみ出さない', await noOverflow());
     await shot('2_pick.png');
 
-    // ③ A3 を開く（案C：未提出の名札＋最近の提出・2026-11-20）
+    // ③ A3 を開く（案A：声かけリスト・2026-11-20 同僚の品評会で決定）
     const tabBtn = t => '[...document.querySelectorAll("#tabs .tab")].find(e=>e.textContent.startsWith(' + JSON.stringify(t) + '))';
     await click('[...document.querySelectorAll(".cls")].find(e=>e.querySelector(".c").textContent==="A3")');
     await wait('location.hash.startsWith("#/class/")', 'class');
-    check('クラス：未提出 7人の名札（名前＋学籍番号）', await ev('document.querySelectorAll(".chip").length === 7 && [...document.querySelectorAll(".chip span")].every(e=>/^\\d{7}$/.test(e.textContent))'));
-    check('クラス：提出率の輪 72%（18 / 25）', await ev('document.querySelector(".ring b").textContent === "72%" && /18 \\/ 25人/.test(document.querySelector(".hd-ring").textContent)'));
-    check('クラス：最近の提出は5人・時刻が新しい順', await ev('(()=>{const t=[...document.querySelectorAll(".list li.done .tm")].map(e=>e.textContent);return t.length===5 && t.join()===t.slice().sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})).join();})()'));
+    check('クラス：未提出 7人の行（名前＋学籍番号）', await ev('document.querySelectorAll(".list.rest li").length === 7 && [...document.querySelectorAll(".list.rest .nm span")].every(e=>/^\\d{7}$/.test(e.textContent))'));
+    check('クラス：「未提出 7人」がいちばん大きい・18 / 25人 提出・72%', await ev('document.querySelector(".hd-big .v b").textContent === "7" && /18 \\/ 25人/.test(document.querySelector(".hd-big .of").textContent) && /72%/.test(document.querySelector(".hd-big .of").textContent)'));
+    check('クラス：提出済みは1行にたたむ（行は出さない）', await ev('!document.querySelector(".list li.done") && /^提出済み 18人/.test(document.querySelector(".sub-go.fold").textContent)'));
     check('クラス：「10秒ごとに更新」の表示', await ev('/10秒ごとに更新/.test(document.getElementById("live").textContent)'));
     check('クラス：横にはみ出さない', await noOverflow());
     await shot('3_class_rest.png');
-    await click(byText('人をすべて表示'));
-    check('「すべて表示」：提出済みの絞り込みに切り替わる（18人・時刻つき・名札なし）', await ev(tabBtn('提出済み') + '.getAttribute("aria-pressed")==="true" && document.querySelectorAll(".list li.done").length === 18 && !document.querySelector(".chip") && [...document.querySelectorAll(".list .tm")].every(e=>/\\d:\\d\\d/.test(e.textContent))'));
+    await click('document.querySelector(".sub-go.fold")');
+    check('たたんだ行を押す：提出済みの絞り込みに切り替わる（18人・時刻つき・未提出の行なし）', await ev(tabBtn('提出済み') + '.getAttribute("aria-pressed")==="true" && document.querySelectorAll(".list li.done").length === 18 && !document.querySelector(".list.rest") && [...document.querySelectorAll(".list .tm")].every(e=>/\\d:\\d\\d/.test(e.textContent))'));
     check('絞り込み「提出済み」：横にはみ出さない', await noOverflow());
     await shot('3_class_done.png');
     await click(tabBtn('全員'));
-    check('絞り込み「全員」：名札7＋提出済み18行', await ev('document.querySelectorAll(".chip").length === 7 && document.querySelectorAll(".list li.done").length === 18'));
+    check('絞り込み「全員」：未提出7行＋提出済み18行', await ev('document.querySelectorAll(".list.rest li").length === 7 && document.querySelectorAll(".list li.done").length === 18'));
     await click(tabBtn('未提出'));
-    check('絞り込み「未提出」に戻すと最近の5人に戻る', await ev('document.querySelectorAll(".list li.done").length === 5'));
+    check('絞り込み「未提出」に戻すと提出済みはまたたたむ', await ev('!document.querySelector(".list li.done") && !!document.querySelector(".sub-go.fold")'));
+    // 新着の数（見本の A1 は30秒前に1人出している）
+    await ev('history.back()'); await wait('location.hash.startsWith("#/pick/")', 'pick again');
+    await click('[...document.querySelectorAll(".cls")].find(e=>e.querySelector(".c").textContent==="A1")');
+    await wait('location.hash.includes("A1")', 'class A1');
+    check('たたんだ行に新着の数が出る（A1＝新着 1人）', await ev('/（新着 1人）/.test(document.querySelector(".sub-go.fold").textContent)'));
 
     // 戻る（スマホの戻る＝history.back）
     await ev('history.back()'); await pause(200);

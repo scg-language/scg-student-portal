@@ -24,9 +24,10 @@
     - ホームの大きなカードは「いま」の回だけ。おわった回は ⑤「おわった アンケート」から開く（②③④は同じ画面を使う）
     - しめきった回は 10秒ごとの取り直しをしない（もう増えない）
 
-  2026-11-20 ③を Claude Design の案C「未提出の名札＋最近の提出」にした（きあ選択）
-    - 上に提出率の輪と「未提出 n人」。未提出は名札（名前＋学籍番号）を折り返して1画面に全部出す
-    - その下に「最近の提出」を新しい順に5人。2分以内は「新着」。「提出済み n人をすべて表示」で絞り込みを切り替える
+  2026-11-20 ③を Claude Design の案A「声かけリスト」にした（同僚の品評会で決定。いったん案Cで作ってから差し替え）
+    - 上に「未提出 n人」をいちばん大きく。右に「n / n人 提出」と％、下に進みのバー
+    - 未提出の人を大きめの行（名前＋学籍番号）で並べる＝名前を読み上げて声をかけやすい
+    - 提出済みは「提出済み n人（新着 n人）」の1行にたたむ。押すと絞り込みが「提出済み」に切り替わる。2分以内は「新着」
   🔴 文言はふつうの日本語（社員が使う画面）。やさしい日本語・分かち書きは学生画面（index.html）だけ（2026-11-20 きあ）
 -->
 <style>
@@ -55,15 +56,17 @@ button{font:inherit}
 .live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--pp-sub);padding-right:6px;white-space:nowrap}
 .live i{width:8px;height:8px;border-radius:50%;background:#86EFAC;display:inline-block}
 .live.stop i{background:#bbb}
-/* ③のヘッダー：提出率の輪＋未提出の人数 */
-.hd-ring{display:flex;align-items:center;gap:18px;padding:8px 8px 2px}
-.ring{position:relative;width:84px;height:84px;flex:none}
-.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:18px;font-weight:800}
-.hd-ring .of{font-size:16px;font-weight:700}
-.hd-ring .rest{display:flex;align-items:baseline;gap:6px}
-.hd-ring .rest .k{font-size:15px;font-weight:800;color:var(--pp-sub)}
-.hd-ring .rest .v{font-size:40px;font-weight:800;line-height:1}
-.hd-ring .rest .u{font-size:18px;font-weight:800}
+/* ③のヘッダー（案A）：未提出の人数をいちばん大きく */
+.hd-big{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:6px 8px 0}
+.hd-big .k{font-size:15px;font-weight:800;color:var(--pp-sub)}
+.hd-big .v{display:flex;align-items:baseline;gap:4px}
+.hd-big .v b{font-size:64px;font-weight:800;line-height:1}
+.hd-big .v span{font-size:22px;font-weight:800}
+.hd-big .of{text-align:right;padding-bottom:8px}
+.hd-big .of b{display:block;font-size:17px;font-weight:800}
+.hd-big .of span{font-size:13px;font-weight:700;color:var(--pp-sub)}
+.hd-bar{margin:12px 8px 4px;height:8px;border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden}
+.hd-bar i{display:block;height:100%;background:#fff;border-radius:999px}
 
 /* 本体 */
 main{flex:1;padding:18px 16px 32px;display:flex;flex-direction:column;gap:16px}
@@ -102,7 +105,7 @@ h2.sec{margin:4px 2px 0;font-size:14px;font-weight:800;color:var(--sub)}
 
 /* 絞り込み */
 .tabs{display:flex;gap:8px;padding:12px 16px 0;max-width:520px}
-.tab{flex:1;min-height:44px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;background:#fff;color:var(--ink);border:1px solid var(--edge)}
+.tab{flex:1;min-height:48px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;background:#fff;color:var(--ink);border:1px solid var(--edge)}
 .tab[aria-pressed="true"]{background:var(--pp);color:#fff;border-color:var(--pp)}
 
 /* 名前の一覧 */
@@ -118,15 +121,13 @@ h2.sec{margin:4px 2px 0;font-size:14px;font-weight:800;color:var(--sub)}
 .list .now{font-size:12px;font-weight:800;color:var(--pp)}
 .list .tm{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums;flex:none}
 h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
-/* 未提出の名札（案C）。名前は学生のデータなので長くても折り返す */
-.box{background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(17,24,39,.05);padding:14px;display:flex;flex-direction:column;gap:10px}
-.box h2{margin:0;font-size:15px;font-weight:800;color:var(--rest)}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{min-height:48px;max-width:100%;border-radius:12px;border:2px solid var(--rest-dot);background:var(--rest-l);padding:4px 12px;
-  display:flex;flex-direction:column;justify-content:center}
-.chip b{font-size:16px;font-weight:800;overflow-wrap:anywhere}
-.chip span{font-size:11px;font-weight:700;color:#7A2E0B}
-.allok{color:var(--ok);font-size:15px;font-weight:800}
+/* 未提出の行（案A）。読み上げるので名前を大きく。名前は学生のデータなので長くても折り返す */
+.list.rest li{min-height:60px;gap:14px;padding:0 16px}
+.list.rest .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--rest-dot);flex:none}
+.list.rest .nm b{font-size:18px;font-weight:800}
+.list.rest .nm span{font-size:13px}
+.list.rest .badge{font-size:13px;font-weight:800;color:var(--rest);background:var(--rest-l);border-radius:999px;padding:4px 12px;flex:none}
+.sub-go.fold{min-height:52px}
 
 /* 全体 */
 .rows li{padding:0}
@@ -181,7 +182,6 @@ h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
 const DEMO = /[?&]demo=1\b/.test(location.search);
 const REFRESH_MS = 10000;      // クラスを開いているあいだ、10秒ごとに取り直す
 const FRESH_MS = 2 * 60000;    // 2分以内の提出に「新着」を付ける
-const RECENT_N = 5;            // ③の「最近の提出」に出す人数
 const WD = ["日","月","火","水","木","金","土"];
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
@@ -342,24 +342,8 @@ function header(opts){
 }
 const bar = (p, cls) => { const b = el("div", cls || "bar"); b.setAttribute("role", "img"); b.setAttribute("aria-label", "提出 " + p + "%");
   const i = el("i"); i.style.width = p + "%"; b.appendChild(i); return b; };
-/* 提出率の輪（③のヘッダー）。円周 2π×34 のうち p% を白で塗る */
-const ring = p => {
-  const ns = "http://www.w3.org/2000/svg", w = el("div", "ring"), s = document.createElementNS(ns, "svg");
-  s.setAttribute("width", 84); s.setAttribute("height", 84); s.setAttribute("viewBox", "0 0 84 84");
-  s.setAttribute("role", "img"); s.setAttribute("aria-label", "提出 " + p + "%");
-  const C = 2 * Math.PI * 34;
-  const c = (stroke, dash) => { const e = document.createElementNS(ns, "circle");
-    e.setAttribute("cx", 42); e.setAttribute("cy", 42); e.setAttribute("r", 34); e.setAttribute("fill", "none");
-    e.setAttribute("stroke", stroke); e.setAttribute("stroke-width", 9);
-    if(dash != null){ e.setAttribute("stroke-linecap", "round"); e.setAttribute("stroke-dasharray", dash + " " + C); e.setAttribute("transform", "rotate(-90 42 42)"); }
-    return e; };
-  s.appendChild(c("rgba(255,255,255,.22)"));
-  if(p > 0) s.appendChild(c("#fff", (C * p / 100).toFixed(1)));
-  w.appendChild(s); w.appendChild(el("b", null, p + "%"));
-  return w;
-};
-const chevBtn = (cls, label, icon, onclick) => { const b = el("button", cls); b.type = "button";
-  if(icon) b.appendChild(svg(icon, 18, "#7B2A70")); b.appendChild(document.createTextNode(label));
+const chevBtn = (cls, label, icon, onclick, iconColor) => { const b = el("button", cls); b.type = "button";
+  if(icon) b.appendChild(svg(icon, 18, iconColor || "#7B2A70", iconColor ? 2.6 : 2)); b.appendChild(document.createTextNode(label));
   const c = svg(ICON.next, 18, cls === "go" ? null : "#6B6475", cls === "go" ? 2.2 : 2); c.classList.add("chev"); b.appendChild(c);
   b.onclick = onclick; return b; };
 
@@ -435,7 +419,7 @@ function viewPick(r){
   m.appendChild(el("p", "note", "クラスは毎回選びます。前回見たクラスは自動では開きません。"));
 }
 
-/* ③ 提出の状況（HR中・10秒ごと）— 案C：未提出の名札＋最近の提出（2026-11-20） */
+/* ③ 提出の状況（HR中・10秒ごと）— 案A：声かけリスト（2026-11-20） */
 let tab = "rest";
 function viewClass(r, c){
   tab = "rest";
@@ -447,10 +431,11 @@ function viewClass(r, c){
     catch(e){ const lv = $("live"); if(lv){ lv.classList.add("stop"); lv.lastChild.textContent = "更新が止まっています"; } }
   }, REFRESH_MS);
 }
+const isFresh = x => Date.now() - new Date(x.submitted_at).getTime() < FRESH_MS;
 /* 提出済みの行（新しい順のまま）。2分以内は「新着」 */
 function doneList(rows, byId){
   const ul = el("ul", "list");
-  rows.forEach(x => { const s = byId.get(x.student_id) || {}, fresh = Date.now() - new Date(x.submitted_at).getTime() < FRESH_MS;
+  rows.forEach(x => { const s = byId.get(x.student_id) || {}, fresh = isFresh(x);
     const li = el("li", "done" + (fresh ? " fresh" : "")); li.appendChild(svg(ICON.check, 18, "#1E7B34", 2.6));
     li.appendChild(el("span", "nm2", s.display_name || "（名前なし）"));
     if(fresh) li.appendChild(el("span", "now", "新着"));
@@ -461,10 +446,11 @@ function drawClass(r, c, keepScroll){
   const y = window.scrollY;
   const sc = scope(r, c), p = pct(sc.done.length, sc.tg.length);
   const hd = header({ back: "/pick/" + r.id, backLabel: "クラスの選択に戻る", sub: roundName(r), title: (short(c) || "クラスなし") + " クラス", live: closed(r) ? "closed" : "on" });
-  const top = el("div", "hd-ring"); top.appendChild(ring(p));
-  const txt = el("div"); txt.appendChild(el("div", "of", sc.done.length + " / " + sc.tg.length + "人 提出"));
-  const rs = el("div", "rest"); rs.appendChild(el("span", "k", "未提出")); rs.appendChild(el("span", "v", String(sc.rest.length))); rs.appendChild(el("span", "u", "人"));
-  txt.appendChild(rs); top.appendChild(txt); hd.appendChild(top);
+  const big = el("div", "hd-big");
+  const lf = el("div"); lf.appendChild(el("div", "k", "未提出"));
+  const v = el("div", "v"); v.appendChild(el("b", null, String(sc.rest.length))); v.appendChild(el("span", null, "人")); lf.appendChild(v); big.appendChild(lf);
+  const rt = el("div", "of"); rt.appendChild(el("b", null, sc.done.length + " / " + sc.tg.length + "人 提出")); rt.appendChild(el("span", null, p + "%")); big.appendChild(rt);
+  hd.appendChild(big); hd.appendChild(bar(p, "hd-bar"));
   // 絞り込み
   const tabs = $("tabs"); tabs.hidden = false; tabs.replaceChildren();
   [["rest", "未提出 " + sc.rest.length], ["done", "提出済み " + sc.done.length], ["all", "全員 " + sc.tg.length]].forEach(([k, label]) => {
@@ -473,30 +459,30 @@ function drawClass(r, c, keepScroll){
   });
   const m = $("main"); m.replaceChildren();
   const byId = new Map(sc.tg.map(s => [s.id, s]));
-  // 未提出：名札を折り返して1画面に全部（声をかける相手が一目で分かる）
+  // 未提出：大きめの行で並べる（名前を読み上げて声をかける）
   if(tab !== "done"){
-    const box = el("section", "box"); box.setAttribute("aria-label", "未提出の学生");
-    box.appendChild(el("h2", null, "未提出（" + sc.rest.length + "人）"));
-    if(!sc.rest.length) box.appendChild(el("div", "allok", "全員提出しました。"));
-    else { const w = el("div", "chips");
-      sc.rest.forEach(s => { const ch = el("div", "chip"); ch.appendChild(el("b", null, s.display_name || "（名前なし）"));
-        ch.appendChild(el("span", null, s.student_no || "")); w.appendChild(ch); });
-      box.appendChild(w); }
-    m.appendChild(box);
+    const sec = el("section"); sec.style.cssText = "display:flex;flex-direction:column;gap:8px";
+    sec.appendChild(el("h2", "sec h-rest", "未提出（" + sc.rest.length + "人）"));
+    if(!sc.rest.length) sec.appendChild(el("div", "empty", "全員提出しました。"));
+    else { const ul = el("ul", "list rest");
+      sc.rest.forEach(s => { const li = el("li"); const d = el("span", "dot"); d.setAttribute("aria-hidden", "true"); li.appendChild(d);
+        const nm = el("span", "nm"); nm.appendChild(el("b", null, s.display_name || "（名前なし）")); nm.appendChild(el("span", null, s.student_no || ""));
+        li.appendChild(nm); li.appendChild(el("span", "badge", "未提出")); ul.appendChild(li); });
+      sec.appendChild(ul); }
+    m.appendChild(sec);
   }
-  // 提出済み：「未提出」では最近の5人だけ、「提出済み」「全員」では全員（新しい順）
-  const sec = el("section"); sec.style.cssText = "display:flex;flex-direction:column;gap:8px";
+  // 提出済み：「未提出」では1行にたたむ（押すと「提出済み」へ）。「提出済み」「全員」では全員を新しい順に
   if(tab === "rest"){
-    sec.appendChild(el("h2", "sec h-ok", "最近の提出"));
-    if(!sc.done.length) sec.appendChild(el("div", "empty", "まだ提出はありません。"));
-    else { sec.appendChild(doneList(sc.done.slice(0, RECENT_N), byId));
-      sec.appendChild(chevBtn("sub-go", "提出済み " + sc.done.length + "人をすべて表示", null, () => { tab = "done"; drawClass(r, c); window.scrollTo(0, 0); })); }
+    if(sc.done.length){ const nf = sc.done.filter(isFresh).length;
+      m.appendChild(chevBtn("sub-go fold", "提出済み " + sc.done.length + "人" + (nf ? "（新着 " + nf + "人）" : ""), ICON.check,
+        () => { tab = "done"; drawClass(r, c); window.scrollTo(0, 0); }, "#1E7B34")); }
   } else {
+    const sec = el("section"); sec.style.cssText = "display:flex;flex-direction:column;gap:8px";
     sec.appendChild(el("h2", "sec h-ok", "提出済み（" + sc.done.length + "人）・新しい順"));
     if(!sc.done.length) sec.appendChild(el("div", "empty", "まだ提出はありません。"));
     else sec.appendChild(doneList(sc.done, byId));
+    m.appendChild(sec);
   }
-  m.appendChild(sec);
   m.appendChild(el("p", "note", "ここには提出の有無と時刻だけを表示します。回答内容は PC のマスター画面で確認してください。"));
   if(keepScroll) window.scrollTo(0, y);
 }
