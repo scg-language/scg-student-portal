@@ -28,7 +28,8 @@
   const md = iso => { const d = new Date(iso); return (d.getMonth() + 1) + "/" + d.getDate(); };
   const mdhm = iso => { const d = new Date(iso); return md(iso) + " " + d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); };
   const daysLeft = iso => Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
-  const isLive = r => !r.is_void && (!r.closes_at || new Date(r.closes_at).getTime() > Date.now());
+  const isLive = r => !r.is_void && (!r.closes_at || new Date(r.closes_at).getTime() > Date.now());   // 学生が答えられる
+  const rst = r => RoundState.state(r);   // "now" / "past" / "void"（assets/round-state.js。スマホ画面と同じ線・2026-11-20）
   const defOf = key => SURVEYS.find(s => s.key === key) || null;
   const ansText = (q, v) => (v == null || v === "" || (Array.isArray(v) && !v.length)) ? "" : (Array.isArray(v) ? v.map(x => optLabel(q, x)).join("、") : optLabel(q, v));
   const TYPE_JA = { select: "1つ選ぶ", multi: "いくつでも", text: "書いて答える", date: "日付" };
@@ -126,7 +127,7 @@
   }
 
   /* ════════ アンケート結果（管理①） ════════ */
-  const S = { key: null, rounds: [], rid: null, resp: [], prevRound: null, prevResp: [], all: [], tab: "sum", cls: "", compare: false, loadedAt: 0, busy: false };
+  const S = { key: null, rounds: [], rid: null, resp: [], prevRound: null, prevResp: [], all: [], tab: "sum", cls: "", compare: false, loadedAt: 0, busy: false, pastOpen: null };
   const sdef = () => defOf(S.key) || SURVEYS[0];
   const curRound = () => S.rounds.find(r => r.id === S.rid) || null;
   const respQ = rid => "/rest/v1/survey_responses?select=student_id,answers,submitted_at,profiles(student_no,display_name,class_name)&round_id=eq." + rid + "&order=submitted_at.desc";
@@ -147,10 +148,12 @@
       S.all = await students();
       S.rounds = await api.get("/rest/v1/survey_rounds?select=id,title,class_names,student_ids,opens_at,closes_at,is_void"
         + "&survey_key=eq." + encodeURIComponent(S.key) + "&order=opens_at.desc&limit=30");
-      if (!S.rounds.find(r => r.id === S.rid)) {
-        // 既定は「受付中で締切のある回」→「受付中」→「取り消していない回」→ 先頭
-        const pick = S.rounds.find(r => isLive(r) && r.closes_at) || S.rounds.find(isLive) || S.rounds.find(r => !r.is_void) || S.rounds[0];
+      if (!S.rounds.find(r => r.id === S.rid && rst(r) !== "void")) {
+        // 既定は「いまの回で締切のある回」→「いまの回」→「おわった回の新しいもの」。★取り消した回は選ばない（2026-11-20）
+        const past = S.rounds.filter(r => rst(r) === "past").sort(RoundState.pastOrder);
+        const pick = S.rounds.find(r => rst(r) === "now" && r.closes_at) || S.rounds.find(r => rst(r) === "now") || past[0];
         S.rid = pick ? pick.id : null;
+        if (S.pastOpen == null) S.pastOpen = !!(pick && rst(pick) === "past");   // いまの回が無いときは、おわった回を開いておく
       }
       await svLoadResp();
       S.loadedAt = Date.now();
@@ -171,18 +174,31 @@
   }
   function svRender() {
     const sc = svScope(), { r, def, targets, resp, rest, flagged } = sc;
-    // 回のチップ
+    // 回のチップ。★いまの回を前に、おわった回は「おわった回（n）」にしまう。取り消した回は出さない（2026-11-20 きあ決定・スマホと同じ線）
     const chips = byId("sv-chips"); chips.replaceChildren();
-    if (!S.rounds.length) chips.appendChild(mk("span", "muted", "まだ回がありません。「＋ 新しい回を はじめる」から作れます。"));
-    S.rounds.forEach(x => {
-      const b = mk("button", "chip" + (x.is_void ? " void" : ""));
+    const cur = S.rounds.filter(x => rst(x) === "now"), past = S.rounds.filter(x => rst(x) === "past").sort(RoundState.pastOrder);
+    const nVoid = S.rounds.filter(x => rst(x) === "void").length;
+    if (!cur.length && !past.length) chips.appendChild(mk("span", "muted", nVoid
+      ? "出している回はありません（取り消した回 " + nVoid + "本は 出していません）。「＋ 新しい回を はじめる」から作れます。"
+      : "まだ回がありません。「＋ 新しい回を はじめる」から作れます。"));
+    const chip = x => {
+      const b = mk("button", "chip");
       b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", x.id === S.rid ? "true" : "false");
       if (isLive(x)) b.appendChild(mk("span", "dot"));
-      b.appendChild(document.createTextNode((x.title || "（無題）") + (x.is_void ? "（取消）" : "")));
-      b.title = x.is_void ? "取り消した回（学生には出ていません）" : (isLive(x) ? "受付中" : "終了");
+      b.appendChild(document.createTextNode(x.title || "（無題）"));
+      b.title = isLive(x) ? (rst(x) === "past" ? "締切なし・はじめてから" + RoundState.ARCHIVE_DAYS + "日たった回（いまも答えられます）" : "受付中") : "しめきった回";
       b.onclick = async () => { S.rid = x.id; await svLoadResp(); svRender(); };
       chips.appendChild(b);
-    });
+    };
+    cur.forEach(chip);
+    if (past.length) {
+      const t = mk("button", "chip", "おわった回（" + past.length + "）" + (S.pastOpen ? " ▾" : " ▸"));
+      t.type = "button"; t.id = "sv-past-toggle"; t.setAttribute("aria-expanded", S.pastOpen ? "true" : "false");
+      t.title = "しめきった回と、締切のない回で はじめてから" + RoundState.ARCHIVE_DAYS + "日たった回";
+      t.onclick = () => { S.pastOpen = !S.pastOpen; svRender(); };
+      chips.appendChild(t);
+      if (S.pastOpen) past.forEach(chip);
+    }
     // クラス
     const sel = byId("sv-class"), keep = S.cls;
     const classes = [...new Set((r ? targetsOf(r, S.all) : []).map(s => s.class_name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ja"));
@@ -329,7 +345,7 @@
   const survey = {
     async tick() { if (Date.now() - S.loadedAt < 20000) return; await svReload(); },   // 2秒の tick から呼ばれる。20秒あける
     reload() { S.loadedAt = 0; return svReload(); },
-    pickKey(k) { S.key = k; S.rid = null; S.cls = ""; S.loadedAt = 0; svReload(); },
+    pickKey(k) { S.key = k; S.rid = null; S.cls = ""; S.pastOpen = null; S.loadedAt = 0; svReload(); },
     /* 今日の「対応すること」から：そのアンケート・その回・そのタブで開く */
     focus(key, rid, tab) {
       svKey = key; byId("sv-pick").value = key;
@@ -387,7 +403,7 @@
   }
   async function openSurveyRounds() {
     const rounds = await api.get("/rest/v1/survey_rounds?select=id,survey_key,title,class_names,student_ids,opens_at,closes_at,is_void&is_void=eq.false&order=closes_at.asc.nullslast");
-    return rounds.filter(r => isLive(r) && defOf(r.survey_key));
+    return rounds.filter(r => rst(r) === "now" && defOf(r.survey_key));   // ★おわった回（締切なしで30日たったものを含む）は「今日」に出さない
   }
   async function todayTodo(rounds) {
     const box = byId("td-todo"), all = await students(), items = [];

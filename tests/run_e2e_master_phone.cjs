@@ -69,6 +69,8 @@ async function main() {
     check('見本データの帯が出ている', await ev('!document.getElementById("demo-bar").hidden'));
     check('ホーム：提出 205 / 256人', await ev('/205/.test(document.querySelector(".cnt").textContent) && /256人/.test(document.querySelector(".cnt").textContent)'));
     check('ホーム：横にはみ出さない', await noOverflow());
+    check('ホーム：大きなカードは いまの回だけ（1枚）', await ev('document.querySelectorAll(".card").length === 1'));
+    check('ホーム：「おわった アンケート（2）」がある', await ev('!!' + byText('おわった アンケート（2）')));
     await shot('1_home.png');
 
     // ② クラスをえらぶ
@@ -106,6 +108,26 @@ async function main() {
     check('ぜんたい：名前を出さない（数だけ）', await ev('!/見本 学生/.test(document.querySelector(".app").innerText)'));
     check('ぜんたい：横にはみ出さない', await noOverflow());
     await shot('4_all.png');
+
+    // ⑤ おわった アンケート（2026-11-20）
+    await ev('history.back()'); await pause(200);
+    await click(byText('おわった アンケート'));
+    await wait('location.hash.startsWith("#/past")', 'past');
+    check('おわった：2本・新しい順（先頭は しめきった 11月）', await ev('document.querySelectorAll(".olds li").length === 2 && /11月/.test(document.querySelector(".olds li").textContent) && /しめきり/.test(document.querySelector(".olds li").textContent)'));
+    check('おわった：締切のない回は「いまも 答えられます」', await ev('/いまも 答えられます/.test(document.querySelectorAll(".olds li")[1].textContent)'));
+    check('おわった：名前を出さない（数だけ）', await ev('!/見本 学生/.test(document.querySelector(".app").innerText)'));
+    check('おわった：横にはみ出さない', await noOverflow());
+    await shot('5_past.png');
+    await click('document.querySelector(".olds button")');
+    await wait('location.hash.startsWith("#/pick/demo2")', 'past pick');
+    await click('document.querySelector(".cls")');
+    await wait('location.hash.startsWith("#/class/demo2/")', 'past class');
+    check('しめきった回のクラス：「しめきり済み」と出る', await ev('/しめきり済み/.test(document.getElementById("live").textContent)'));
+    check('しめきった回のクラス：横にはみ出さない', await noOverflow());
+    await shot('5_past_class.png');
+    await click('document.querySelector(".hd .ibtn")'); await wait('location.hash.startsWith("#/pick/")', 'past back pick');
+    await click('document.querySelector(".hd .ibtn")'); await pause(200);
+    check('もどる：おわった アンケート に戻る', await ev('location.hash.startsWith("#/past")'));
 
     check('JS の例外 0件', exceptions.length === 0);
     if (exceptions.length) console.log('  例外: ' + exceptions.join(' / '));

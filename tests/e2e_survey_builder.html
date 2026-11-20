@@ -12,9 +12,13 @@
  *   → 公開する → 下書きに もどす（★回を はじめないので毎回元の状態に戻る＝行が溜まらない）
  *   → 区切りのあるコードの定義は複製を断る／簡単な定義は複製でフォームが開く（保存しない）
  * 学生（s039）で:
- *   検査用の公開版「🧪検査用 公開（画面で作る）」の回（題名「検査用」・s039 だけが対象）が一覧に出て、答えられる
- *   ★公開版と回は1回目だけ作り、2回目からは使い回す（survey_defs も survey_rounds も消せないので、溜めない）
+ *   検査用の公開版「🧪検査用 公開（画面で作る）」の回（s039 だけが対象）が一覧に出て、答えられる
+ *   ★公開版は1回目だけ作り、2回目からは使い回す（survey_defs は消せないので、溜めない）
  *   ★s039 だけを対象にしているのは、ほかの検査（l150 の一覧の数・s001 の 2台運用）に混ざらないようにするため
+ *   🔴 回は毎回作って、終わったら取り消す（2026-11-20）。以前は「検査用」の回を開いたまま使い回していたが、
+ *      マスターのスマホ画面・PC の画面に「受付中」として出ていた（きあ指摘）。取り消しは戻せないので回は使い回せない。
+ *      代わりに1回ごとに「取り消した回1本＋s039 の回答1件」が残る（どちらも消す口が無い。画面には出ない）。
+ *      締切も20分後に付けておく＝取り消しに失敗しても、20分で しめきられる
  * 🔴 資格情報は tmp/e2e_creds.js（.env 由来）。値は出力しない。 */
 const out = document.getElementById("out"), log = { steps: [] };
 const step = (name, ok, detail) => log.steps.push({ name, ok: !!ok, detail: detail === undefined ? "" : String(detail).slice(0, 240) });
@@ -22,6 +26,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, ms = 20000) { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (fn()) return true; } catch (e) {} await sleep(150); } return false; }
 const CREDS = window.__E2E_CREDS || null;
 const DRAFT_T = "🧪検査用 下書き（画面で作る）", PUB_T = "🧪検査用 公開（画面で作る）", STUDENT = "s039";
+let roundId = null, master = null;   // この検査で作った回と、後片付け用のマスターの鍵
 function setVal(w, el, v) { el.value = v; el.dispatchEvent(new w.Event("input", { bubbles: true })); }
 async function loadFrame(f, src) {
   f.src = src;
@@ -101,12 +106,15 @@ async function loadFrame(f, src) {
       pub = w.SurveyDB.find(r.survey_key);
     }
     step("検査用の公開版がある", pub && pub.status === "published", pub && pub.status);
-    const rounds = await w.eval("api").get("/rest/v1/survey_rounds?select=id&survey_key=eq." + pub.key + "&title=eq." + encodeURIComponent("検査用"));
-    if (!rounds.length) {
-      const me = await w.eval("api").get("/rest/v1/profiles?select=id&student_no=eq." + STUDENT);
-      await w.eval("api").rpc("start_survey_round", { p_survey_key: pub.key, p_title: "検査用", p_student_ids: [me[0].id] });
-    }
-    step("公開版の回（s039 だけ）がある", true);
+    const me = await w.eval("api").get("/rest/v1/profiles?select=id&student_no=eq." + STUDENT);
+    const roundTitle = "検査用 " + new Date().toISOString().slice(0, 19).replace("T", " ");
+    const started = await w.eval("api").rpc("start_survey_round", { p_survey_key: pub.key, p_title: roundTitle, p_student_ids: [me[0].id],
+      p_closes_at: new Date(Date.now() + 20 * 60000).toISOString() });
+    roundId = (started && (started.round_id || started.id)) || null;
+    if (!roundId) { const rs = await w.eval("api").get("/rest/v1/survey_rounds?select=id&survey_key=eq." + pub.key + "&title=eq." + encodeURIComponent(roundTitle)); roundId = rs[0] && rs[0].id; }
+    step("この検査だけの回（s039 だけ・20分で しめきり）を作れる", !!roundId, JSON.stringify(started).slice(0, 120));
+    // 取り消しは学生でログインしたあとに行うので、マスターの鍵を先に控えておく（画面には出さない）
+    master = { token: w.eval("api").token, url: w.eval("SB_URL"), key: w.eval("SB_ANON") };
     $("btn-logout").click(); await sleep(500);
     try { w.localStorage.clear(); } catch (e) {}
 
@@ -132,7 +140,19 @@ async function loadFrame(f, src) {
     }
     log.done = true;
   } catch (e) { log.error = String(e && e.message || e); }
-  finally { out.textContent = "E2E_RESULT " + JSON.stringify(log); }
+  finally {
+    // 後片付け：この検査で作った回を取り消す（★途中で落ちても必ず通る場所に置く）
+    if (roundId && master) {
+      try {
+        const res = await fetch(master.url + "/rest/v1/rpc/close_survey_round", { method: "POST",
+          headers: { apikey: master.key, Authorization: "Bearer " + master.token, "Content-Type": "application/json" },
+          body: JSON.stringify({ p_round_id: roundId, p_void: true }) });
+        const j = await res.json().catch(() => ({}));
+        step("後片付け：作った回を取り消す（スマホ・PC の画面に残さない）", res.ok && j.is_void === true, res.status);
+      } catch (e) { step("後片付け：作った回を取り消す（スマホ・PC の画面に残さない）", false, e.message); }
+    }
+    out.textContent = "E2E_RESULT " + JSON.stringify(log);
+  }
 })();
 </script>
 </body></html>

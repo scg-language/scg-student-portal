@@ -18,6 +18,11 @@
     - クラスは毎回えらぶ。前に見たクラスを自動で開かない
   ★担任のクラスを上に出す案は、担任のデータが DB に無いので今は出さない（つなぎこみ待ち）
   ★?demo=1 … 見本データで動く（ログインしない・DBを読まない）。見た目の確認と Claude Design 用
+
+  2026-11-20 おわった回をしまう・見られる（きあ決定：基本の機能はスマホと PC で同じにする）
+    - どの回が「いま／おわった／取り消し」かは assets/round-state.js が決める（PC の admin.js も同じものを使う）
+    - ホームの大きなカードは「いま」の回だけ。おわった回は ⑤「おわった アンケート」から開く（②③④は同じ画面を使う）
+    - しめきった回は 10秒ごとの取り直しをしない（もう増えない）
 -->
 <style>
 :root{
@@ -119,6 +124,11 @@ h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
 .rows .b i{display:block;height:100%;background:var(--pp);border-radius:999px}
 .rows .l{font-size:13px;font-weight:800;text-align:right}
 
+/* おわった アンケート */
+.olds li{padding:0}
+.olds button{display:flex;align-items:center;gap:10px;width:100%;min-height:60px;padding:8px 14px;background:none;border:0;color:var(--ink);cursor:pointer;text-align:left}
+.olds .l{font-size:13px;font-weight:800;color:var(--sub);flex:none;font-variant-numeric:tabular-nums}
+
 /* ログイン */
 .login{background:#fff;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px}
 .login label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
@@ -151,6 +161,7 @@ h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
 <script src="assets/api.js"></script>
 <script src="assets/surveys.js"></script>
 <script src="assets/survey-db.js"></script>
+<script src="assets/round-state.js"></script>
 <script>
 (function(){
 "use strict";
@@ -169,14 +180,20 @@ const svg = (d, size, stroke, w) => {
   return s;
 };
 const ICON = { back:"M15 6l-6 6 6 6", next:"M9 6l6 6-6 6", menu:"M4 7h16|M4 12h16|M4 17h16", check:"M5 12.5l4.5 4.5L19 7",
-  cap:"M3 9l9-5 9 5-9 5-9-5z|M7 11.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-4.5", chart:"M4 20V10|M10 20V4|M16 20v-7|M22 20H2" };
+  cap:"M3 9l9-5 9 5-9 5-9-5z|M7 11.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-4.5", chart:"M4 20V10|M10 20V4|M16 20v-7|M22 20H2",
+  box:"M3 7h18v4H3z|M5 11v8h14v-8|M10 15h4" };
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const short = c => String(c || "").replace(/クラス$/, "");
 const md = d => (d.getMonth()+1) + "月" + d.getDate() + "日（" + WD[d.getDay()] + "）";
 const hm = d => d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0");
 const sameDay = (a, b) => a.toDateString() === b.toDateString();
 const when = iso => { const d = new Date(iso); return sameDay(d, new Date()) ? hm(d) : (d.getMonth()+1) + "/" + d.getDate() + " " + hm(d); };
-const isLive = r => !r.is_void && (!r.closes_at || new Date(r.closes_at).getTime() > Date.now());
+const ST = r => RoundState.state(r);                 // "now" / "past" / "void"（スマホと PC で同じ線）
+const closed = r => RoundState.isClosed(r);         // しめきった（＝もう増えない）
+const nowRounds = () => D.rounds.filter(r => ST(r) === "now")
+  .sort((a, b) => (a.closes_at ? new Date(a.closes_at).getTime() : Infinity) - (b.closes_at ? new Date(b.closes_at).getTime() : Infinity));
+const pastRounds = () => D.rounds.filter(r => ST(r) === "past").sort(RoundState.pastOrder);
+const homeOf = r => ST(r) === "past" ? "/past" : "/";
 const defOf = key => (typeof SURVEYS !== "undefined" && SURVEYS.find(s => s.key === key)) || null;
 const roundName = r => { const d = defOf(r.survey_key), t = d && d.title ? (d.title.ja || "") : "";
   return t + (r.title && r.title !== "常設" ? (t ? " " : "") + r.title : "") || "（無題のアンケート）"; };
@@ -206,12 +223,17 @@ async function loadAll(){
   if(DEMO){ demoData(); return; }
   try{ await SurveyDB.loadAll(); }catch(e){ /* 画面で作った定義が読めなくても、コードの定義の回は出す */ }
   await loadStudents(true);
+  // ★おわった回も読む（しまうだけで、見られる）。取り消した回は読まない
   const rounds = await api.get("/rest/v1/survey_rounds?select=id,survey_key,title,class_names,student_ids,opens_at,closes_at,is_void"
-    + "&is_void=eq.false&order=closes_at.asc.nullslast");
-  D.rounds = rounds.filter(r => isLive(r) && defOf(r.survey_key));
+    + "&is_void=eq.false&order=opens_at.desc&limit=60");
+  D.rounds = rounds.filter(r => ST(r) !== "void" && defOf(r.survey_key));
   D.resp = {};
-  await loadResp(D.rounds.map(r => r.id));
+  await loadResp(nowRounds().map(r => r.id));   // おわった回の提出は、開いたときに読む（ensureResp）
   D.loadedAt = Date.now();
+}
+async function ensureResp(ids){
+  const need = ids.filter(id => !D.resp[id]);
+  if(need.length) await loadResp(need);
 }
 async function reloadRound(rid){
   if(DEMO){ demoTick(rid); return; }
@@ -241,25 +263,42 @@ function demoData(){
   let n = 0;
   cls.forEach((c, ci) => { for(let i = 0; i < sizes[ci]; i++){ n++;
     D.students.push({ id: "s"+n, student_no: "2604" + String(900 + n).slice(-3), display_name: "見本 学生" + String(n).padStart(3,"0"), class_name: c + "クラス" }); } });
+  const DAY = 86400000, now = Date.now(), iso = ms => new Date(ms).toISOString();
   const r = { id: "demo1", survey_key: (SURVEYS[0] || {}).key, title: "12月", class_names: [], student_ids: [],
-    opens_at: new Date(Date.now() - 2*86400000).toISOString(), closes_at: new Date(Date.now() + 2*86400000).toISOString(), is_void: false };
-  D.rounds = [r]; D.resp = { demo1: [] };
-  let t = Date.now() - 30000;
+    opens_at: iso(now - 2*DAY), closes_at: iso(now + 2*DAY), is_void: false };
+  // おわった回の見本：しめきった回（11月）と、締切のない回で はじめてから40日たったもの
+  const r2 = { id: "demo2", survey_key: (SURVEYS[1] || SURVEYS[0] || {}).key, title: "11月", class_names: [], student_ids: [],
+    opens_at: iso(now - 27*DAY), closes_at: iso(now - 20*DAY), is_void: false };
+  const r3 = { id: "demo3", survey_key: (SURVEYS[2] || SURVEYS[0] || {}).key, title: "常設", class_names: [], student_ids: [],
+    opens_at: iso(now - 40*DAY), closes_at: null, is_void: false };
+  D.rounds = [r, r2, r3]; D.resp = { demo1: [], demo2: [], demo3: [] };
+  let t = now - 30000;
   cls.forEach((c, ci) => {
     const mem = D.students.filter(s => s.class_name === c + "クラス");
     mem.slice(0, mem.length - rests[ci]).forEach((s, i) => { D.resp.demo1.push({ student_id: s.id, round_id: "demo1", submitted_at: new Date(t - (ci * 7 + i) * 97000).toISOString() }); });
+    mem.slice(0, mem.length - (rests[ci] > 5 ? 2 : 0)).forEach((s, i) => { D.resp.demo2.push({ student_id: s.id, round_id: "demo2", submitted_at: iso(now - 22*DAY - (ci * 30 + i) * 60000) }); });
+    mem.slice(0, Math.floor(mem.length / 2)).forEach((s, i) => { D.resp.demo3.push({ student_id: s.id, round_id: "demo3", submitted_at: iso(now - 38*DAY - (ci * 30 + i) * 60000) }); });
   });
-  D.resp.demo1.sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
-  D.loadedAt = Date.now();
+  Object.values(D.resp).forEach(a => a.sort((x, y) => y.submitted_at.localeCompare(x.submitted_at)));
+  D.loadedAt = now;
 }
 function demoTick(rid){ D.loadedAt = Date.now(); }
 
 /* ════════ 画面の切り替え（# で持つ＝スマホの「戻る」が効く） ════════ */
 let timer = null;
-function route(){
+async function route(){
   clearInterval(timer); timer = null;
-  const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+  const h = location.hash;
+  const p = h.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
   const r = D.rounds.find(x => x.id === p[1]);
+  // おわった回の提出は、まだ読んでいなければここで読む（ホームを開くたびに全部の回を読まない）
+  const need = p[0] === "past" ? pastRounds().map(x => x.id) : (r ? [r.id] : []);
+  if(need.some(id => !D.resp[id])){
+    $("main").replaceChildren(el("div", "empty", "よみこみ中…"));
+    try{ await ensureResp(need); }catch(e){ return showErr(e); }
+    if(location.hash !== h) return;   // 読んでいる間に別の画面へ移った
+  }
+  if(p[0] === "past") return viewPast();
   if(p[0] === "pick" && r) return viewPick(r);
   if(p[0] === "class" && r && p[2] != null) return viewClass(r, p[2]);
   if(p[0] === "all" && r) return viewAll(r);
@@ -280,8 +319,8 @@ function header(opts){
   tt.appendChild(el("div", "m", opts.title));
   if(opts.tag) tt.appendChild(el("div", "tag", opts.tag));
   row.appendChild(tt);
-  if(opts.live){ const lv = el("div", "live" + (opts.live === "stop" ? " stop" : "")); lv.id = "live";
-    lv.appendChild(el("i")); lv.appendChild(document.createTextNode(opts.live === "stop" ? "止まっています" : "10秒ごと")); row.appendChild(lv); }
+  if(opts.live){ const lv = el("div", "live" + (opts.live === "on" ? "" : " stop")); lv.id = "live";
+    lv.appendChild(el("i")); lv.appendChild(document.createTextNode({ on: "10秒ごと", stop: "止まっています", closed: "しめきり済み" }[opts.live])); row.appendChild(lv); }
   if(opts.menu){ const m = el("button", "ibtn soft"); m.type = "button"; m.setAttribute("aria-label", "メニュー");
     m.appendChild(svg(ICON.menu, 20)); m.onclick = openMenu; row.appendChild(m); }
   hd.appendChild(row);
@@ -300,10 +339,11 @@ function viewHome(){
   $("tabs").hidden = true;
   const m = $("main"); m.replaceChildren();
   const top = el("div"); top.appendChild(el("div", "date", md(new Date()))); top.appendChild(el("h1", "pg", "今日の HR")); m.appendChild(top);
-  if(!D.rounds.length){
+  const cur = nowRounds(), past = pastRounds();
+  if(!cur.length){
     m.appendChild(el("div", "empty", "いま受付中のアンケートはありません。回をはじめるのは PC のマスター画面からです。"));
   }
-  D.rounds.forEach(r => {
+  cur.forEach(r => {
     const sc = scope(r), p = pct(sc.done.length, sc.tg.length), nc = classesOf(r).length;
     const card = el("section", "card"); card.setAttribute("aria-label", roundName(r));
     const hrow = el("div"); hrow.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap";
@@ -318,12 +358,37 @@ function viewHome(){
     card.appendChild(chevBtn("sub-go", "ぜんたいの すすみ", ICON.chart, () => go("/all/" + r.id)));
     m.appendChild(card);
   });
+  if(past.length) m.appendChild(chevBtn("sub-go", "おわった アンケート（" + past.length + "）", ICON.box, () => go("/past")));
   m.appendChild(el("p", "note", "回答の中身・CSV・回の取り消しは、PC のマスター画面で行います。"));
+}
+
+/* ⑤ おわった アンケート（しめきった回／締切なしで はじめてから30日たった回）。開くと②③④と同じ画面 */
+function viewPast(){
+  header({ back: "/", title: "おわった アンケート" });
+  $("tabs").hidden = true;
+  const m = $("main"); m.replaceChildren();
+  const list = pastRounds();
+  if(!list.length){ m.appendChild(el("div", "empty", "おわった アンケートは まだ ありません。")); return; }
+  const ul = el("ul", "list olds");
+  list.forEach(r => {
+    const sc = scope(r), li = el("li"), b = el("button"); b.type = "button";
+    const nm = el("span", "nm"); nm.appendChild(el("b", null, roundName(r)));
+    nm.appendChild(el("span", null, closed(r) ? "しめきり " + md(new Date(r.closes_at))
+      : "締切なし（" + md(new Date(r.opens_at)) + " から）・いまも 答えられます"));
+    b.appendChild(nm);
+    b.appendChild(el("span", "l", sc.done.length + " / " + sc.tg.length + "人"));
+    b.appendChild(svg(ICON.next, 18, "#6B6475"));
+    b.setAttribute("aria-label", roundName(r) + "　提出 " + sc.done.length + " / " + sc.tg.length + "人");
+    b.onclick = () => go("/pick/" + r.id);
+    li.appendChild(b); ul.appendChild(li);
+  });
+  m.appendChild(ul);
+  m.appendChild(el("p", "note", "しめきった回と、締切のない回で はじめてから " + RoundState.ARCHIVE_DAYS + "日 たった回です（新しい順）。ここも 数と名前だけです。"));
 }
 
 /* ② クラスをえらぶ */
 function viewPick(r){
-  header({ back: "/", sub: roundName(r), title: "クラスを えらぶ" });
+  header({ back: homeOf(r), sub: roundName(r), title: "クラスを えらぶ" });
   $("tabs").hidden = true;
   const m = $("main"); m.replaceChildren();
   m.appendChild(el("h2", "sec", "クラス"));
@@ -345,6 +410,7 @@ let tab = "rest";
 function viewClass(r, c){
   tab = "rest";
   drawClass(r, c);
+  if(closed(r)) return;   // しめきった回はもう増えない＝取り直さない
   timer = setInterval(async () => {
     if(document.hidden) return;
     try{ await reloadRound(r.id); drawClass(r, c, true); }
@@ -354,7 +420,7 @@ function viewClass(r, c){
 function drawClass(r, c, keepScroll){
   const y = window.scrollY;
   const sc = scope(r, c), p = pct(sc.done.length, sc.tg.length);
-  const hd = header({ back: "/pick/" + r.id, backLabel: "クラスを えらびなおす", sub: roundName(r), title: (short(c) || "クラスなし") + " クラス", live: "on" });
+  const hd = header({ back: "/pick/" + r.id, backLabel: "クラスを えらびなおす", sub: roundName(r), title: (short(c) || "クラスなし") + " クラス", live: closed(r) ? "closed" : "on" });
   const big = el("div", "hd-big");
   big.appendChild(el("div", "n", String(sc.done.length))); big.appendChild(el("div", "of", "/ " + sc.tg.length + "人 が提出"));
   const rs = el("div", "rest"); rs.appendChild(el("div", "k", "まだ")); rs.appendChild(el("div", "v", sc.rest.length + "人")); big.appendChild(rs);
@@ -398,7 +464,7 @@ function drawClass(r, c, keepScroll){
 /* ④ ぜんたいの すすみ（数だけ） */
 function viewAll(r){
   const sc = scope(r), p = pct(sc.done.length, sc.tg.length);
-  header({ back: "/", sub: roundName(r), title: "ぜんたいの すすみ" });
+  header({ back: homeOf(r), sub: roundName(r), title: "ぜんたいの すすみ" });
   $("tabs").hidden = true;
   const m = $("main"); m.replaceChildren();
   const card = el("section", "card"); card.setAttribute("aria-label", "合計");
@@ -406,7 +472,7 @@ function viewAll(r){
   cnt.appendChild(el("span", "r", "まだ " + sc.rest.length + "人")); card.appendChild(cnt);
   card.appendChild(bar(p));
   if(r.closes_at){ const n = Math.ceil((new Date(r.closes_at).getTime() - Date.now()) / 86400000);
-    card.appendChild(el("div", "due", "しめきり " + md(new Date(r.closes_at)) + " " + hm(new Date(r.closes_at)) + " ／ のこり " + n + "日")); }
+    card.appendChild(el("div", "due", "しめきり " + md(new Date(r.closes_at)) + " " + hm(new Date(r.closes_at)) + " ／ " + (closed(r) ? "しめきり済み" : "のこり " + n + "日"))); }
   m.appendChild(card);
   m.appendChild(el("h2", "sec", "クラスごと（まだが多い順）"));
   const rows = classesOf(r).map(c => ({ c, s: scope(r, c) })).sort((a, b) => b.s.rest.length - a.s.rest.length || a.c.localeCompare(b.c, "ja", {numeric:true}));

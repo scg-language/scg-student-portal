@@ -13,8 +13,24 @@
    本物の4本の回答数を汚さない。パスワードは資格情報のみ .env 由来。
    ★鍵は**固定**（2026-09-11 に変更）。以前は test_multi_ui_<時刻> と毎回ちがう鍵にしていたため、
      消す口が無い survey_responses に行が9件たまっていた。固定にすると毎回おなじ回へ上書きされる。
-     対応する「回」は db/2026-09-11_survey_rounds_phase2.sql が常設で1つ作る（題名「検査用」）。 */
+     対応する「回」は db/2026-09-11_survey_rounds_phase2.sql が常設で1つ作る（題名「検査用」）。
+   ★2026-11-20：お試しの「常設」の回（しんろ・すまい・けんこう・がくひ）を取り消した（本番の前に片付け・きあ決定）。
+     「まだのものが上・済みが下」「バッジの数」「しんろの形」を見るには未回答の回が要るので、
+     **この検査だけの しんろの回（l150 だけ・20分で しめきり）を毎回作り、終わったら取り消す**。
+     l150 はその回に答えないので、残るのは取り消した回1本だけ（回は消す口が無い。画面には出ない）。 */
 const out = document.getElementById("out"), log = { steps: [] };
+let SB = null, mtok = null, roundId = null;   // 後片付け用（マスターの鍵は画面にも結果にも出さない）
+async function cleanup() {
+  if (!roundId || !mtok) return;
+  try {
+    const r = await fetch(SB.url + "/rest/v1/rpc/close_survey_round", { method: "POST",
+      headers: { apikey: SB.key, Authorization: "Bearer " + mtok, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_round_id: roundId, p_void: true }) });
+    const j = await r.json().catch(() => ({}));
+    step("後片付け：この検査の しんろの回を取り消す", r.ok && j.is_void === true, r.status);
+  } catch (e) { step("後片付け：この検査の しんろの回を取り消す", false, e.message); }
+  roundId = null;
+}
 const step = (name, ok, detail) => log.steps.push({ name, ok: !!ok, detail: detail === undefined ? "" : String(detail).slice(0, 220) });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, ms = 20000) { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (fn()) return true; } catch (e) {} await sleep(150); } return false; }
@@ -48,6 +64,20 @@ const CREDS = window.__E2E_CREDS || null;
     q: [ { k: "a", t: "select", l: { ja: "A", en: "A" }, sl: "A", o: [{ v: "1", ja: "いち", en: "one" }, { v: "2", ja: "に", en: "two" }] },
          { k: "b", t: "select", l: { ja: "B", en: "B" }, sl: "B", o: [{ v: "1", ja: "いち", en: "one" }, { v: "2", ja: "に", en: "two" }] },
          { k: "c", t: "select", l: { ja: "C", en: "C" }, sl: "C", o: [{ v: "1", ja: "いち", en: "one" }, { v: "2", ja: "に", en: "two" }] } ] });
+  // ── この検査だけの しんろの回を作る（マスターの権限。学生の画面とは別の通信で）──
+  SB = { url: w.eval("SB_URL"), key: w.eval("SB_ANON"), dom: w.eval("MAIL_DOMAIN") };
+  try {
+    const tr = await fetch(SB.url + "/auth/v1/token?grant_type=password", { method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: String(CREDS.masterNo || "").toLowerCase() + "@" + SB.dom, password: CREDS.masterPw }) });
+    mtok = (await tr.json()).access_token;
+    const H = { apikey: SB.key, Authorization: "Bearer " + mtok, "Content-Type": "application/json" };
+    const me = await (await fetch(SB.url + "/rest/v1/profiles?select=id&student_no=eq.l150", { headers: H })).json();
+    const st = await (await fetch(SB.url + "/rest/v1/rpc/start_survey_round", { method: "POST", headers: H,
+      body: JSON.stringify({ p_survey_key: "shinro_2026", p_title: "検査用 " + new Date().toISOString().slice(0, 19).replace("T", " "),
+        p_student_ids: [me[0].id], p_closes_at: new Date(Date.now() + 20 * 60000).toISOString() }) })).json();
+    roundId = (st && st.round_id) || null;
+  } catch (e) { step("この検査だけの しんろの回を作る", false, e.message); }
+  step("この検査だけの しんろの回（l150 だけ・20分で しめきり）を作れる", !!roundId);
   await until(() => !$("scr-login").hidden, 8000);
   step("login screen shown", !$("scr-login").hidden);
   $("in-no").value = "l150"; $("in-pw").value = CREDS.studentPw; $("btn-login").click();
@@ -76,8 +106,8 @@ const CREDS = window.__E2E_CREDS || null;
   const before = rows(d);
   step("★検査用のアンケートが一覧に出る（回から引けている）",
        before.some(x => x.includes("じどうけんさ")), before.join(" | "));
-  step("★本物の4本も一覧に出る（常設の回に紐づいている）",
-       before.some(x => x.includes("しんろ")), before.join(" | "));
+  // ★2026-11-20：お試しの「常設」の回4本は取り消した（本番の前に片付け・きあ決定）。
+  //   以前ここにあった「本物の4本も一覧に出る」は、その回が開いていることを当てにしていたので外した。
   const target = [...d.querySelectorAll("#survey-list .row")].find(r => r.textContent.includes("じどうけんさ"));
   target.click();
   step("survey form shown", await until(() => !$("scr-survey").hidden), $("survey-title").textContent);
@@ -113,9 +143,8 @@ const CREDS = window.__E2E_CREDS || null;
        afterEn.some(x => x.startsWith("[済]") && x.includes("Self-check") && x.includes("Submitted")),
        afterEn.join(" | "));
   w.eval('setLang("ja")'); await sleep(200);
-  step("本物の4本はまだ未回答のまま上にある",
-       ["しんろ", "すまい", "けんこう", "がくひ"].every(k =>
-         after.some(x => x.startsWith("[ ]") && x.includes(k))), after.join(" | "));
+  step("この検査の しんろの回は未回答のまま上にある",
+       after.length > 0 && after[0].startsWith("[ ]") && after[0].includes("しんろ"), after.join(" | "));
   // 再度開くと前回の答えが入っていて「なおして そうしん」になる
   [...d.querySelectorAll("#survey-list .row")].find(r => r.textContent.includes("じどうけんさ")).click();
   await until(() => !$("scr-survey").hidden);
@@ -153,7 +182,8 @@ const CREDS = window.__E2E_CREDS || null;
   const kinds = [...d.querySelectorAll("#survey-fields .field")].map(x => x.querySelector("select") ? "select" : "text");
   step("shinro form = text/select/text with 10 options", kinds.join(",") === "text,select,text" && d.querySelectorAll("#survey-fields select option").length === 11, kinds.join(",") + " options=" + d.querySelectorAll("#survey-fields select option").length);
   log.done = true;
+  await cleanup();
   out.textContent = "E2E_RESULT " + JSON.stringify(log);
-})().catch(e => { log.error = String(e); out.textContent = "E2E_RESULT " + JSON.stringify(log); });
+})().catch(async e => { log.error = String(e); await cleanup(); out.textContent = "E2E_RESULT " + JSON.stringify(log); });
 </script>
 </body></html>
