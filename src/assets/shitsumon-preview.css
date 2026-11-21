@@ -1,0 +1,83 @@
+/* 質問箱の見本（shitsumon-preview.html）だけで使う。共通の app.css は読まない。見た目は作り込まない。 */
+:root{--ink:#14202b;--sub:#52606d;--line:#cfd8e2;--bg:#eef2f6;--brand:#24507a;--card:#fff;
+ --c-new:#8a5a00;--b-new:#fff1d6;--c-doing:#1d4f91;--b-doing:#e1ecfb;--c-done:#1f6b3a;--b-done:#dff3e5;--c-stale:#a12222;--b-stale:#fde4e4;
+ font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;color:var(--ink);background:var(--bg)}
+*{box-sizing:border-box}
+body{margin:0;font-size:16px;line-height:1.6;background:var(--bg)}
+button,select,input,textarea{font:inherit}
+button{border:1px solid #8aa0b8;border-radius:8px;padding:8px 14px;background:#fff;color:var(--brand);font-weight:700;cursor:pointer;min-height:42px}
+button[disabled]{opacity:.5;cursor:not-allowed}
+.qb-primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.qb-top{background:#20375a;color:#fff;padding:16px 16px 0}
+.qb-top h1{font-size:20px;margin:0 0 6px}
+.qb-notice{margin:0 0 12px;background:#fff7df;color:#4a3a00;border-left:5px solid #b78818;padding:8px 12px;border-radius:4px;font-size:14px}
+.qb-tabs{display:flex;gap:6px}
+.qb-tabs button{border-radius:8px 8px 0 0;border:0;background:#3b5478;color:#fff}
+.qb-tabs button[aria-pressed=true]{background:var(--bg);color:var(--ink)}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.qb-view[hidden]{display:none}
+.qb-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 14px}
+.qb-card h2{font-size:18px;margin:0 0 10px}
+.qb-card h3{font-size:15px;margin:12px 0 4px}
+.qb-muted{color:var(--sub)}
+.qb-small{font-size:14px;margin:0 0 6px}
+.qb-msg{margin:10px 0 0;padding:8px 10px;border-radius:6px;background:#eef6ff}
+.qb-msg.err{background:#fff0f0;color:#a12222}
+.qb-field{display:block;font-size:14px;color:var(--sub);margin:10px 0 3px}
+textarea,input[type=text],select{width:100%;max-width:100%;font-size:16px;color:var(--ink);padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.qb-picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:14px;color:var(--sub)}
+.qb-picker select{width:auto;padding:6px;font-size:15px}
+
+/* 学生の画面：スマホ幅 */
+.qb-phone{max-width:420px;margin:0 auto;font-size:17px;line-height:1.9}
+.qb-urgent{background:#fde4e4;color:#7a1515;border-radius:10px;padding:10px 14px;margin:0 0 14px;font-weight:700}
+.qb-tel{font-size:20px;letter-spacing:.05em}
+.qb-me{display:flex;flex-direction:column;margin:0}
+.qb-me-name{font-size:20px;font-weight:700}
+.qb-kinds{display:grid;grid-template-columns:1fr;gap:8px;margin:6px 0 4px}
+.qb-kind{text-align:left;min-height:56px;font-size:17px;color:var(--ink)}
+.qb-kind[aria-pressed=true]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.qb-dest{margin:12px 0 8px;padding:8px 12px;border-radius:8px;background:#e1ecfb;font-weight:700}
+.qb-big{width:100%;min-height:56px;font-size:18px;margin-top:8px}
+.qb-stlist{list-style:none;padding:0;margin:0}
+.qb-stlist li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;border-top:1px solid var(--line);padding:8px 0}
+.qb-stlist li:first-child{border-top:0}
+.qb-st-kind{flex-basis:100%;font-weight:700}
+.qb-badge{display:inline-block;border-radius:999px;padding:1px 10px;font-size:15px;font-weight:700}
+.qb-badge[data-status=new]{color:var(--c-new);background:var(--b-new)}
+.qb-badge[data-status=doing]{color:var(--c-doing);background:var(--b-doing)}
+.qb-badge[data-status=done]{color:var(--c-done);background:var(--b-done)}
+
+/* 職員の画面 */
+.qb-staffgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.qb-opencount{font-size:30px;font-weight:800;margin:0 0 8px}
+.qb-filter{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.qb-filter button[aria-pressed=true]{background:var(--brand);color:#fff}
+.qb-sflist{list-style:none;padding:0;margin:0 0 14px}
+.qb-sflist li{margin:0 0 6px}
+.qb-row{width:100%;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;text-align:left;color:var(--ink);font-weight:400}
+.qb-row-kind{font-weight:700}
+.qb-stale{color:var(--c-stale);background:var(--b-stale);border-radius:6px;padding:0 8px;font-weight:700;font-size:14px}
+.qb-detail{border-width:2px;border-color:var(--brand)}
+.qb-detail-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.qb-detail-head button{flex:none}
+.qb-info{display:grid;grid-template-columns:7em minmax(0,1fr);gap:4px 10px;margin:0}
+.qb-info dt{color:var(--sub)}
+.qb-info dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.qb-actions{margin:12px 0}
+.qb-box{border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0}
+.qb-box button{margin-top:8px}
+.qb-boxhead{font-weight:700;margin:0}
+.qb-history{font-size:14px;color:var(--sub);padding-left:18px;margin:4px 0 0}
+.qb-history li{overflow-wrap:anywhere}
+.qb-ntlist{list-style:none;padding:0;margin:0;font-size:14px}
+.qb-ntlist li{display:flex;flex-direction:column;border-top:1px solid var(--line);padding:6px 0}
+.qb-nt-text{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:#f5f7fa;border-radius:4px;padding:4px 6px;overflow-wrap:anywhere}
+
+@media(max-width:800px){
+ .qb-staffgrid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:600px){
+ .qb-top h1{font-size:17px}
+ main{padding:12px 10px}
+}
