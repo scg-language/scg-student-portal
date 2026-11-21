@@ -302,15 +302,15 @@ async function main() {
     check('対象数（分母）は 8人', (/\/ (\d+)人/.exec(s1.of) || [])[1], '8');
     check('未提出は 2人（数字とタブの数が同じ）', [s1.rest, s1.tnRest], ['2', '2']);
     check('未提出の名前は 996・993 だけ（取り消した回・別の定義・回なしの回答で「提出済み」にならない）', sorted(nosOf(s1.restTags)), sorted(E.rest));
-    known(WHY, '提出は 6人（対象外 991 を数えない）', s1.count, '6');
-    known(WHY, '式：提出＋未提出＝対象数', Number(s1.count) + Number(s1.rest), 8);
-    known(WHY, 'クラス別の内訳が 対象の人数を超えない（C① は 1/1）', s1.bycls, 'A① 3/4 ・ B① 2/3 ・ C① 1/1');
+    check('提出は 6人（対象外 991 を数えない）', s1.count, '6');
+    check('式：提出＋未提出＝対象数', Number(s1.count) + Number(s1.rest), 8);
+    check('クラス別の内訳が 対象の人数を超えない（C① は 1/1）', s1.bycls, 'A① 3/4 ・ B① 2/3 ・ C① 1/1');
     console.log('── PC ②他の回・取り消した回・別の定義が混ざらない ──');
     check('回のチップに取り消した回が出ない', s1.chips.filter(c => c.includes('取り消し')), []);
     check('チップ＝今回＋「終了した回（2）」（前回と常設をしまう）', s1.chips, [T.cur, '終了した回（2） ▸']);
     check('一人ずつ＝この回に入っている行だけ（他の回・取り消し・別定義・回なしの行は0件）', s1.eachNos.filter(no => !E.done.concat(E.outsider).includes(no)), []);
     check('一人ずつ：この回の対象者の回答は全員ぶん出ている（重複なし）', sorted(s1.eachNos.filter(no => E.done.includes(no))), sorted(E.done));
-    known(WHY, '一人ずつに対象外（991）が出ない', sorted(s1.eachNos), sorted(E.done));
+    check('一人ずつに対象外（991）が出ない', sorted(s1.eachNos), sorted(E.done));
     check('一人ずつの行数＝「提出」の数＝タブの数（画面の中で食い違わない）', [String(s1.eachNos.length), s1.tnEach], [s1.count, s1.count]);
     console.log('── PC ③面談候補の旗と理由 ──');
     const flagMap = Object.fromEntries(s1.flagRows.map(r => [r.no, r.reasons]));
@@ -318,15 +318,15 @@ async function main() {
     check('再提出：太郎(999)は「あとの答え」で判定（1回目は旗なし・取り消した回の「進路未定」は付かない）', (flagMap['2604999'] || []).includes('進路未定'), false);
     check('旗の無い人（998・994）は面談候補に出ない', ['2604998', '2604994'].filter(no => flagMap[no]), []);
     check('未提出者（996）は取り消した回・回なしの「早く相談したい」で候補にならない', !!flagMap['2604996'], false);
-    known(WHY, '面談候補は 4人（対象外 991 を入れない）', [s1.flag, s1.tnFlag, String(s1.flagRows.length)], ['4', '4', '4']);
+    check('面談候補は 4人（対象外 991 を入れない）', [s1.flag, s1.tnFlag, String(s1.flagRows.length)], ['4', '4', '4']);
     check('面談候補の数字＝タブの数＝行数（画面の中で食い違わない）', [s1.tnFlag, String(s1.flagRows.length)], [s1.flag, s1.flag]);
 
     console.log('── PC ④集計（選ぶ質問・複数選択・記述・日付） ──');
     const cPath = await card('希望進路'), cTalk = await card('面談の希望'), cExam = await card('今後の受験予定'), cOc = await card('見学した学校'), cDate = await card('家族と話す予定日');
     check('希望進路「まだ決まっていない」＝1人（997 だけ。取り消した回の太郎・花子を数えない）', cPath.bars['まだ決まっていない・悩んでいる'].n, '1');
     check('希望進路「大学」＝1人（太郎の再提出）', cPath.bars['大学'].n, '1');
-    known(WHY, '希望進路の「答えた人」は 6人', (/答えた人 (\d+)人/.exec(cPath.meta) || [])[1], '6');
-    known(WHY, '面談の希望「できるだけ早く」＝1人（太郎だけ）', cTalk.bars['できるだけ早く相談したい'].n, '1');
+    check('希望進路の「答えた人」は 6人', (/答えた人 (\d+)人/.exec(cPath.meta) || [])[1], '6');
+    check('面談の希望「できるだけ早く」＝1人（太郎だけ）', cTalk.bars['できるだけ早く相談したい'].n, '1');
     check('複数選択：太郎の3つが別々に1人ずつ数えられる', [cExam.bars['7月のJLPT N2'].n, cExam.bars['EJU（日本留学試験）'].n, cExam.bars['その他'].n], ['1', '1', '1']);
     check('長い記述：集計のカードに全文が出る（途中で切れない・タグにならない）', cOc && cOc.texts, [LONG.trim()]);
     check('日付：「2027年2月15日」と読める', cDate && cDate.texts, ['2027年2月15日']);
@@ -373,7 +373,7 @@ async function main() {
     check('CSV：BOM 付き UTF-8・ファイル名にアンケート名と回の名前', [csv.bom, csv.name], [true, '進路アンケート（2027年1月）_' + T.cur + '.csv']);
     check('CSV：見出しに重複が無く、全部の行が同じ列数', [new Set(head).size === head.length, body.every(r => r.length === head.length)], [true, true]);
     check('CSV：行数＝画面の「提出」の数、学籍番号の集合＝「一人ずつ」', [String(body.length), sorted(body.map(r => r[0]))], [s1.count, sorted(s1.eachNos)]);
-    known(WHY, 'CSV：対象外（991）の行が無い（6行）', sorted(body.map(r => r[0])), sorted(E.done));
+    check('CSV：対象外（991）の行が無い（6行）', sorted(body.map(r => r[0])), sorted(E.done));
     check('CSV：面談候補の理由＝画面の面談候補と同じ（全員ぶん）', Object.fromEntries(body.filter(r => r[col('面談候補の理由')]).map(r => [r[0], r[col('面談候補の理由')]])), Object.fromEntries(s1.flagRows.map(r => [r.no, r.reasons.join('・')])));
     check('CSV：太郎の氏名・クラス・提出日時（再提出の時刻）', [taroCsv[1], taroCsv[2], taroCsv[3]], ['テスト太郎', A, await ev('new Date(' + J(new Date(now - HOUR).toISOString()) + ').toLocaleString("ja-JP")')]);
     check('CSV：長い記述が1文字も変わらない', taroCsv[col('見学した学校')], LONG);
@@ -389,7 +389,7 @@ async function main() {
     check('A①クラス：CSV も3行・全部 A①クラス', [csvA.rows.length - 1, csvA.rows.slice(1).every(r => r[2] === A)], [3, true]);
     await ev('(()=>{const s=document.getElementById("sv-class");s.value=' + J(C) + ';s.dispatchEvent(new Event("change"));})()');
     const sC = await read();
-    known(WHY, 'C①クラス：提出1＋未提出0＝対象1（指定学生 992 だけ）', [sC.count, sC.rest, (/\/ (\d+)人/.exec(sC.of) || [])[1]], ['1', '0', '1']);
+    check('C①クラス：提出1＋未提出0＝対象1（指定学生 992 だけ）', [sC.count, sC.rest, (/\/ (\d+)人/.exec(sC.of) || [])[1]], ['1', '0', '1']);
     await ev('(()=>{const s=document.getElementById("sv-class");s.value="";s.dispatchEvent(new Event("change"));})()');
 
     console.log('── PC ⑨回を切り替える（前回・常設）・別の定義 ──');
@@ -418,8 +418,8 @@ async function main() {
     check('今日：対応することは今回の回の2件だけ（取り消し・常設・終了・全員提出の回は出ない）', todo.length, 2);
     check('今日：未提出 2人', tRest.n, '2');
     const WHY2 = '「今日」も同じ＝src/assets/admin.js:413-418 todayTodo() が回答を対象で絞らずに数えている';
-    known(WHY2, '今日：未提出の行の内訳は「提出 6 / 8」', (/提出 (\d+ \/ \d+)/.exec(tRest.sub || '') || [])[1], '6 / 8');
-    known(WHY2, '今日：面談候補 4人', tFlag.n, '4');
+    check('今日：未提出の行の内訳は「提出 6 / 8」', (/提出 (\d+ \/ \d+)/.exec(tRest.sub || '') || [])[1], '6 / 8');
+    check('今日：面談候補 4人', tFlag.n, '4');
 
     console.log('── PC ⑪学生（一覧と個人詳細） ──');
     await ev('document.querySelector("[data-view=students]").click()');
@@ -432,8 +432,7 @@ async function main() {
     const heads = await ev('[...document.querySelectorAll(".drawer .db .arow")].filter(r=>[...r.children].some(c=>c.tagName==="BUTTON")).map(r=>({when:r.querySelector(".q").textContent,tags:[...r.querySelectorAll(":scope > .tags .tag")].map(e=>e.textContent)}))');
     await shot('pc_4_student.png');
     check('学生詳細：今回と前回の回答が、回の名前つきで出る', [heads.some(x => x.when.endsWith('・ ' + T.cur)), heads.some(x => x.when.endsWith('・ ' + T.prev))], [true, true]);
-    known('学生の詳細が取り消した回の回答を、ふつうの回答と同じ見た目で並べる＝src/assets/admin.js:712-730 stOpen() が is_void を読んでおらず、絞っても印を付けてもいない',
-      '学生詳細：取り消した回の回答が出ない（または取り消しと分かる）', heads.filter(x => x.when.includes('取り消し')).map(x => x.when.replace(/^.*・ /, '')), []);
+    check('学生詳細：取り消した回の回答が出ない（または取り消しと分かる）', heads.filter(x => x.when.includes('取り消し')).map(x => x.when.replace(/^.*・ /, '')), []);
     await ev('document.querySelector(".drawer .x").click()');
 
     /* ════════ スマホ：master-phone.html（同じダミー・同じ線） ════════ */
@@ -462,8 +461,7 @@ async function main() {
     const phA = await ev('({rest:document.querySelector(".hd-big .v b").textContent,of:document.querySelector(".hd-big .of b").textContent,names:[...document.querySelectorAll(".list.rest .nm")].map(e=>e.querySelector("b").textContent+" "+e.querySelector("span").textContent)})');
     await shot('phone_2_class.png');
     check('スマホ A①：未提出 1人（テスト四郎 2604996）・3 / 4人 提出', [phA.rest, phA.of, phA.names], ['1', '3 / 4人 提出', ['テスト四郎 2604996']]);
-    known('PC とスマホで「提出」の数が違う（PC 7・スマホ 6）＝スマホ master-phone.html:259-266 scope() は対象で絞るが、PC admin.js:165-173 svScope() は絞らない。「基本の機能はスマホと PC で同じ」に反する',
-      'PC とスマホで今回の「提出」の数が同じ', s1.count, ph.n);
+    check('PC とスマホで今回の「提出」の数が同じ', s1.count, ph.n);
     check('スマホは回答の中身（answers）を1度も取りに行かない', log.gets.filter(g => g.who === 'phone' && g.table === 'survey_responses' && /answers/.test(g.query)).length, 0);
 
     console.log('── 全体 ──');
