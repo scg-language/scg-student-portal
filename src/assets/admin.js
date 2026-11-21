@@ -141,7 +141,9 @@
     if (S.prevRound) { try { S.prevResp = await api.get(respQ(S.prevRound.id)); } catch (e) { S.prevResp = []; } }
   }
   async function svReload() {
-    if (S.busy) return;
+    // ★読み込み中に来た依頼（アンケートの切り替えなど）は捨てずに、終わったあとでもう一度読む（2026-11-21。
+    //   捨てると、選んだアンケートと出ている中身が食い違ったまま残る）
+    if (S.busy) { S.again = true; return; }
     S.busy = true;
     try {
       if (!S.key) S.key = (typeof svKey !== "undefined" && svKey) || SURVEYS[0].key;
@@ -160,12 +162,16 @@
       svRender();
     } catch (e) {
       showMsg("sv-msg", "読み込みに失敗しました（" + e.message + "）", true);
-    } finally { S.busy = false; }
+    } finally { S.busy = false; if (S.again) { S.again = false; svReload(); } }
   }
   function svScope() {
     const r = curRound(), def = sdef();
     let targets = r ? targetsOf(r, S.all) : [];
-    let resp = S.resp;
+    // ★回の対象に入っていない学生の回答は数えない（2026-11-21。回答のあとでクラスが変わった等。スマホ画面と同じ線）。
+    //   これを絞らないと「対象数＝提出＋未提出」が崩れ、クラス別・面談候補・CSV にも混ざる
+    const tset = new Set(targets.map(s => s.id));
+    let resp = S.resp.filter(x => tset.has(x.student_id));
+    S.outside = S.resp.length - resp.length;
     if (S.cls) { targets = targets.filter(s => s.class_name === S.cls); resp = resp.filter(x => (x.profiles || {}).class_name === S.cls); }
     const done = new Set(resp.map(x => x.student_id));
     const rest = targets.filter(s => !done.has(s.id));
@@ -207,6 +213,9 @@
     // 数字
     byId("sv-count").textContent = resp.length;
     byId("sv-of").textContent = r ? "/ " + targets.length + "人 ・ " + pct(resp.length, targets.length) + "%" : "";
+    // 対象外の回答があるときは、黙って消さずに件数を出す（差の理由を説明できるように）
+    byId("sv-of").title = r && S.outside ? "この回の対象に入っていない学生の回答が " + S.outside + "件あります（回答のあとでクラスや対象が変わった場合など）。数には入れていません。" : "";
+    if (r && S.outside) byId("sv-of").textContent += " ・ 対象外の回答 " + S.outside + "件は数えていません";
     const byCls = classes.filter(c => !S.cls || c === S.cls).map(c => {
       const t = targets.filter(s => s.class_name === c).length, d = resp.filter(x => (x.profiles || {}).class_name === c).length;
       return c.replace(/クラス$/, "") + " " + d + "/" + t;
@@ -410,7 +419,8 @@
     if (rounds.length) {
       const resp = await api.get("/rest/v1/survey_responses?select=student_id,round_id,answers&round_id=in.(" + rounds.map(r => r.id).join(",") + ")");
       rounds.forEach(r => {
-        const def = defOf(r.survey_key), tg = targetsOf(r, all), mine = resp.filter(x => x.round_id === r.id);
+        const def = defOf(r.survey_key), tg = targetsOf(r, all), tgIds = new Set(tg.map(s => s.id)),
+          mine = resp.filter(x => x.round_id === r.id && tgIds.has(x.student_id));   // ★対象外の学生の回答は数えない（アンケート結果と同じ線）
         const done = new Set(mine.map(x => x.student_id)), rest = tg.filter(s => !done.has(s.id)).length;
         const due = r.closes_at ? "締切 " + md(r.closes_at) + " ・ あと " + daysLeft(r.closes_at) + "日" : "締切なし";
         const name = def.title.ja + (r.title && r.title !== "常設" ? "「" + r.title + "」" : "");
@@ -708,12 +718,16 @@
       body.appendChild(mk("div", "dsec", "アンケート"));
       const box = mk("div", "", "読み込み中…"); body.appendChild(box);
       if (isMaster()) pwSection(body, o.s);
-      body.appendChild(mk("div", "note", "出席率・同意の記録・アカウントの停止は、学生マスタDBとのつなぎ込みと管理用の権限ができてから追加します。"));
-      api.get("/rest/v1/survey_responses?select=survey_key,round_id,answers,submitted_at,survey_rounds(title)&student_id=eq." + o.s.id + "&order=submitted_at.desc")
+      body.appendChild(mk("div", "note", "出席率・同意の記録・アカウントの停止は、学校の名簿とのつなぎ込みと管理用の権限ができてから追加します。"));
+      api.get("/rest/v1/survey_responses?select=survey_key,round_id,answers,submitted_at,survey_rounds(title,is_void)&student_id=eq." + o.s.id + "&order=submitted_at.desc")
         .catch(() => api.get("/rest/v1/survey_responses?select=survey_key,round_id,answers,submitted_at&student_id=eq." + o.s.id + "&order=submitted_at.desc"))
         .then(rows => {
           box.replaceChildren();
-          if (!rows.length) { box.appendChild(mk("div", "muted", "まだ答えていません。")); return; }
+          // ★取り消した回の回答は並べない（2026-11-21。アンケート結果・スマホ画面と同じ線）。件数だけ下に出す
+          const nVoid = rows.filter(r => r.survey_rounds && r.survey_rounds.is_void).length;
+          rows = rows.filter(r => !(r.survey_rounds && r.survey_rounds.is_void));
+          if (!rows.length) { box.appendChild(mk("div", "muted", nVoid ? "表示できる回答はありません（取り消した回の回答 " + nVoid + "件は表示しません）。" : "まだ答えていません。")); return; }
+          if (nVoid) box.appendChild(mk("div", "muted", "取り消した回の回答 " + nVoid + "件は表示していません。"));
           rows.forEach((r, i) => {
             const def = defOf(r.survey_key); if (!def) return;
             const head = mk("div", "arow");

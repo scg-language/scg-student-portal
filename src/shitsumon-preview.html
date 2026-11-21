@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>質問箱の見本 — SCG 学生ポータル</title>
+<link rel="stylesheet" href="assets/shitsumon-preview.css">
+</head>
+<body>
+<header class="qb-top">
+ <h1>質問箱（相談の受付と引き継ぎ）の見本</h1>
+ <p id="qb-notice" class="qb-notice">これは見本です。ダミーのデータだけで動き、再読み込みで元に戻ります。どこにも送られません。</p>
+ <nav class="qb-tabs" aria-label="見る画面">
+  <button id="tab-student" type="button" aria-pressed="true">学生の画面</button>
+  <button id="tab-staff" type="button" aria-pressed="false">職員の画面</button>
+ </nav>
+</header>
+
+<main>
+ <!-- 学生の画面（やさしい日本語） -->
+ <section id="view-student" class="qb-view" aria-label="学生の画面">
+  <div class="qb-picker">
+   <label for="st-who">見本の操作：どの学生として見るか</label>
+   <select id="st-who"></select>
+  </div>
+  <div class="qb-phone" id="st-phone">
+   <p id="st-urgent" class="qb-urgent">いそぎの ときは がっこうに でんわ して ください。<br><span class="qb-tel">000-0000-0000</span></p>
+   <div class="qb-card">
+    <h2>あなた</h2>
+    <p id="st-me" class="qb-me"></p>
+   </div>
+   <div class="qb-card">
+    <h2>そうだんの しゅるい</h2>
+    <p class="qb-muted">ひとつ えらんで ください。</p>
+    <div id="st-kinds" class="qb-kinds"></div>
+    <label class="qb-field" for="st-memo">メモ（かかなくても いいです）</label>
+    <p class="qb-muted qb-small">じぶんの くにの ことばで かいても いいです。</p>
+    <textarea id="st-memo" maxlength="500" rows="3"></textarea>
+    <p id="st-dest" class="qb-dest" hidden></p>
+    <button id="st-send" type="button" class="qb-primary qb-big" disabled>おくる</button>
+    <p id="st-msg" class="qb-msg" role="status" hidden></p>
+   </div>
+   <div class="qb-card">
+    <h2>おくった そうだん</h2>
+    <p class="qb-muted qb-small">へんじは この がめんには きません。がっこうで はなします。</p>
+    <ul id="st-list" class="qb-stlist"></ul>
+   </div>
+  </div>
+ </section>
+
+ <!-- 職員の画面（ふつうの日本語） -->
+ <section id="view-staff" class="qb-view" aria-label="職員の画面" hidden>
+  <div class="qb-picker">
+   <label for="sf-who">見本の操作：だれとして見るか</label>
+   <select id="sf-who"></select>
+  </div>
+  <div class="qb-staffgrid">
+   <div class="qb-staffmain">
+    <p id="sf-open" class="qb-opencount"></p>
+    <nav class="qb-filter" aria-label="状態で絞る">
+     <button type="button" data-filter="new" aria-pressed="true">未対応 <span id="cnt-new"></span></button>
+     <button type="button" data-filter="doing" aria-pressed="false">対応中 <span id="cnt-doing"></span></button>
+     <button type="button" data-filter="done" aria-pressed="false">終了 <span id="cnt-done"></span></button>
+    </nav>
+    <ul id="sf-list" class="qb-sflist"></ul>
+    <p id="sf-empty" class="qb-muted" hidden>この状態の相談はありません。</p>
+
+    <section id="sf-detail" class="qb-card qb-detail" hidden aria-label="相談の詳細">
+     <div class="qb-detail-head"><h2 id="dt-title"></h2><button id="dt-close" type="button">閉じる</button></div>
+     <dl id="dt-info" class="qb-info"></dl>
+     <div id="dt-actions"></div>
+     <p id="dt-msg" class="qb-msg" role="status" hidden></p>
+     <h3>履歴</h3>
+     <ul id="dt-history" class="qb-history"></ul>
+    </section>
+
+    <section id="ad-stale" class="qb-card" hidden aria-label="放置されている相談">
+     <h2>放置されている相談（3日以上 未対応）</h2>
+     <ul id="ad-stale-list" class="qb-sflist"></ul>
+     <p id="ad-stale-empty" class="qb-muted" hidden>ありません。</p>
+    </section>
+    <section id="ad-log" class="qb-card" hidden aria-label="操作の記録">
+     <h2>操作の記録</h2>
+     <p class="qb-muted qb-small">見本の中だけの一覧です。メモの中身は残しません。</p>
+     <ul id="ad-log-list" class="qb-history"></ul>
+    </section>
+   </div>
+   <aside class="qb-card qb-notify" aria-label="外への知らせの見本">
+    <h2>外への知らせ（見本）</h2>
+    <p class="qb-muted qb-small">相談が届いたとき、連絡ツールに流す文面の見本です。実際には送りません。</p>
+    <ul id="nt-list" class="qb-ntlist"></ul>
+    <p id="nt-empty" class="qb-muted" hidden>まだありません。</p>
+   </aside>
+  </div>
+ </section>
+</main>
+<script src="assets/shitsumon-preview.js"></script>
+</body>
+</html>

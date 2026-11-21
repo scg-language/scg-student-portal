@@ -33,8 +33,25 @@ async function main(){
   const evaluate=async expression=>{const r=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw new Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
   const screenshot=async name=>{const r=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,name),Buffer.from(r.data,'base64'));};
   const check=async(name,expression)=>{const ok=typeof expression==='string'?await evaluate(expression):expression;checks.push({name,ok:Boolean(ok)});if(!ok){await screenshot('failure.png');throw new Error('FAILED: '+name);}};
+  /* 押す場所は「止まっていて、そこに本当にその部品がある」ことを確かめてから決める（2026-11-21）。
+     原因：送信が通ると画面は window.scrollTo({top:0,behavior:"smooth"}) で動き出す（career-survey-preview.html）。
+     以前は scrollIntoView の直後に座標を1回だけ読んで押していたので、なめらかスクロールがまだ動いていると
+     押す瞬間にはボタンが数十px ずれていて空振りした（PC が重いときだけ起きる＝初回だけ止まって見えた）。
+     空振りは例外にならず、1つ先の「学校未定」の検査で初めて落ちていた。
+     ★待ち時間を延ばすのではなく、「位置が3コマ続けて同じ」＋「その点にあるのが目当ての部品」を条件にする。
+       条件を満たせなければ、先の検査ではなくここで理由つきで止める（5秒は直すための待ちではなく、あきらめる上限）。 */
   const click=async selector=>{
-   const point=await evaluate('(()=>{const el=document.querySelector('+JSON.stringify(selector)+');if(!el)throw Error("Missing element");el.scrollIntoView({block:"center",behavior:"instant"});const r=el.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};})()');
+   const point=await evaluate('(async()=>{const sel='+JSON.stringify(selector)+';const el=document.querySelector(sel);if(!el)throw Error("Missing element: "+sel);'
+    +'const frame=()=>new Promise(r=>requestAnimationFrame(()=>r()));const started=performance.now();let last="",steady=0,why="";'
+    +'el.scrollIntoView({block:"center",behavior:"instant"});'
+    +'for(;;){await frame();const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;'
+    +'const hit=r.width>0&&r.height>0?document.elementFromPoint(x,y):null;'
+    +'const on=!!hit&&(hit===el||el.contains(hit)||hit.contains(el)||Array.from(el.labels||[]).some(l=>l.contains(hit)));'
+    +'const key=x+","+y+","+scrollX+","+scrollY;steady=on&&key===last?steady+1:0;last=key;'
+    +'if(steady>=3)return{x,y};'
+    +'why=!r.width||!r.height?"not displayed":!hit?"outside the viewport":!on?"covered by "+(hit.id||hit.className||hit.tagName):"still moving";'
+    +'if(!on)el.scrollIntoView({block:"center",behavior:"instant"});'
+    +'if(performance.now()-started>5000)throw Error("Click target is not ready ("+why+"): "+sel);}})()');
    await cdp('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
    await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});await pause(120);
   };
@@ -74,6 +91,8 @@ async function main(){
   await click('#preview-submit');
   await check('Valid answers show receipt without interpreting input as HTML','!document.getElementById("preview-receipt-panel").hidden&&document.getElementById("receipt-list").textContent.includes("<img")&&!document.querySelector("#receipt-list img")&&!window.injected');
   await click('#preview-back');
+  // ★下の「Reopen restores…」は隠れたままのフォームでも通ってしまう。戻れたこと自体をここで見る（空振りを原因の場所で落とす）
+  await check('Back from the receipt shows the form again','!document.getElementById("preview-form-panel").hidden&&document.getElementById("preview-receipt-panel").hidden');
   await check('Reopen restores submitted array and date','careerSurveyPreview.getForm().read().concerns[0]==="none"&&document.getElementById("sv-family_talk_by").value==="2027-02-15"');
   await set('schools_status','undecided');await click('#preview-submit');
   await check('Undecided-school answer removes stale school names','!Object.prototype.hasOwnProperty.call(careerSurveyPreview.getSaved(),"school_1")');
@@ -116,7 +135,7 @@ async function main(){
   await check('Last page shows submit instead of next','surveyForm.page()===3&&!document.getElementById("btn-survey-submit").hidden&&document.getElementById("btn-survey-next").hidden');
   await set('jlpt_level','');await click('#btn-survey-submit');
   await check('Submit with an earlier unanswered question jumps back to that page','surveyForm.page()===0&&document.getElementById("sv-jlpt_level").getAttribute("aria-invalid")==="true"');
-  await set('jlpt_level','n4');await pause(1200); // let the smooth scroll to the error finish before clicking
+  await set('jlpt_level','n4');// エラーへのなめらかスクロール中でも、click() が「止まった」ことを条件で待つ（以前はここに pause(1200) があった）
   await click('#btn-survey-next');await click('#btn-survey-next');await click('#btn-survey-next');
   await evaluate('api.upsert=async()=>{throw new Error("Offline simulated failure");}');
   await click('#btn-survey-submit');
