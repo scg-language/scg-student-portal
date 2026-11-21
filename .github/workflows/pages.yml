@@ -1,7 +1,9 @@
 name: Deploy Pages
 on:
+  # 2026-11-21：公開は release ブランチだけ。main への push では公開しない（作業の正本と、公開の時期を分ける）。
+  # 公開するとき＝ git push origin main:release （release を main の位置へ進める）
   push:
-    branches: [main]
+    branches: [release]
   workflow_dispatch:
 permissions:
   contents: read
