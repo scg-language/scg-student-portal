@@ -107,6 +107,7 @@ status_changed_by uuid
 graduated_on      date            卒業した日（5年の起点）
 ```
 
+- `homeroom_id uuid → profiles`（学生の行だけ。担任の職員。null＝未設定）。書き換えは `public.set_homeroom(p_student_ids uuid[], p_staff uuid)`＝`account.manage` を持つ人だけ・操作の記録に1行。学生本人は自分の担任の名前だけ読める
 - 学生が書く RPC（`submit_attempt`・`save_draft`・`record_away`・アンケートの提出）は、`status='active'` の学生だけ通す
 - `graduated`＝ログインできる。自分の記録は読める。受ける・出すは通らない。開いている回の一覧にも出ない
 - `withdrawn`＝ログインできない（Auth 側でも止める）＋ 上と同じく書けない
