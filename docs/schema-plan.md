@@ -178,6 +178,7 @@ quiz_runs に足す：  pass_pct  integer         始めた瞬間の線の写し
 | `password.reset` | パスワードを初期値に戻した |
 | `caps.set` | 人ごとの足し引きを変えた |
 | `caps.bundle.set` | 束を付け替えた |
+| `homeroom.set` | 担任を付けた・外した（記録には人数だけ） |
 
 ## 進み具合（SQL にしたもの）
 
@@ -185,7 +186,7 @@ quiz_runs に足す：  pass_pct  integer         始めた瞬間の線の写し
 |---|---|---|---|
 | 1 | `db/2026-11-21_capabilities.sql` | `tests/sql/capabilities_check.sql`（25項目） | ✅ **2026-11-22 適用済み**（適用前・適用後とも全項目 OK） |
 | 2 | `db/2026-11-22_audit_log.sql` | `tests/sql/audit_log_check.sql`（32項目） | ✅ **2026-11-22 適用済み**（同上）。診断は ERROR 0件。WARN は4件増えた（`my_caps`・`log_view`・`set_staff_cap`・`set_staff_bundle`＝どれも中で権限を見ている・仕様） |
-| 3 | アカウントの状態 | — | まだ書いていない |
+| 3 | `db/2026-11-22_account_status.sql`（状態・担任・学籍番号の形） | `tests/sql/account_status_check.sql`（39項目） | ロールバック検査は通過（2026-11-22・本物の提出の関数を通して確認）。**未適用**。🔴 今ある動きに触る（学生が書く4つの表にトリガ・開いている回の一覧2本を置き換え） |
 | 4 | テストの種類と再テスト | — | まだ書いていない |
 | 5 | 既存の関数の締め直し | — | まだ書いていない |
 
