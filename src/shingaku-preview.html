@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>進学先情報の見本 — SCG 学生ポータル</title>
+<link rel="stylesheet" href="assets/shingaku-preview.css">
+</head>
+<body>
+<header class="pv-top">
+ <h1>進学先情報の見本</h1>
+ <p>SCG 学生ポータル · 学生の画面と職員の画面を切り替えて、同じデータの動きを試す</p>
+</header>
+<main class="pv-page">
+ <p class="pv-notice" id="pv-notice">これは見本です。ダミーのデータだけで動き、再読み込みで元に戻ります。学校名・学生・リンク先はすべて架空です。</p>
+ <div class="pv-toolbar">
+  <div class="pv-mode" role="group" aria-label="表示する画面">
+   <button type="button" id="mode-student" aria-pressed="true">学生の画面</button>
+   <button type="button" id="mode-staff" aria-pressed="false">職員の画面</button>
+  </div>
+  <label class="pv-me" id="me-wrap">学生の画面で使う見本の学生
+   <select id="me-select"></select>
+  </label>
+ </div>
+ <section id="student-root" aria-label="学生の画面"></section>
+ <section id="staff-root" aria-label="職員の画面" hidden></section>
+</main>
+<script src="assets/shingaku-preview.js"></script>
+</body>
+</html>
