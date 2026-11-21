@@ -1,0 +1,53 @@
+/* 成績ポートフォリオの見本（portfolio-preview.html 専用）。色は student.css の body.sp の値を使う */
+*{box-sizing:border-box;}
+body.sp{margin:0;background:var(--ground);color:var(--ink2);
+  font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;
+  font-size:16px;line-height:1.6;}
+.pf-banner{background:#FFF7DF;border-bottom:1px solid #E8D59A;padding:10px 16px;font-size:.85rem;font-weight:700;color:#5A4300;}
+.pf-tools{padding:12px 16px 4px;}
+.pf-tools-label{font-size:.78rem;color:var(--sub2);font-weight:700;margin:0 0 6px;}
+.pf-samples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+.pf-samples button{font:inherit;text-align:left;border:2px solid var(--hair);background:var(--card);border-radius:12px;
+  padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:2px;color:var(--ink2);}
+.pf-samples button small{font-size:.72rem;color:var(--sub2);}
+.pf-samples button[aria-pressed="true"]{border-color:var(--navy);background:#E8F0F8;}
+main{max-width:560px;margin:0 auto;padding:8px 16px 48px;display:flex;flex-direction:column;gap:14px;}
+.pf-head{padding:6px 2px;}
+.pf-grad{display:inline-block;margin:0 0 6px;padding:3px 10px;border-radius:999px;background:#E5E7EB;color:#374151;font-size:.8rem;font-weight:800;}
+.pf-hi{margin:0;font-size:1.3rem;font-weight:800;}
+.pf-meta{margin:2px 0 0;font-size:.8rem;color:var(--sub2);font-weight:700;display:flex;gap:10px;flex-wrap:wrap;}
+.pf-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.pf-act{font:inherit;font-weight:800;font-size:.9rem;border:0;border-radius:999px;padding:9px 16px;background:var(--navy);color:#fff;cursor:pointer;}
+.pf-actmsg{font-size:.8rem;color:var(--sub2);margin:6px 0 0;}
+.pf-sec{background:var(--card);border-radius:var(--r-l);padding:16px;box-shadow:var(--shadow-s);}
+.pf-sec h2{margin:0;font-size:1.1rem;font-weight:800;}
+.pf-sec h3{margin:14px 0 6px;font-size:.95rem;font-weight:800;}
+.pf-asof{margin:2px 0 8px;font-size:.75rem;color:var(--sub2);}
+.pf-note,.pf-legend{font-size:.78rem;color:var(--sub2);margin:6px 0;}
+.pf-empty{margin:8px 0 0;padding:12px;border-radius:12px;background:#F3F4F6;color:var(--sub2);font-weight:700;font-size:.9rem;text-align:center;}
+.pf-chart{width:100%;height:auto;display:block;}
+.pf-grid{stroke:#E5E7EB;stroke-width:1;}
+.pf-axis{font-size:10px;fill:#6B7280;}
+.pf-passline{stroke:#1769AA;stroke-width:1.2;stroke-dasharray:5 4;}
+.pf-passlabel,.pf-guidelabel{fill:#1769AA;font-weight:700;}
+.pf-guide{stroke:#1769AA;stroke-width:1.2;stroke-dasharray:5 4;}
+.pf-guide[data-guide="80"]{stroke:#6B7280;}
+.pf-line{fill:none;stroke:var(--navy);stroke-width:2;}
+.pf-dot{fill:var(--navy);}
+.pf-dot-retest{fill:#fff;stroke:var(--navy);stroke-width:2;}
+.pf-bar{fill:#9DC0E3;}
+.pf-recs{list-style:none;margin:6px 0 0;padding:0;}
+.pf-rec{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:7px 0;border-top:1px solid var(--hair);font-size:.88rem;}
+.pf-rec-date{color:var(--sub2);width:3.2em;}
+.pf-rec-title{flex:1;font-weight:700;min-width:8em;}
+.pf-rec-score{font-weight:800;}
+.pf-badge{font-size:.72rem;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap;}
+.pf-badge.is-pass{background:#E6F0FA;color:var(--navy);}
+.pf-badge.is-notyet{background:#F3F4F6;color:#4B5563;}
+.pf-big{display:flex;align-items:baseline;gap:10px;margin:4px 0 8px;}
+.pf-big-label{font-size:.85rem;color:var(--sub2);font-weight:700;}
+.pf-big-num{font-size:1.8rem;font-weight:800;color:var(--navy);}
+.pf-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.pf-table th{text-align:left;font-weight:700;padding:6px 4px;border-top:1px solid var(--hair);}
+.pf-table td{text-align:right;font-weight:800;padding:6px 4px;border-top:1px solid var(--hair);white-space:nowrap;}
+.pf-total th,.pf-total td{border-top:2px solid #D1D5DB;}
