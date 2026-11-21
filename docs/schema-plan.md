@@ -183,8 +183,8 @@ quiz_runs に足す：  pass_pct  integer         始めた瞬間の線の写し
 
 | 順 | ファイル | 検査 | 状態 |
 |---|---|---|---|
-| 1 | `db/2026-11-21_capabilities.sql` | `tests/sql/capabilities_check.sql`（25項目） | ロールバック検査は通過（2026-11-22）。**未適用** |
-| 2 | `db/2026-11-22_audit_log.sql` | `tests/sql/audit_log_check.sql`（32項目） | ロールバック検査は通過（2026-11-22）。**未適用** |
+| 1 | `db/2026-11-21_capabilities.sql` | `tests/sql/capabilities_check.sql`（25項目） | ✅ **2026-11-22 適用済み**（適用前・適用後とも全項目 OK） |
+| 2 | `db/2026-11-22_audit_log.sql` | `tests/sql/audit_log_check.sql`（32項目） | ✅ **2026-11-22 適用済み**（同上）。診断は ERROR 0件。WARN は4件増えた（`my_caps`・`log_view`・`set_staff_cap`・`set_staff_bundle`＝どれも中で権限を見ている・仕様） |
 | 3 | アカウントの状態 | — | まだ書いていない |
 | 4 | テストの種類と再テスト | — | まだ書いていない |
 | 5 | 既存の関数の締め直し | — | まだ書いていない |
