@@ -85,7 +85,7 @@ async function main() {
     await check('Notice says it is a preview, dummy-only and resets on reload', 'document.getElementById("qb-notice").textContent.includes("これは見本です。ダミーのデータだけで動き、再読み込みで元に戻ります")');
     await check('8 dummy students, numbers descend from 2604999', 'shitsumonPreview.db.students.length===8&&shitsumonPreview.db.students.every((s,i)=>s.id===String(2604999-i))');
     await check('Dummy names are obviously fictional', 'shitsumonPreview.db.students.every(s=>s.name.startsWith("テスト"))');
-    await check('Staff are role names only', 'shitsumonPreview.STAFF.map(s=>s.name).join()==="事務の職員A,担任A,担任B,相談窓口の職員,情報管理者"');
+    await check('Staff are role names only', 'shitsumonPreview.STAFF.map(s=>s.name).join()==="事務の職員A,担任A,担任B,相談窓口の職員,全体を見る人（校長・情報管理者）"');
     await check('A 4-day-old unhandled consult is seeded', 'shitsumonPreview.db.consults.some(c=>c.status==="new"&&Date.now()-c.at.getTime()>=4*86400000-60000)');
 
     // --- 学生：開いた時点で自分が出ている・急ぎは電話 ---

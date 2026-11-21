@@ -13,7 +13,8 @@
     { id: "tanninA", name: "担任A", desk: "担任", student: "たんにんの せんせい" },
     { id: "tanninB", name: "担任B", desk: "担任", student: "たんにんの せんせい" },
     { id: "madoguchi", name: "相談窓口の職員", desk: "相談窓口（担任以外）", student: "そうだんの まどぐちの ひと" },
-    { id: "admin", name: "情報管理者", desk: "情報管理者", student: "がっこうの ひと", admin: true }
+    // ★「相談の全体を見る」は、情報管理者の束ではなく、人に付ける別のできること（docs/yakusoku.md 9章）。最初は校長と情報管理者
+    { id: "admin", name: "全体を見る人（校長・情報管理者）", desk: "全体を見る人（校長・情報管理者）", student: "がっこうの ひと", admin: true }
   ];
   const ST = id => STAFF.find(s => s.id === id);
 
