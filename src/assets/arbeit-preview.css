@@ -1,0 +1,86 @@
+/* アルバイト情報の見本（arbeit-preview.html）だけで使う。共通の app.css は読まない。 */
+:root{--ink:#14202b;--sub:#52606d;--line:#cfd8e2;--bg:#eef2f6;--brand:#24507a;--card:#fff;
+ --c-missing:#8a5a00;--b-missing:#fff1d6;--c-submitted:#1d4f91;--b-submitted:#e1ecfb;
+ --c-confirmed:#1f6b3a;--b-confirmed:#dff3e5;--c-returned:#a12222;--b-returned:#fde4e4;
+ --c-exempt:#5a4b8a;--b-exempt:#ece8fa;--c-none:#4a5560;--b-none:#e9edf1;
+ --c-unknown:#6b4a2b;--b-unknown:#fff;--c-na:#8a96a3;--b-na:transparent;
+ font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;color:var(--ink);background:var(--bg)}
+*{box-sizing:border-box}
+body{margin:0;font-size:16px;line-height:1.6;background:var(--bg)}
+button,select,input,textarea{font:inherit}
+button{border:1px solid #8aa0b8;border-radius:8px;padding:8px 14px;background:#fff;color:var(--brand);font-weight:700;cursor:pointer;min-height:42px}
+button[disabled]{opacity:.5;cursor:not-allowed}
+.ap-primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.ap-danger{color:var(--c-returned);border-color:var(--c-returned)}
+.ap-top{background:#20375a;color:#fff;padding:16px 16px 0}
+.ap-top h1{font-size:20px;margin:0 0 6px}
+.ap-notice{margin:0 0 12px;background:#fff7df;color:#4a3a00;border-left:5px solid #b78818;padding:8px 12px;border-radius:4px;font-size:14px}
+.ap-tabs{display:flex;gap:6px}
+.ap-tabs button{border-radius:8px 8px 0 0;border:0;background:#3b5478;color:#fff}
+.ap-tabs button[aria-pressed=true]{background:var(--bg);color:var(--ink)}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.ap-view[hidden]{display:none}
+.ap-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 14px}
+.ap-card h2{font-size:18px;margin:0 0 10px}
+.ap-muted{color:var(--sub)}
+.ap-msg{margin:10px 0 0;padding:8px 10px;border-radius:6px;background:#eef6ff}
+.ap-msg.err{background:#fff0f0;color:#a12222}
+.ap-field{display:flex;flex-direction:column;gap:3px;font-size:14px;color:var(--sub);margin:0 0 10px}
+.ap-field select,.ap-field input,.ap-field textarea{font-size:16px;color:var(--ink);padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff;max-width:100%}
+
+/* 学生の画面：スマホ幅 */
+.ap-picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:14px;color:var(--sub)}
+.ap-picker select{padding:6px;font-size:15px;max-width:100%}
+.ap-phone{max-width:420px;margin:0 auto;font-size:17px;line-height:1.9}
+.ap-step{font-weight:700;margin:12px 0 4px}
+.ap-thumb{margin:8px 0}
+.ap-thumb img{max-width:160px;max-height:160px;border:1px solid var(--line);border-radius:6px}
+.ap-wp{border-top:1px solid var(--line);padding:10px 0 4px}
+.ap-wp:first-child{border-top:0;padding-top:0}
+.ap-wp h3{font-size:17px;margin:0 0 4px}
+.ap-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:4px 0;flex-wrap:wrap}
+.ap-reason{flex-basis:100%;font-size:15px;color:var(--c-returned);background:var(--b-returned);border-radius:6px;padding:4px 8px;overflow-wrap:anywhere}
+.ap-choice{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.ap-addwp{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ap-addwp input{flex:1 1 160px;min-width:0;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:16px}
+
+/* 状態の印（学生・職員とも） */
+.ap-badge{display:inline-block;border-radius:999px;padding:1px 10px;font-size:14px;font-weight:700;white-space:nowrap;border:1px solid transparent}
+:is(.ap-badge,.ap-chip)[data-state=missing]{color:var(--c-missing);background:var(--b-missing)}
+:is(.ap-badge,.ap-chip)[data-state=submitted]{color:var(--c-submitted);background:var(--b-submitted)}
+:is(.ap-badge,.ap-chip)[data-state=confirmed]{color:var(--c-confirmed);background:var(--b-confirmed)}
+:is(.ap-badge,.ap-chip)[data-state=returned]{color:var(--c-returned);background:var(--b-returned)}
+:is(.ap-badge,.ap-chip)[data-state=exempt]{color:var(--c-exempt);background:var(--b-exempt)}
+:is(.ap-badge,.ap-chip)[data-state=none]{color:var(--c-none);background:var(--b-none)}
+:is(.ap-badge,.ap-chip)[data-state=unknown]{color:var(--c-unknown);background:var(--b-unknown);border:1px dashed var(--c-unknown)}
+:is(.ap-badge,.ap-chip)[data-state=na]{color:var(--c-na);background:var(--b-na)}
+
+/* 職員の画面：PC 幅でもスマホ幅でも */
+.ap-filters{display:flex;flex-wrap:wrap;gap:12px}
+.ap-filters .ap-field{min-width:150px;flex:0 1 200px}
+.ap-summary{margin:4px 0 8px;font-size:14px}
+.ap-legend{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.ap-tablewrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:10px;max-width:100%}
+.ap-table{border-collapse:collapse;width:100%;font-size:14px}
+.ap-table th,.ap-table td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.ap-table th{background:#f5f7fa;white-space:nowrap}
+.ap-table td.nm{white-space:nowrap}
+.ap-cell{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.ap-chip{font-size:13px;font-weight:700;border-radius:6px;padding:3px 8px;min-height:30px;border:1px solid rgba(0,0,0,.12);text-align:left;white-space:nowrap}
+.ap-chip[data-state=na],.ap-chip[data-state=none],.ap-chip[data-state=unknown]{cursor:default}
+.ap-paper{display:inline-block;margin-left:4px;font-size:11px;padding:0 5px;border-radius:4px;background:#333;color:#fff;vertical-align:middle}
+.ap-detail{margin-top:14px;border-width:2px;border-color:var(--brand)}
+.ap-detail-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.ap-detail-head button{white-space:nowrap;flex:none}
+.ap-detail img{max-width:100%;max-height:420px;border:1px solid var(--line);border-radius:6px;display:block;margin:6px 0}
+.ap-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin:10px 0}
+.ap-box{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;width:100%}
+.ap-box textarea{width:100%;min-height:64px}
+.ap-history{font-size:13px;color:var(--sub);padding-left:18px;margin:6px 0 0}
+.ap-history li{overflow-wrap:anywhere}
+
+@media(max-width:600px){
+ .ap-top h1{font-size:17px}
+ main{padding:12px 10px}
+ .ap-filters .ap-field{flex:1 1 130px;min-width:0}
+}
