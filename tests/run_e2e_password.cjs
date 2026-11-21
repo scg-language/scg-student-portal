@@ -129,7 +129,9 @@ async function main() {
     // 再読み込み（保存済みのログインで開く）でも初期なら決め直し
     mock.rpcMissing = false; mock.initial = true;
     await cdp('Page.reload');
-    await check('6 再読み込みでも初期なら決め直し', until('!document.getElementById("scr-password").hidden'));
+    // ★再読み込みの直後は、まだ要素が無い瞬間がある（null の .hidden を読んで例外＝約1/8で落ちていた・2026-11-21）。
+    //   待ち時間は延ばさず、「要素があって、出ている」を条件にする
+    await check('6 再読み込みでも初期なら決め直し', until('(()=>{const e=document.getElementById("scr-password");return !!e&&!e.hidden})()'));
     // 英語
     await ev('setLang && setLang("en")').catch(() => {});
     await check('英語の題名', until('/Set your new password|あたらしい/.test(document.getElementById("pw-title").textContent)'));
