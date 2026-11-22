@@ -177,18 +177,19 @@
        ・在籍中の学生で、いまの版をまだ読んでいないとき、ログインのあと（パスワードの次）に必ず出る（もどるボタンなし）
        ・同意を取るものではない。ボタンは「よみました」1つ
        ・マイから開いたときは読むだけ（もどれる）
-       ・文は assets/policy-notice.js。そこの ready が false の間は出さない -->
+       ・文は assets/policy-notice.js。そこの ready が false の間は出さない
+       ・言語はこの画面だけで切り替える（ntLang）。ポータルのほかの画面の言語（LANG）とは別。ボタンと知らせも、お知らせの言語で出す -->
   <section id="scr-notice" hidden>
     <div class="panel">
       <button type="button" class="nt-lang" id="btn-nt-lang" data-i18n="nt.lang"></button>
       <h2 id="nt-title"></h2>
-      <p class="nt-changed" id="nt-changed" data-i18n="nt.changed" hidden></p>
+      <p class="nt-changed" id="nt-changed" hidden></p>
       <div class="nt-body" id="nt-body"></div>
       <p class="nt-readon" id="nt-readon" hidden></p>
-      <button class="btn" id="btn-nt-read" data-i18n="nt.read">よみました</button>
+      <button class="btn" id="btn-nt-read">よみました</button>
       <div class="msg" id="nt-msg"></div>
-      <button type="button" class="set-out" id="btn-nt-back" data-i18n="pw.back" hidden>もどる</button>
-      <button type="button" class="set-out" id="btn-nt-logout" data-i18n="my.logout" hidden>ログアウト</button>
+      <button type="button" class="set-out" id="btn-nt-back" hidden>もどる</button>
+      <button type="button" class="set-out" id="btn-nt-logout" hidden>ログアウト</button>
     </div>
   </section>
 
@@ -1582,7 +1583,7 @@ async function afterLogin(){
    ★出さない場合：文が決まっていない（ready=false）／RPC が無い・通信の失敗／画面の文の版と DB の版が違う
      ＝どれも今までどおりホームへ進む（ログインを止めない）。
    返り値＝ホームへ進んだら true、お知らせを出したら false */
-let ntForced = false, ntStatus = null;
+let ntForced = false, ntStatus = null, ntLang = null;   // ntLang＝お知らせの画面だけの言語（ポータルの LANG とは別）
 async function noticeStatus(){
   const N = window.POLICY_NOTICE;
   if(!N || !N.ready) return null;
@@ -1598,33 +1599,55 @@ async function afterPassword(){
 }
 function openNotice(forced, st){
   ntForced = !!forced; ntStatus = st || null;
+  // はじめは、ポータルで選んである言語（訳があれば）。お知らせの画面で選び直したら、それを使う
+  if(!ntLang) ntLang = window.POLICY_NOTICE.has(LANG) ? LANG : "ja";
   renderNotice();
   show("scr-notice");
 }
 function renderNotice(){
   const N = window.POLICY_NOTICE;
-  $("nt-title").textContent = tx(N.title);
+  const nx = o => N.tx(o, ntLang);
+  $("scr-notice").lang = ntLang;
+  $("nt-title").textContent = nx(N.title);
+  $("nt-changed").textContent = nx(N.ui.changed);
   $("nt-changed").hidden = !(ntForced && ntStatus && ntStatus.read_before);
-  const body = $("nt-body"); body.replaceChildren(); N.render(body, LANG);
+  const body = $("nt-body"); body.replaceChildren(); N.render(body, ntLang);
+  $("btn-nt-read").textContent = nx(N.ui.read);
+  $("btn-nt-back").textContent = nx(N.ui.back);
+  $("btn-nt-logout").textContent = nx(N.ui.logout);
   const at = !ntForced && ntStatus && ntStatus.read_at ? new Date(ntStatus.read_at) : null;
   $("nt-readon").hidden = !at;
-  if(at) $("nt-readon").textContent = t("nt.readon", { d: at.getFullYear() + "/" + (at.getMonth()+1) + "/" + at.getDate() });
+  if(at) $("nt-readon").textContent = nx(N.ui.readon).replace("{d}", at.getFullYear() + "/" + (at.getMonth()+1) + "/" + at.getDate());
   $("btn-nt-read").hidden = !ntForced;
   $("btn-nt-logout").hidden = !ntForced;
   $("btn-nt-back").hidden = ntForced;
   clearMsg("nt-msg");
 }
 $("btn-nt-read").onclick = async () => {
-  const N = window.POLICY_NOTICE, b = $("btn-nt-read");
-  clearMsg("nt-msg"); b.disabled = true; b.textContent = t("nt.busy");
+  const N = window.POLICY_NOTICE, b = $("btn-nt-read"), nx = o => N.tx(o, ntLang);
+  clearMsg("nt-msg"); b.disabled = true; b.textContent = nx(N.ui.busy);
   try{
-    await api.ackNotice(N.key, N.version, LANG);
+    await api.ackNotice(N.key, N.version, ntLang);   // 記録に残すのは、読んだときに画面に出ていた言語
     await goMyPage();
   }catch(e){
-    err("nt-msg", t(e.code === "PT409" || e.code === "409" ? "nt.err.reload" : "nt.err.other"));
-  }finally{ b.disabled = false; b.textContent = t("nt.read"); }
+    err("nt-msg", nx(e.code === "PT409" || e.code === "409" ? N.ui.errReload : N.ui.errOther));
+  }finally{ b.disabled = false; b.textContent = nx(N.ui.read); }
 };
-$("btn-nt-lang").onclick = () => openLangSheet();
+/* お知らせの言語えらび。訳が入っている言語だけを並べる。選んでも、ポータルのほかの画面の言語は変えない */
+$("btn-nt-lang").onclick = () => sheet.open(body => {
+  const N = window.POLICY_NOTICE;
+  const h = el("div","sh-title", "ことば ・ Language"); h.id = "sheet-title"; body.append(h);
+  const list = el("div","sh-list"); list.id = "nt-langs";
+  N.langs().forEach(([code, native]) => {
+    const b = el("button"); b.type = "button"; b.dataset.code = code; b.lang = code;
+    b.append(el("span","nat", native));
+    if(code === ntLang) b.append(el("span","ck","✓"));
+    b.setAttribute("aria-pressed", String(code === ntLang));
+    b.onclick = () => { ntLang = code; renderNotice(); sheet.close(); window.scrollTo(0,0); };
+    list.append(b);
+  });
+  body.append(list);
+});
 $("btn-nt-back").onclick = () => goSettings();
 $("btn-nt-logout").onclick = () => doLogout();
 $("set-notice").hidden = !(window.POLICY_NOTICE && window.POLICY_NOTICE.ready);

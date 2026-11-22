@@ -100,7 +100,7 @@ async function main() {
     await click('#st-logout'); await select('ctl-who', '2604996'); await click('#st-login');
     await click('#lang-en');
     await check('English shows the English heading and button', (await text('#st-phone h2')).includes('Important notice') && (await text('#st-read')) === 'I have read this');
-    await check('Languages without a checked translation cannot be chosen', 'document.getElementById("lang-zh").disabled&&document.getElementById("lang-ne").disabled');
+    await check('Only languages that have a translation are listed', '(()=>{const b=[...document.querySelectorAll("#st-langs button")].map(x=>x.id.slice(5));return b.join()===window.POLICY_NOTICE.langs().map(l=>l[0]).join()})()');
     await click('#st-read');
     await check('Record keeps the language that was on screen', 'window.policyPreview.log[window.policyPreview.log.length-1].lang==="en"');
 

@@ -108,11 +108,7 @@ const I18N = {
     "set.pw": "パスワードを かえる",
     // 学生ポータルについてのお知らせ。文そのものは assets/policy-notice.js
     "set.notice": "学校からの 大事な お知らせ",
-    "nt.read": "よみました", "nt.busy": "おくっています…", "nt.lang": "ことば ・ Language",
-    "nt.changed": "まえに よんだ ときから、かわった ところが あります。もういちど よんで ください。",
-    "nt.readon": "✓ よみました（{d}）",
-    "nt.err.reload": "お知らせが あたらしく なりました。ページを よみこみなおして ください。",
-    "nt.err.other": "おくれませんでした。もういちど おして ください。",
+    "nt.lang": "ことば ・ Language",   // お知らせの画面のボタンと知らせは assets/policy-notice.js の ui（お知らせの言語で出す）
     "pw.title": "パスワードを かえる", "pw.title.first": "あたらしい パスワードを きめましょう",
     "pw.lead.first": "いまの パスワードは はじめの パスワードです。じぶんだけの パスワードに かえてください。",
     "pw.rule1": "えいご（a〜z）と すうじ（0〜9）を まぜて 8もじ いじょう",
@@ -219,11 +215,7 @@ const I18N = {
     "set.cancel": "Cancel", "sheet.close": "Close",
     "set.pw": "Change password",
     "set.notice": "Important notice from the school",
-    "nt.read": "I have read this", "nt.busy": "Sending…", "nt.lang": "ことば ・ Language",
-    "nt.changed": "Something has changed since you last read this. Please read it again.",
-    "nt.readon": "✓ Read ({d})",
-    "nt.err.reload": "The notice has been updated. Please reload the page.",
-    "nt.err.other": "Could not send. Please press again.",
+    "nt.lang": "ことば ・ Language",   // お知らせの画面のボタンと知らせは assets/policy-notice.js の ui（お知らせの言語で出す）
     "pw.title": "Change password", "pw.title.first": "Set your new password",
     "pw.lead.first": "You are using the first password. Please change it to your own password.",
     "pw.rule1": "At least 8 characters, with both letters (a–z) and numbers (0–9)",

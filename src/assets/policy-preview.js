@@ -11,15 +11,12 @@
   const ADDED = L("先生との 面談の 記録を まとめる", "Summarizing records of your meetings with teachers");
   const UI = {
     login: L("ログイン", "Log in"), loginNote: L("（見本です。おすと ログイン します）", "(Preview: press to log in)"),
-    read: L("よみました", "I have read this"),
-    changed: L("まえに よんだ ときから、かわった ところが あります。色の ついた ところです。", "Something has changed since you last read this. The change is highlighted."),
     hello: L("{name} さん", "Hello, {name}"), quiz: L("テストを うける", "Take a quiz"), survey: L("アンケートに こたえる", "Answer a survey"),
     dummy: L("（見本では うごきません）", "(Not active in this preview)"),
     noticeCard: L("学校からの 大事な お知らせ", "Important notice from the school"),
     readOn: L("よみました（{d}）", "Read ({d})"), again: L("もういちど よむ", "Read again"), back: L("もどる", "Back"),
-    logout: L("ログアウト", "Log out"), soon: L("じゅんびちゅう", "coming soon"),
+    logout: L("ログアウト", "Log out"),
   };
-  const LANGS = [["ja", "日本語", true], ["en", "English", true], ["zh", "中文", false], ["ne", "नेपाली", false], ["my", "မြန်မာ", false], ["si", "සිංහල", false], ["bn", "বাংলা", false], ["vi", "Tiếng Việt", false], ["uz", "Oʻzbekcha", false]];
   const ACTION_LABEL = { read: "よみました" };
 
   // ---------- ダミーデータ（ブラウザのメモリだけ） ----------
@@ -46,9 +43,10 @@
   function button(text, cls, id, fn) { const b = el("button", cls, text); b.type = "button"; if (id) b.id = id; b.addEventListener("click", fn); return b; }
   function langBar(parent) {
     const bar = el("div", "pp-langs"); bar.id = "st-langs";
-    LANGS.forEach(([code, label, ready]) => {
-      const b = button(ready ? label : label + "（" + tx(UI.soon) + "）", "", "lang-" + code, () => { state.lang = code; render(); });
-      b.disabled = !ready; b.setAttribute("aria-pressed", String(state.lang === code)); bar.appendChild(b);
+    // 訳が入っている言語だけを並べる（assets/policy-notice.js）。お知らせの文とボタンだけが、その言語になる
+    NOTICE.langs().forEach(([code, label]) => {
+      const b = button(label, "", "lang-" + code, () => { state.lang = code; render(); });
+      b.lang = code; b.setAttribute("aria-pressed", String(state.lang === code)); bar.appendChild(b);
     });
     parent.appendChild(bar);
   }
@@ -71,9 +69,9 @@
     } else if (state.screen === "gate" || state.screen === "reread") {
       langBar(card);
       card.appendChild(el("h2", "", tx(NOTICE.title)));
-      if (state.screen === "gate" && readBefore(state.who)) { const c = el("p", "pp-changed", tx(UI.changed)); c.id = "st-changed"; card.appendChild(c); }
+      if (state.screen === "gate" && readBefore(state.who)) { const c = el("p", "pp-changed", tx(NOTICE.ui.changed)); c.id = "st-changed"; card.appendChild(c); }
       noticeDoc(card);
-      if (state.screen === "gate") card.appendChild(button(tx(UI.read), "pp-primary pp-wide", "st-read", () => { record(state.who, "read"); state.screen = nextScreen(); render(); }));
+      if (state.screen === "gate") card.appendChild(button(tx(NOTICE.ui.read), "pp-primary pp-wide", "st-read", () => { record(state.who, "read"); state.screen = nextScreen(); render(); }));
       else card.appendChild(button(tx(UI.back), "pp-wide", "st-back", () => { state.screen = "home"; render(); }));
     } else {
       card.appendChild(el("h2", "", tx(UI.hello).replace("{name}", me().name)));

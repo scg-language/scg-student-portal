@@ -118,7 +118,11 @@ async function main() {
     // 2 言語
     await click('#btn-nt-lang');
     await check('2 言語のシートが出る', until('!document.getElementById("sheet").hidden'));
-    await ev('setLang("en"); sheet.close(true); true');
+    await check('2 並ぶのは、訳が入っている言語だけ', '(()=>{const b=[...document.querySelectorAll("#nt-langs button")].map(x=>x.dataset.code);const want=window.POLICY_NOTICE.langs().map(l=>l[0]);return b.length>=2&&b.join()===want.join()})()');
+    await check('2 訳に抜けが無い（入っている言語は全部のキーがそろっている）', 'Object.keys(window.POLICY_NOTICE.missing()).length===0');
+    await click('#nt-langs button[data-code="en"]');
+    await check('2 選ぶとシートが閉じる', until('document.getElementById("sheet").hidden'));   // ★閉じる前に押すと、シートを押してしまう
+    await check('2 お知らせの言語を変えても、ポータルの言語は変わらない', 'LANG==="ja"');
     await check('2 英語にすると文も英語', until('document.getElementById("nt-title").textContent.includes("Important notice") && document.getElementById("btn-nt-read").textContent==="I have read this" && document.querySelector("#nt-body .pn-h").textContent.includes("stored")'));
 
     // 5 文が新しくなっていた（先に試す：まだ読んでいない状態が要る）
@@ -127,16 +131,15 @@ async function main() {
     await check('5 409 なら読み込み直しの案内（サーバーの文は出さない）', until('/reload/i.test(document.getElementById("nt-msg").textContent)'));
     await check('5 ホームへ進まない', shown('scr-notice'));
     mock.ackQueue.push([500, { message: 'x' }], [500, { message: 'x' }], [500, { message: 'x' }], [500, { message: 'x' }]);
-    await ev('setLang("ja"); true');
 
-    // 3 よみました
+    // 3 よみました（英語のまま押す＝記録に残るのは、画面に出ていた言語）
     const before = mock.acks.length;
     await ev('document.getElementById("btn-nt-read").click(), true');
-    await check('3 通信に失敗したら、もういちど押す案内', until('document.getElementById("nt-msg").textContent.includes("もういちど")', 20000));
+    await check('3 通信に失敗したら、もういちど押す案内（お知らせの言語で）', until('document.getElementById("nt-msg").textContent.includes("press again")', 20000));
     await click('#btn-nt-read');
     await check('3 押すとホームへ', until(shown('scr-mypage')));
     const last = mock.acks.at(-1);
-    await check('3 サーバーへ届く形（鍵・版・言語だけ）', last.p_key === 'student_privacy' && last.p_version === 1 && last.p_lang === 'ja' && Object.keys(last).length === 3 && mock.acks.length > before);
+    await check('3 サーバーへ届く形（鍵・版・言語だけ）', last.p_key === 'student_privacy' && last.p_version === 1 && last.p_lang === 'en' && Object.keys(last).length === 3 && mock.acks.length > before);
 
     // 4 読んだあと
     await cdp('Page.reload');
@@ -145,7 +148,7 @@ async function main() {
     const acks4 = mock.acks.length;
     await click('#set-notice');
     await check('4 マイから読み直せる', until(shown('scr-notice')));
-    await check('4 読むだけ：よみましたは無い・もどるあり・読んだ日が出る', '!!document.getElementById("btn-nt-read").hidden && !document.getElementById("btn-nt-back").hidden && !!document.getElementById("btn-nt-logout").hidden && document.getElementById("nt-readon").textContent.includes("よみました")');
+    await check('4 読むだけ：よみましたは無い・もどるあり・読んだ日が出る', '!!document.getElementById("btn-nt-read").hidden && !document.getElementById("btn-nt-back").hidden && !!document.getElementById("btn-nt-logout").hidden && /Read|よみました/.test(document.getElementById("nt-readon").textContent)');
     await shot('reread.png');
     await click('#btn-nt-back');
     await check('4 もどるでマイへ・何も送っていない', (await until(shown('scr-settings'))) && mock.acks.length === acks4);
