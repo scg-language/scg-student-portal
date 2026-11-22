@@ -679,6 +679,8 @@
           </div>
         </div>
         <div class="panel"><div class="awrap" id="st-table"><div class="muted">読み込み中…</div></div></div>
+        <!-- アカウントの発行（2026-11-23・発行できる人＝情報管理者だけに出す。中身と動きは assets/accounts.js が組み立てる） -->
+        <div class="panel" id="ac-panel" hidden></div>
         <div class="note">出席率・担任・最終ログインは、学校の名簿とのつなぎ込みと管理用の権限ができてから追加します。パスワードの初期化は、学生の詳細から行えます（マスターのみ）。</div>
       </div>
 
@@ -842,6 +844,7 @@
 <script src="assets/survey-editor.js"></script>
 <script src="assets/round-state.js"></script>
 <script src="assets/admin.js"></script>
+<script src="assets/accounts.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 function err(id,t){ const m=$(id); m.className="msg err"; m.textContent=t; }
