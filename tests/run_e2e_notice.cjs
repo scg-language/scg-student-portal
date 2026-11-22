@@ -1,4 +1,4 @@
-/* はじめのお知らせ（個人情報のあつかい・学生画面）の通し検査 — 2026-11-22
+/* 学生ポータルについてのお知らせ（学生画面）の通し検査 — 2026-11-22
  * ★通信なし：Supabase への要求はすべて CDP の Fetch で横取りして、見本の返事を返す（本物の DB・資格情報は使わない）
  * 見ること
  *   0 文に【　】が残っている間は ready=false。そのままなら、まだ読んでいなくてもホームへ直行（お知らせを出さない）
@@ -109,7 +109,7 @@ async function main() {
     await check('1 ログインのあと、お知らせが出る', until(shown('scr-notice')));
     await check('1 ホームは出ない・タブは隠れる', '!!document.getElementById("scr-mypage").hidden && !!document.getElementById("tabbar").hidden');
     await check('1 もどるボタンなし・ログアウトあり', '!!document.getElementById("btn-nt-back").hidden && !document.getElementById("btn-nt-logout").hidden');
-    await check('1 8つの節が出る', 'document.querySelectorAll("#nt-body .pn-h").length===8');
+    await check('1 節は2つだけ（保存する場所・AI の利用）', '(()=>{const h=[...document.querySelectorAll("#nt-body .pn-h")].map(e=>e.textContent);return h.length===2&&h[0].includes("保存")&&h[1].includes("AI")})()');
     await check('1 ボタンは「よみました」1つ（同意・不同意のボタンは無い）', 'document.querySelectorAll("#scr-notice .btn").length===1 && document.getElementById("btn-nt-read").textContent==="よみました" && !/同意 します|同意 しません/.test(document.getElementById("scr-notice").textContent)');
     await check('1 AI の2つの約束が入っている', '(()=>{const t=document.getElementById("nt-body").textContent;return t.includes("AI だけで")&&t.includes("AI の 学習に つかいません")})()');
     await check('1 横にはみ出さない', 'document.documentElement.scrollWidth<=window.innerWidth+1');
@@ -119,7 +119,7 @@ async function main() {
     await click('#btn-nt-lang');
     await check('2 言語のシートが出る', until('!document.getElementById("sheet").hidden'));
     await ev('setLang("en"); sheet.close(true); true');
-    await check('2 英語にすると文も英語', until('document.getElementById("nt-title").textContent.includes("Important notice") && document.getElementById("btn-nt-read").textContent==="I have read this" && document.querySelector("#nt-body .pn-h").textContent.includes("Information")'));
+    await check('2 英語にすると文も英語', until('document.getElementById("nt-title").textContent.includes("Important notice") && document.getElementById("btn-nt-read").textContent==="I have read this" && document.querySelector("#nt-body .pn-h").textContent.includes("stored")'));
 
     // 5 文が新しくなっていた（先に試す：まだ読んでいない状態が要る）
     mock.ackQueue.push([409, { code: 'PT409', message: 'お知らせが新しくなりました。読み込み直してください' }]);

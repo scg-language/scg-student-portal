@@ -173,7 +173,7 @@
     </div>
   </section>
 
-  <!-- はじめのお知らせ（個人情報のあつかい・2026-11-22）。docs/yakusoku.md 4-2
+  <!-- 学生ポータルについてのお知らせ（2026-11-22）。docs/yakusoku.md 4-2
        ・在籍中の学生で、いまの版をまだ読んでいないとき、ログインのあと（パスワードの次）に必ず出る（もどるボタンなし）
        ・同意を取るものではない。ボタンは「よみました」1つ
        ・マイから開いたときは読むだけ（もどれる）
@@ -182,7 +182,6 @@
     <div class="panel">
       <button type="button" class="nt-lang" id="btn-nt-lang" data-i18n="nt.lang"></button>
       <h2 id="nt-title"></h2>
-      <p class="nt-sub" id="nt-sub"></p>
       <p class="nt-changed" id="nt-changed" data-i18n="nt.changed" hidden></p>
       <div class="nt-body" id="nt-body"></div>
       <p class="nt-readon" id="nt-readon" hidden></p>
@@ -1578,7 +1577,7 @@ async function afterLogin(){
   if(await api.passwordIsInitial()){ openPassword(true); return; }
   await afterPassword();
 }
-/* ---- はじめのお知らせ（個人情報のあつかい・2026-11-22）----
+/* ---- 学生ポータルについてのお知らせ（2026-11-22）----
    パスワードの次に挟む。在籍中の学生で、いまの版をまだ読んでいないときだけ出す（判定はサーバー）。
    ★出さない場合：文が決まっていない（ready=false）／RPC が無い・通信の失敗／画面の文の版と DB の版が違う
      ＝どれも今までどおりホームへ進む（ログインを止めない）。
@@ -1605,7 +1604,6 @@ function openNotice(forced, st){
 function renderNotice(){
   const N = window.POLICY_NOTICE;
   $("nt-title").textContent = tx(N.title);
-  $("nt-sub").textContent = tx(N.sub);
   $("nt-changed").hidden = !(ntForced && ntStatus && ntStatus.read_before);
   const body = $("nt-body"); body.replaceChildren(); N.render(body, LANG);
   const at = !ntForced && ntStatus && ntStatus.read_at ? new Date(ntStatus.read_at) : null;

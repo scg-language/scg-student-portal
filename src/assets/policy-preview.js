@@ -57,7 +57,7 @@
   const me = () => students.find(s => s.id === state.who);
   const nextScreen = () => hasRead(state.who) ? "home" : "gate";
   function noticeDoc(card) {
-    NOTICE.render(card, state.lang, state.version >= 2 ? { extra: { s8: ADDED } } : null);
+    NOTICE.render(card, state.lang, state.version >= 2 ? { extra: { s2: ADDED } } : null);
   }
   function renderStudent() {
     const phone = $("st-phone"); phone.replaceChildren(); phone.dataset.screen = state.screen;
@@ -71,7 +71,6 @@
     } else if (state.screen === "gate" || state.screen === "reread") {
       langBar(card);
       card.appendChild(el("h2", "", tx(NOTICE.title)));
-      card.appendChild(el("p", "pp-muted", tx(NOTICE.sub)));
       if (state.screen === "gate" && readBefore(state.who)) { const c = el("p", "pp-changed", tx(UI.changed)); c.id = "st-changed"; card.appendChild(c); }
       noticeDoc(card);
       if (state.screen === "gate") card.appendChild(button(tx(UI.read), "pp-primary pp-wide", "st-read", () => { record(state.who, "read"); state.screen = nextScreen(); render(); }));

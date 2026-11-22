@@ -144,10 +144,10 @@ async function main() {
     await click('document.querySelector(".hd .ibtn")'); await pause(200);
     check('戻る：終了したアンケートに戻る', await ev('location.hash.startsWith("#/past")'));
 
-    // ── はじめのお知らせ（個人情報の取扱い）を読んだか（2026-11-22） ──
+    // ── 学生ポータルについてのお知らせを読んだか（2026-11-22） ──
     check('お知らせ：文が決まるまで本物の画面には出さない（ready を見ている）', /function noticeOn\(\)\{ return DEMO \|\| !!\(NT && NT\.ready\); \}/.test(src));
     await ev('location.hash = "#/", true'); await wait('!!document.getElementById("nt-card")', 'notice card');
-    check('お知らせ：ホームにカードが出る（見本データ）', await ev('/個人情報の取扱い/.test(document.getElementById("nt-card").textContent)'));
+    check('お知らせ：ホームにカードが出る（見本データ）', await ev('/学生ポータルについてのお知らせ/.test(document.getElementById("nt-card").textContent)'));
     await click('document.querySelector("#nt-card .go")');
     await wait('location.hash === "#/notice"', 'notice pick');
     check('お知らせ・選択：クラスが10個・名前も人数も出さない', await ev('document.querySelectorAll(".cls").length === 10 && !/見本 学生|人/.test(document.querySelector(".grid3").innerText)'));

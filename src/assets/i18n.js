@@ -106,7 +106,7 @@ const I18N = {
     "set.logout.q": "ログアウト しますか？", "set.logout.body": "つぎは 学籍番号と パスワードで ログインします。",
     "set.cancel": "キャンセル", "sheet.close": "とじる",
     "set.pw": "パスワードを かえる",
-    // はじめのお知らせ（個人情報のあつかい）。文そのものは assets/policy-notice.js
+    // 学生ポータルについてのお知らせ。文そのものは assets/policy-notice.js
     "set.notice": "学校からの 大事な お知らせ",
     "nt.read": "よみました", "nt.busy": "おくっています…", "nt.lang": "ことば ・ Language",
     "nt.changed": "まえに よんだ ときから、かわった ところが あります。もういちど よんで ください。",

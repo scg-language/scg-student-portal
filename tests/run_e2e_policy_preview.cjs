@@ -76,8 +76,8 @@ async function main() {
     await check('Starts at the login screen', (await screen()) === 'login');
     await click('#st-login');
     await check('Unread student is stopped at the notice before home', (await screen()) === 'gate');
-    await check('Notice has 7 sections plus the AI section', 'document.querySelectorAll("#st-phone h3").length===8');
-    await check('Undecided parts are marked', 'document.querySelectorAll("#st-phone .pn-todo").length>=5');
+    await check('Notice has only two sections (storage place and AI)', 'document.querySelectorAll("#st-phone h3").length===2');
+    await check('No undecided parts remain in the text', 'document.querySelectorAll("#st-phone .pn-todo").length===0');
     await check('There is one button only: no agree/decline choice anywhere', '!document.getElementById("st-agree")&&!document.getElementById("st-decline")&&!document.getElementById("ctl-mode")');
     await check('AI uses are written as examples, with a way to ask', (await text('#st-phone')).includes('たとえば') && (await text('#st-phone')).includes('しんぱいな'));
     await check('AI-only-decides promise is in the notice', (await text('#st-phone')).includes('AI だけで'));

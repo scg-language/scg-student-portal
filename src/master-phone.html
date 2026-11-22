@@ -384,13 +384,13 @@ function viewHome(){
   m.appendChild(el("p", "note", "回答の中身・CSV・回の取り消しは、PC のマスター画面で行います。"));
 }
 
-/* ⑥ はじめのお知らせ（個人情報の取扱い）を読んだか（2026-11-22）。docs/yakusoku.md 4-2
+/* ⑥ 学生ポータルについてのお知らせを読んだか（2026-11-22）。docs/yakusoku.md 4-2
    ・同意を取るものではない。見るのは「まだ読んでいない学生」の名前と人数だけ
    ・クラスを開いたときだけサーバーに聞く（RPC notice_unread＝名簿を見られる人だけ・開いたことは操作の記録に残る）
    ・クラスの選択には人数を出さない（全クラスぶんの名前を一度に取りに行かない）
    ・文が決まるまで（policy-notice.js の ready=false）は、ホームにも出さない。見本データでは出す */
 const NT = window.POLICY_NOTICE || null;
-const NT_NAME = "はじめのお知らせ（個人情報の取扱い）";
+const NT_NAME = "学生ポータルについてのお知らせ";
 function noticeOn(){ return DEMO || !!(NT && NT.ready); }
 async function loadNotice(c){
   if(DEMO){
