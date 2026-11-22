@@ -1,0 +1,45 @@
+/* はじめのお知らせの見本（policy-preview.html）だけで使う。共通の app.css は読まない。 */
+:root{--ink:#14202b;--sub:#52606d;--line:#cfd8e2;--bg:#eef2f6;--brand:#24507a;--card:#fff;
+ --ok:#1f6b3a;--okbg:#dff3e5;--warn:#8a5a00;--warnbg:#fff1d6;
+ font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;color:var(--ink);background:var(--bg)}
+*{box-sizing:border-box}
+body{margin:0;font-size:16px;line-height:1.6;background:var(--bg)}
+button,select{font:inherit}
+button{border:1px solid #8aa0b8;border-radius:8px;padding:8px 14px;background:#fff;color:var(--brand);font-weight:700;cursor:pointer;min-height:44px}
+button[disabled]{opacity:.5;cursor:not-allowed}
+.pp-primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.pp-wide{display:block;width:100%;margin:8px 0;font-size:18px;min-height:52px}
+.pp-top{background:#20375a;color:#fff;padding:16px 16px 0}
+.pp-top h1{font-size:20px;margin:0 0 6px}
+.pp-notice{margin:0 0 12px;background:#fff7df;color:#4a3a00;border-left:5px solid #b78818;padding:8px 12px;border-radius:4px;font-size:14px}
+.pp-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.pp-tabs button{border-radius:8px 8px 0 0;border:0;background:#3b5478;color:#fff}
+.pp-tabs button[aria-pressed=true]{background:var(--bg);color:var(--ink)}
+main{max-width:900px;margin:0 auto;padding:16px}
+.pp-view[hidden]{display:none}
+.pp-ctl{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:0 0 14px;padding:10px 12px;border:1px dashed #8aa0b8;border-radius:10px}
+.pp-field{display:flex;flex-direction:column;gap:3px;font-size:14px;color:var(--sub);min-width:0}
+.pp-field select{font-size:16px;color:var(--ink);padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff;max-width:100%}
+.pp-ver{font-size:16px;color:var(--ink);font-weight:700}
+.pp-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 14px}
+.pp-card h2{font-size:19px;margin:0 0 10px}
+.pp-card h3{font-size:17px;margin:18px 0 4px;color:var(--brand)}
+.pp-muted{color:var(--sub);font-size:14px}
+.pp-phone{max-width:420px;margin:0 auto;font-size:17px;line-height:1.9}
+.pp-phone p{margin:0 0 8px;overflow-wrap:anywhere}
+.pp-phone ul{margin:0 0 8px;padding-left:22px}
+.pp-langs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.pp-langs button{min-height:40px;padding:4px 12px;font-size:15px}
+.pp-langs button[aria-pressed=true]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.pp-todo{background:var(--warnbg);color:var(--warn);border-radius:4px;padding:0 2px}
+.pp-changed{background:var(--warnbg);border-left:5px solid #b78818;border-radius:4px;padding:8px 12px;margin:0 0 12px}
+.pp-new{background:var(--warnbg)}
+.pp-done{background:var(--okbg);color:var(--ok);border-radius:8px;padding:8px 12px;font-weight:700}
+.pp-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pp-big{font-size:22px;font-weight:800;margin:10px 0 4px}
+.pp-names{margin:0 0 10px;padding-left:22px}
+.pp-tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;max-width:100%}
+.pp-table{border-collapse:collapse;width:100%;font-size:14px}
+.pp-table th,.pp-table td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+.pp-table th{background:#f5f7fa}
+@media(max-width:600px){.pp-top h1{font-size:17px} main{padding:12px 10px}}

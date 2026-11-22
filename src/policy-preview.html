@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>はじめのお知らせの見本 — SCG 学生ポータル</title>
+<link rel="stylesheet" href="assets/policy-preview.css">
+</head>
+<body>
+<header class="pp-top">
+ <h1>はじめのお知らせ（個人情報のあつかい）の見本</h1>
+ <p class="pp-notice">これは見本です。ダミーのデータだけで動き、再読み込みで元に戻ります。文は下書きで、【　】はまだ決まっていない所です。英語の文は確認前です。</p>
+ <nav class="pp-tabs" aria-label="見る画面">
+  <button id="tab-student" type="button" aria-pressed="true">学生の画面</button>
+  <button id="tab-teacher" type="button" aria-pressed="false">先生のスマホ</button>
+  <button id="tab-log" type="button" aria-pressed="false">残る記録</button>
+ </nav>
+</header>
+
+<main>
+ <section class="pp-ctl" aria-label="見本の操作">
+  <label class="pp-field">どの学生として見るか<select id="ctl-who"></select></label>
+  <label class="pp-field">形<select id="ctl-mode">
+   <option value="notice">お知らせだけ（「よみました」1つ）</option>
+   <option value="consent">お知らせ＋AIの同意（断れる）</option>
+  </select></label>
+  <div class="pp-field">文の版<span id="ctl-ver" class="pp-ver"></span>
+   <button id="ctl-bump" type="button">文を直して、版を上げる</button></div>
+ </section>
+
+ <!-- 学生の画面（やさしい日本語） -->
+ <section id="view-student" class="pp-view" aria-label="学生の画面">
+  <div class="pp-phone" id="st-phone"></div>
+ </section>
+
+ <!-- 先生のスマホ（ふつうの日本語） -->
+ <section id="view-teacher" class="pp-view" aria-label="先生のスマホ" hidden>
+  <div class="pp-phone">
+   <div class="pp-card">
+    <h2>お知らせを読んだか</h2>
+    <label class="pp-field">クラス<select id="tc-class"></select></label>
+    <p id="tc-count" class="pp-big"></p>
+    <ul id="tc-list" class="pp-names"></ul>
+    <p id="tc-done" class="pp-muted"></p>
+    <p id="tc-note" class="pp-muted"></p>
+   </div>
+  </div>
+ </section>
+
+ <!-- 残る記録（作る人が見る） -->
+ <section id="view-log" class="pp-view" aria-label="残る記録" hidden>
+  <div class="pp-card">
+   <h2>残る記録</h2>
+   <p class="pp-muted">押すたびに1行ふえます。直したり消したりはしません。いまの状態は、その学生のいちばん新しい行で決まります。</p>
+   <div class="pp-tablewrap">
+    <table class="pp-table">
+     <thead><tr><th>学籍番号</th><th>押したもの</th><th>版</th><th>言語</th><th>日時</th></tr></thead>
+     <tbody id="lg-body"></tbody>
+    </table>
+   </div>
+  </div>
+ </section>
+</main>
+<script src="assets/policy-preview.js"></script>
+</body>
+</html>
