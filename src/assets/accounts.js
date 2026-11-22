@@ -1,4 +1,4 @@
-/* 学生アカウントの発行（2026-11-23・db/2026-11-23_account_issue.sql）
+/* 学生アカウントの発行（2026-11-23／2026-11-24 に Edge Function へ移した）
  *
  * 置き場：マスター画面「学生」の下の「アカウントの発行」（master.html の #ac-panel。中身はここで組み立てる）
  *   名簿のファイルを選ぶ（または3列を貼る）→「名簿を確認する」
@@ -6,12 +6,14 @@
  *   ★名簿は、学生マスタDB（またはリンガル）から「学籍番号・氏名・クラス」の3列を書き出したものを使う（2026-11-23 きあ）。
  *     事務に見本の Excel を配って埋めてもらう形はやめた（見本を保存するボタンは外した）
  *
- * 🔴 作るのはサーバーの RPC（issue_student_accounts）だけ。発行できる人かどうかはサーバーが見る（account.manage＝情報管理者）。
+ * 🔴 作るのはサーバーだけ＝Supabase の Edge Function「issue-accounts」（supabase/functions/issue-accounts/）。
+ *    ログイン用のアカウントは Auth の管理用 API で作る（DB から auth の表へ直接は書かない＝2026-11-21 の決定）。
+ *    発行できる人かどうかは DB が見る（account.manage＝情報管理者。db/2026-11-24_account_issue_edge.sql）。
  *    ここの「持っている人だけに出す」は案内であって権限ではない
  * 🔴 学籍番号の決まりはサーバーと同じ＝全角・ハイフン・空白を取ってから、7桁の数字だけを通す
  *    （サーバー側は app_hidden.normalize_student_no。片方だけ直さない）
  * 🔴 文言はふつうの日本語（社員が使う画面）。表・列・RPC の名前を画面に出さない
- * ★DB が未適用（RPC が無い）でも画面は今までどおり動く。発行だけ「まだ使えません」と出す
+ * ★Edge Function がまだ置かれていなくても、画面は今までどおり動く。発行だけ「まだ使えません」と出す
  * ★名簿の文字は textContent で入れる（HTML として流し込まない）
  *
  * master.html の中の api / askDialog / XLSX を使う。通信もDOMも触らない部分（normalizeNo / parseRoster /
@@ -27,8 +29,10 @@
     duplicate_in_list: "名簿の中で同じ学籍番号が重なっています",
     exists: "すでにアカウントがあります",
     login_exists: "ログイン用のアカウントだけが残っています（情報管理者に確認してください）",
+    "error:profile": "名簿に入れられなかったので、作りませんでした",
+    "error:profile_login_left": "名簿に入れられず、ログイン用のアカウントだけが残りました（情報管理者に確認してください）",
   };
-  const reasonText = code => REASON[code] || (/^error:/.test(code || "") ? "作成中にエラーが起きました（番号 " + code.slice(6) + "）" : "作成できませんでした");
+  const reasonText = code => REASON[code] || (/^error:/.test(code || "") ? "作成中にエラーが起きました（符号 " + code.slice(6) + "）" : "作成できませんでした");
 
   /* ── 名簿を読む（通信・DOM なし） ── */
   /* 学籍番号の形。全角の数字を半角に直し、ハイフン・空白を取ってから、7桁の数字だけを通す。それ以外は null */
@@ -94,8 +98,8 @@
   /* ── ここから画面 ── */
   const byId = id => document.getElementById(id);
   function mk(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-  const notReady = e => /issue_student_accounts|schema cache|404/.test((e && e.message) || "");
-  const NOT_READY = "まだ使えません（データベースの準備待ち）。";
+  const notReady = e => (e && e.status === 404) || /issue_precheck|schema cache|404/.test((e && e.message) || "");
+  const NOT_READY = "まだ使えません（サーバーの準備待ち）。";
   function say(el, text, kind) {
     el.className = kind ? "" : "muted"; el.style.fontWeight = kind === "ok" ? "700" : "";
     el.style.color = kind === "ok" ? "#047857" : kind === "ng" ? "#B91C1C" : "";
@@ -238,7 +242,7 @@
         say(msg, "発行しています… " + i + " / " + total + "件");
         const part = plan.fresh.slice(i, i + CHUNK);
         try {
-          const r = await api.rpc("issue_student_accounts", { p_rows: part.map(x => ({ student_no: x.no, display_name: x.display_name, class_name: x.class_name })) });
+          const r = await api.fn("issue-accounts", { rows: part.map(x => ({ student_no: x.no, display_name: x.display_name, class_name: x.class_name })) });
           got.push(...((r && r.results) || []));
         } catch (e) { stopped = e; break; }
       }

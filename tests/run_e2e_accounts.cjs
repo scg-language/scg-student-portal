@@ -21,7 +21,7 @@ async function main() {
   if (!chrome) throw new Error('Chrome not found');
   const child = spawn(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
   const pause = ms => new Promise(r => setTimeout(r, ms)), pending = new Map(), exceptions = [];
-  const mock = { caps: ['student.read', 'account.manage'], missing: false, issueCalls: [] };
+  const mock = { caps: ['student.read', 'account.manage'], missing: false, issueCalls: [], auths: [], oldCalls: 0 };
   let socket, seq = 0;
   try {
     /* ── A 名簿の読み取り（node で直接） ── */
@@ -43,6 +43,10 @@ async function main() {
     const cl = A.classify(A.parseRoster('2604999\tA\tC\n2604998\tB\tC\n26-04998\tB\tC\n999\tD\tC'), new Set(['2604999']));
     note('A6 3つに分ける（すでにある1・新しく作る1・形式がおかしい2＝書き方ちがいの重なりと、桁の不足）',
       cl.existing.length === 1 && cl.fresh.length === 1 && cl.fresh[0].no === '2604998' && cl.invalid.length === 2 && cl.invalid[0].reason === 'duplicate_in_list');
+
+    note('A7 断られた理由の文：名簿に入れられなかった／ログインだけ残った／そのほかは符号だけ',
+      A.reasonText('error:profile').includes('名簿に入れられなかった') && A.reasonText('error:profile_login_left').includes('ログイン用のアカウントだけ')
+      && A.reasonText('error:auth_weak_password').includes('auth_weak_password') && A.reasonText('exists') === 'すでにアカウントがあります');
 
     /* ── ここからブラウザ ── */
     const portFile = path.join(profile, 'DevToolsActivePort');
@@ -69,10 +73,11 @@ async function main() {
       // ログインのあと本体の画面まで進ませる（小テストが1件も無いとログイン画面で止まる）
       if (u.pathname === '/rest/v1/quiz_sets') return reply(id, 200, [{ id: '00000000-0000-0000-0000-0000000000b1', title: '見本のテスト', lesson: '1', is_open: false, created_at: '2026-11-01T00:00:00Z', source_book: null, source_file: null, source_sheet: null, questions: [{ count: 1 }] }]);
       if (u.pathname === '/rest/v1/rpc/quiz_stats') return reply(id, 200, { count: 0, avg: null, attempts: [], questions: [], focus: {} });
-      if (u.pathname === '/rest/v1/rpc/issue_student_accounts') {
-        if (mock.missing) return reply(id, 404, { code: 'PGRST202', message: 'Could not find the function public.issue_student_accounts(p_rows) in the schema cache' });
-        const body = JSON.parse(rq.postData || '{}'); mock.issueCalls.push(body);
-        const results = (body.p_rows || []).map(r => r.student_no === '2604990'
+      if (u.pathname === '/rest/v1/rpc/issue_student_accounts') { mock.oldCalls = (mock.oldCalls || 0) + 1; return reply(id, 404, { code: 'PGRST202', message: 'gone' }); }
+      if (u.pathname === '/functions/v1/issue-accounts') {
+        if (mock.missing) return reply(id, 404, { code: 'NOT_FOUND', message: 'Requested function was not found' });
+        const body = JSON.parse(rq.postData || '{}'); mock.issueCalls.push({ p_rows: body.rows }); mock.auths.push(rq.headers.Authorization || rq.headers.authorization || '');
+        const results = (body.rows || []).map(r => r.student_no === '2604990'
           ? { student_no: r.student_no, status: 'failed', reason: 'error:23502' }
           : { student_no: r.student_no, status: 'created', reason: null });
         return reply(id, 200, { created: results.filter(x => x.status === 'created').length, existing: 0, invalid: 0, failed: results.filter(x => x.status === 'failed').length, results });
@@ -146,6 +151,7 @@ async function main() {
     await paste(roster + '\n2604993\tテスト五郎\tA1クラス');
     await check('B5 名簿を直したら、発行のボタンと照合の結果は消える', 'document.getElementById("ac-issue").hidden && document.getElementById("ac-preview").children.length===0');
     // 45人＝20件ずつ3回。1人だけ断られる
+    await check('B4b 送り先は Edge Function。ログイン中の人のトークンを付ける。前の口（DB の関数）は呼ばない', mock.auths.length >= 1 && mock.auths.every(a => a === 'Bearer tok') && mock.oldCalls === 0);
     mock.issueCalls.length = 0;
     const many = Array.from({ length: 45 }, (_, i) => (2604990 - i) + '\tテスト' + i + '\tA1クラス').join('\n');
     await paste(many); await click('#ac-check');
@@ -154,12 +160,12 @@ async function main() {
     await check('B6 45人は 20・20・5 件に分けて送る', until('document.getElementById("ac-done")') .then(() => mock.issueCalls.map(c => c.p_rows.length).join() === '20,20,5'));
     await check('B6 断られた1件が、番号と理由つきで出る（英文を出さない）', '(()=>{const t=' + txt('ac-result') + ';return t.includes("作った 44件 ／ 断られた 1件")&&t.includes("2604990")&&t.includes("エラーが起きました")&&!/not null|violat|constraint/i.test(t)})()');
 
-    /* ── D DB が未適用 ── */
+    /* ── D Edge Function がまだ置かれていない ── */
     mock.missing = true; mock.issueCalls.length = 0;
     await paste('2604980\tテスト六郎\tA1クラス'); await click('#ac-check');
     await until('!document.getElementById("ac-issue").hidden');
     await click('#ac-issue'); await confirmOk();
-    await check('D 発行の口が無いとき：「まだ使えません」と出す（英文を出さない）', until('(()=>{const t=' + txt('ac-msg') + ';return t.includes("まだ使えません")&&!/schema cache|function|PGRST/i.test(t)})()'));
+    await check('D 発行の口が無いとき：「まだ使えません」と出す（英文を出さない）', until('(()=>{const t=' + txt('ac-msg') + ';return t.includes("まだ使えません")&&!/schema cache|function|PGRST|not found/i.test(t)})()'));
     await check('D ほかの画面は今までどおり（学生の一覧が出ている）', '!!document.querySelector("#st-table tr[data-i]")');
     mock.missing = false;
 

@@ -332,7 +332,15 @@
 流れ＝「学籍番号・氏名・クラス」の3列の名簿を選ぶ（または貼る）→「名簿を確認する」→ 件数を見て発行。
 名簿は、学生マスタDB（またはリンガル）から書き出す（2026-11-23 きあ。事務に見本の Excel を配って埋めてもらう形は、作ったその日にやめた）。
 
-- 画面＝`src/assets/accounts.js`（中身と動き）＋ `master.html` の `#ac-panel`。DB＝`db/2026-11-23_account_issue.sql`（RPC `issue_student_accounts`）。**2026-11-23 に適用済み**
+- 🔴 **作る方式は「Supabase の正規の口」＝Edge Function**（2026-11-21 きあの決定・`docs/schema-plan.md` 5章の3）。
+  11/23 に作って DB に適用した版（`db/2026-11-23_account_issue.sql`＝RPC `issue_student_accounts`）は、DB から auth の表へ直接書いていて、
+  この決定に反していた。**11/24 に作り直した（このブランチ `work/2026-11-24-yoru`。まだ置いていない・流していない・公開していない）。**
+  - Edge Function＝`supabase/functions/issue-accounts/`（`index.ts`＝通信／`core.mjs`＝手順／`README.md`＝置き方と、実物で確かめること）。
+    ログイン用のアカウントを作る・消すのは Auth の管理用 API だけ。強い鍵を使うのはそこだけ
+  - DB＝`db/2026-11-24_account_issue_edge.sql`（未適用）。`issue_precheck`（名簿の行を分ける）・`issue_attach_profile`（名簿の行を付ける）・
+    `issue_log`（操作の記録）を足し、`issue_student_accounts` を外す。3つとも Edge Function が「押した人の資格」で呼ぶ＝発行できる人かは DB が見る
+  - 画面＝`src/assets/accounts.js` ＋ `master.html` の `#ac-panel`。呼び出しは `api.fn("issue-accounts", …)`（`api.js`。やり直しをしない）
+  - 順番＝①SQL を流す → ②Edge Function を置く → ③画面を公開。**サイトに出ているのは 11/23 の版のまま**（発行の記録は0件）
 - 🔴 **学籍番号の決まりは画面とサーバーで同じ**＝全角・ハイフン・空白を取ってから、7桁の数字だけを通す
   （画面 `Accounts.normalizeNo`／サーバー `app_hidden.normalize_student_no`）。片方だけ直さない
 - 初期パスワードは「scg＋学籍番号」。発行した学生は、最初のログインで「パスワードの決め直し → お知らせ → ホーム」と進む
@@ -340,11 +348,12 @@
 - 確認の画面で、新しく作る学生のクラスごとの人数を出す。いまの名簿に無いクラス名には「新しいクラス名」の印（打ち間違いの目印）
 - 1回の送信は20件ずつ（サーバーは30件まで。パスワードの計算に時間がかかるため）
 - 操作の記録は、送信1回につき1行・件数だけ（学籍番号・氏名は入れない）
-- 🔴 サーバー側は Supabase Auth の表（`auth.users`・`auth.identities`）に直接書いている。Auth の版が上がったら、
-  `tests/sql/account_issue_check.sql` をロールバックで流して確かめる（壊れうる箇所は SQL の冒頭に書いてある）
+- 名簿の行を付けられなかったときは、作ったばかりのログイン用のアカウントを消す（半端を残さない）。消せなかったら、その旨を結果に出す
 - 🔴 **本物の名簿（学生の氏名・学籍番号）は、個人の部屋の Claude では扱わない。** 発行の操作は、きあがマスター画面で行う
 - 入れていないもの：停止・卒業への切り替えの画面（DB の口 `set_account_status` はある）／担任の割り当て／ほかのシステムからの自動取りこみ
-- 検査＝`node tests/run_e2e_accounts.cjs`（32・通信なし）／`tests/sql/account_issue_check.sql`（23・ロールバック）。
+- 検査＝`node tests/run_e2e_accounts.cjs`（34・通信なし）／`node tests/test_issue_accounts_core.cjs`（18・手順）／
+  `tests/sql/account_issue_edge_check.sql`（36・ロールバック。11/24 に「外す行」を除いて流し、0b 以外は全部 OK）。
+  ⚠ `index.ts` は、この PC に Deno が無いので動かしていない（文法だけ確かめた）。置いたあとに実物で見ること＝README の4つ
   ⚠ 通しの検査は外への通信を止めているので、Excel のファイルを選んで読む所は動かしていない（貼り付けと、表から名簿への変換は確かめている）
 
 ## 多言語（2026-09-04）

@@ -189,6 +189,21 @@ const api = {
     return res.json();
   },
 
+  /* Supabase の Edge Function を、ログイン中の人の資格で呼ぶ（2026-11-24・アカウントの発行）。
+   * ★やり直しをしない（tries=1）。作る系の呼び出しを、こちらの判断で2回送らないため。
+   *   断られたら status を持つ Error を投げる（404＝まだ置かれていない） */
+  async fn(name, body) {
+    const path = "/functions/v1/" + name, opts = { method: "POST", body: JSON.stringify(body || {}) };
+    let res = await this._fetch(path, opts, 1);
+    if (res.status === 401 && await this._refresh()) res = await this._fetch(path, opts, 1);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      const e = new Error((b && b.message) || M("err.send", "送信に失敗しました（{s}）", { s: res.status }));
+      e.status = res.status; throw e;
+    }
+    return res.json();
+  },
+
   /* Display-only RPC: always use the anonymous role, never this.token. */
   async publicRpc(name, args) {
     if (name !== "get_teacher_demo_display") throw new Error("表示用の接続先ではありません。");
