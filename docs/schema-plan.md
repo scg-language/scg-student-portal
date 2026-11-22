@@ -202,6 +202,6 @@ quiz_runs に足す：  pass_pct  integer         始めた瞬間の線の写し
 | 3 | `db/2026-11-22_account_status.sql`（状態・担任・学籍番号の形） | `tests/sql/account_status_check.sql`（39項目） | ✅ **2026-11-22 適用済み**（適用前・適用後とも全項目 OK・本物の提出の関数を通して確認）。`.env` が要る live の検査（`test_security.py`・`test_drafts.py --live`・`test_choices.py --live`・`test_integrity.py --live`）は未実施＝会社PCで回す。🔴 今ある動きに触る（学生が書く4つの表にトリガ・開いている回の一覧2本を置き換え） |
 | 4 | `db/2026-11-22_quiz_kinds_retest.sql`（種類・合格の線・再テスト・集計） | `tests/sql/quiz_kinds_retest_check.sql`（51項目） | ✅ **適用済み（2026-11-22）**。適用前後のロールバック検査は全51項目 OK（本物の提出の関数で、合格／不合格／休み／再テスト1回だけ、を通しで確認）。適用後＝種類 matome 10・daily 77・なし 6／対象外でない回 0／操作の記録 0行／advisor ERROR 0・WARN 39（ログインなしで呼べる関数は `get_teacher_demo_display` だけ）。live の検査は会社PCで回す |
 | 5 | 既存の関数の締め直し | — | まだ書いていない |
-| 別 | `db/2026-11-22_notice_acks.sql`（はじめのお知らせを「読みました」の記録） | `tests/sql/notice_acks_check.sql`（40項目） | **未適用**。適用前のロールバック検査は全40項目 OK（2026-11-22）。足すだけ・既存には触らない。見本＝`src/policy-preview.html` |
+| 別 | `db/2026-11-22_notice_acks.sql`（はじめのお知らせを「読みました」の記録） | `tests/sql/notice_acks_check.sql`（40項目） | ✅ **適用済み（2026-11-22）**。適用前・適用後ともロールバック検査は全40項目 OK。診断は ERROR 0件・WARN 42件（3件増＝`ack_notice`・`my_notice_status`・`notice_unread`。ログインなしで呼べる関数は `get_teacher_demo_display` だけ）。画面はまだつないでいない。足すだけ・既存には触らない。見本＝`src/policy-preview.html` |
 
 2本目で決めたこと：権限を変える口は `set_staff_cap`（人ごとの足し引き）と `set_staff_bundle`（束の付け替え）の2つ。どちらも承認者の記入が必須。自分の「権限を変える」と自分の束は、自分では変えられない（うっかり外して、だれも直せなくなるのを防ぐ）。
