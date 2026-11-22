@@ -74,7 +74,7 @@ async function main() {
     check('見本データの帯が出ている', await ev('!document.getElementById("demo-bar").hidden'));
     check('ホーム：提出 205 / 256人', await ev('/205/.test(document.querySelector(".cnt").textContent) && /256人/.test(document.querySelector(".cnt").textContent)'));
     check('ホーム：横にはみ出さない', await noOverflow());
-    check('ホーム：大きなカードは いまの回だけ（1枚）', await ev('document.querySelectorAll(".card").length === 1'));
+    check('ホーム：大きなカードは いまの回だけ（1枚）', await ev('document.querySelectorAll(".card:not(#nt-card)").length === 1'));
     check('ホーム：「終了したアンケート（2）」がある', await ev('!!' + byText('終了したアンケート（2）')));
     await shot('1_home.png');
 
@@ -143,6 +143,25 @@ async function main() {
     await click('document.querySelector(".hd .ibtn")'); await wait('location.hash.startsWith("#/pick/")', 'past back pick');
     await click('document.querySelector(".hd .ibtn")'); await pause(200);
     check('戻る：終了したアンケートに戻る', await ev('location.hash.startsWith("#/past")'));
+
+    // ── はじめのお知らせ（個人情報の取扱い）を読んだか（2026-11-22） ──
+    check('お知らせ：文が決まるまで本物の画面には出さない（ready を見ている）', /function noticeOn\(\)\{ return DEMO \|\| !!\(NT && NT\.ready\); \}/.test(src));
+    await ev('location.hash = "#/", true'); await wait('!!document.getElementById("nt-card")', 'notice card');
+    check('お知らせ：ホームにカードが出る（見本データ）', await ev('/個人情報の取扱い/.test(document.getElementById("nt-card").textContent)'));
+    await click('document.querySelector("#nt-card .go")');
+    await wait('location.hash === "#/notice"', 'notice pick');
+    check('お知らせ・選択：クラスが10個・名前も人数も出さない', await ev('document.querySelectorAll(".cls").length === 10 && !/見本 学生|人/.test(document.querySelector(".grid3").innerText)'));
+    check('お知らせ・選択：横にはみ出さない', await noOverflow());
+    await shot('6_notice_pick.png');
+    await click('document.querySelector(".cls")');
+    await wait('location.hash.startsWith("#/notice/") && !!document.getElementById("nt-rest")', 'notice class');
+    check('お知らせ・クラス：まだの人数と、名前＋学籍番号の行が合う', await ev('(()=>{const n=Number(document.querySelector(".hd-big .v b").textContent);const li=document.querySelectorAll("#nt-rest .list.rest li");return n>0&&li.length===n&&[...document.querySelectorAll("#nt-rest .nm span")].every(e=>/^\\d{7}$/.test(e.textContent))})()'));
+    check('お知らせ・クラス：読んだ人数とクラスの人数が出る', await ev('/\\d+ \\/ 25人 読んだ/.test(document.querySelector(".hd-big .of").textContent)'));
+    check('お知らせ・クラス：同意・不同意という言葉を出さない', await ev('!/同意/.test(document.querySelector(".app").innerText)'));
+    check('お知らせ・クラス：横にはみ出さない', await noOverflow());
+    await shot('6_notice_class.png');
+    await click('document.querySelector(".hd .ibtn")'); await wait('location.hash === "#/notice"', 'notice back');
+    check('お知らせ：戻るでクラスの選択へ', await ev('location.hash === "#/notice"'));
     check('JS の例外 0件', exceptions.length === 0);
     if (exceptions.length) console.log('  例外: ' + exceptions.join(' / '));
     check('外への通信を試みていない', blocked.length === 0);

@@ -176,6 +176,7 @@ h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
 <script src="assets/surveys.js"></script>
 <script src="assets/survey-db.js"></script>
 <script src="assets/round-state.js"></script>
+<script src="assets/policy-notice.js"></script>
 <script>
 (function(){
 "use strict";
@@ -312,6 +313,7 @@ async function route(){
     try{ await ensureResp(need); }catch(e){ return showErr(e); }
     if(location.hash !== h) return;   // 読んでいる間に別の画面へ移った
   }
+  if(p[0] === "notice" && noticeOn()) return p[1] != null ? viewNotice(p[1]) : viewNoticePick();
   if(p[0] === "past") return viewPast();
   if(p[0] === "pick" && r) return viewPick(r);
   if(p[0] === "class" && r && p[2] != null) return viewClass(r, p[2]);
@@ -372,8 +374,84 @@ function viewHome(){
     card.appendChild(chevBtn("sub-go", "全体の提出状況", ICON.chart, () => go("/all/" + r.id)));
     m.appendChild(card);
   });
+  if(noticeOn()){
+    const card = el("section", "card"); card.id = "nt-card"; card.setAttribute("aria-label", NT_NAME);
+    const tt = el("div"); tt.appendChild(el("div", "svt", NT_NAME)); tt.appendChild(el("div", "svs", "学生がログインすると1回だけ出ます。読んだ学生は「よみました」を押します。")); card.appendChild(tt);
+    card.appendChild(chevBtn("go", "まだ読んでいない学生を確認する", null, () => go("/notice")));
+    m.appendChild(card);
+  }
   if(past.length) m.appendChild(chevBtn("sub-go", "終了したアンケート（" + past.length + "）", ICON.box, () => go("/past")));
   m.appendChild(el("p", "note", "回答の中身・CSV・回の取り消しは、PC のマスター画面で行います。"));
+}
+
+/* ⑥ はじめのお知らせ（個人情報の取扱い）を読んだか（2026-11-22）。docs/yakusoku.md 4-2
+   ・同意を取るものではない。見るのは「まだ読んでいない学生」の名前と人数だけ
+   ・クラスを開いたときだけサーバーに聞く（RPC notice_unread＝名簿を見られる人だけ・開いたことは操作の記録に残る）
+   ・クラスの選択には人数を出さない（全クラスぶんの名前を一度に取りに行かない）
+   ・文が決まるまで（policy-notice.js の ready=false）は、ホームにも出さない。見本データでは出す */
+const NT = window.POLICY_NOTICE || null;
+const NT_NAME = "はじめのお知らせ（個人情報の取扱い）";
+function noticeOn(){ return DEMO || !!(NT && NT.ready); }
+async function loadNotice(c){
+  if(DEMO){
+    const mem = D.students.filter(s => s.class_name === c);
+    const un = mem.filter((s, i) => i % 5 === 1 || i % 7 === 3);
+    return { target: mem.length, read: mem.length - un.length, unread: un.map(s => ({ id: s.id, student_no: s.student_no, name: s.display_name })) };
+  }
+  return api.rpc("notice_unread", { p_key: NT.key, p_class: c });
+}
+function viewNoticePick(){
+  header({ back: "/", sub: NT_NAME, title: "クラスを選択" });
+  $("tabs").hidden = true;
+  const m = $("main"); m.replaceChildren();
+  m.appendChild(el("h2", "sec", "クラス"));
+  const g = el("div", "grid3");
+  const cls = Array.from(new Set(D.students.map(s => s.class_name).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ja"));
+  cls.forEach(c => {
+    const b = el("button", "cls"); b.type = "button";
+    b.appendChild(el("span", "c", short(c)));
+    b.onclick = () => go("/notice/" + encodeURIComponent(c));
+    g.appendChild(b);
+  });
+  if(!cls.length) m.appendChild(el("div", "empty", "クラスのある学生がいません。"));
+  m.appendChild(g);
+  m.appendChild(el("p", "note", "クラスを開くと、まだ読んでいない学生の名前が出ます。開いたことは操作の記録に残ります。"));
+}
+async function viewNotice(c){
+  const h = location.hash;
+  header({ back: "/notice", backLabel: "クラスの選択に戻る", sub: NT_NAME, title: short(c) + " クラス", live: "on" });
+  $("tabs").hidden = true;
+  $("main").replaceChildren(el("div", "empty", "読み込み中…"));
+  let d;
+  try{ d = await loadNotice(c); }catch(e){ if(location.hash === h) showErr(e); return; }
+  if(location.hash !== h) return;
+  drawNotice(c, d);
+  timer = setInterval(async () => {
+    if(document.hidden) return;
+    try{ const d2 = await loadNotice(c); if(location.hash === h) drawNotice(c, d2, true); }
+    catch(e){ const lv = $("live"); if(lv){ lv.classList.add("stop"); lv.lastChild.textContent = "更新が止まっています"; } }
+  }, REFRESH_MS);
+}
+function drawNotice(c, d, keepScroll){
+  const y = window.scrollY, un = d.unread || [], p = pct(d.read, d.target);
+  const hd = header({ back: "/notice", backLabel: "クラスの選択に戻る", sub: NT_NAME, title: short(c) + " クラス", live: "on" });
+  const big = el("div", "hd-big");
+  const lf = el("div"); lf.appendChild(el("div", "k", "まだ読んでいない"));
+  const v = el("div", "v"); v.appendChild(el("b", null, String(un.length))); v.appendChild(el("span", null, "人")); lf.appendChild(v); big.appendChild(lf);
+  const rt = el("div", "of"); rt.appendChild(el("b", null, d.read + " / " + d.target + "人 読んだ")); rt.appendChild(el("span", null, p + "%")); big.appendChild(rt);
+  hd.appendChild(big); hd.appendChild(bar(p, "hd-bar"));
+  const m = $("main"); m.replaceChildren();
+  const sec = el("section"); sec.id = "nt-rest"; sec.style.cssText = "display:flex;flex-direction:column;gap:8px";
+  sec.appendChild(el("h2", "sec h-rest", "まだ読んでいない学生（" + un.length + "人）"));
+  if(!un.length) sec.appendChild(el("div", "empty", d.target ? "全員が読みました。" : "このクラスに在籍中の学生はいません。"));
+  else { const ul = el("ul", "list rest");
+    un.forEach(s => { const li = el("li"); const dot = el("span", "dot"); dot.setAttribute("aria-hidden", "true"); li.appendChild(dot);
+      const nm = el("span", "nm"); nm.appendChild(el("b", null, s.name || "（名前なし）")); nm.appendChild(el("span", null, s.student_no || ""));
+      li.appendChild(nm); li.appendChild(el("span", "badge", "未読")); ul.appendChild(li); });
+    sec.appendChild(ul); }
+  m.appendChild(sec);
+  m.appendChild(el("p", "note", "学生がログインすると、お知らせが出ます。読んで「よみました」を押すと、ここから消えます。在籍中の学生だけを数えています。"));
+  if(keepScroll) window.scrollTo(0, y);
 }
 
 /* ⑤ 終了したアンケート（締切を過ぎた回／締切なしで開始から30日たった回）。開くと②③④と同じ画面 */
