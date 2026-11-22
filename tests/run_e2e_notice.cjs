@@ -173,6 +173,16 @@ async function main() {
     await fresh(true); mock.read = false; mock.readBefore = true; await login();
     await check('8 かわった ところの案内が出る', (await until(shown('scr-notice'))) && (await ev('!document.getElementById("nt-changed").hidden && document.getElementById("nt-changed").textContent.includes("かわった")')));
 
+    // 9 言語ごと：文が出る・見出しの番号が残る・横にはみ出さない・日本語が混ざらない（日本語以外）
+    const codes = await ev('window.POLICY_NOTICE.langs().map(l=>l[0])');
+    await check('9 言語は9つ（日・英・中・ネパール・ミャンマー・シンハラ・ベンガル・ベトナム・ウズベク）', codes.join() === 'ja,en,zh,ne,my,si,bn,vi,uz');
+    for (const c of codes) {
+      await ev('ntLang=' + JSON.stringify(c) + ', renderNotice(), window.scrollTo(0,0), true'); await pause(120);
+      await check('9 ' + c + '：節が2つ・番号つき・ボタンに文字・はみ出さない', '(()=>{const h=[...document.querySelectorAll("#nt-body .pn-h")].map(e=>e.textContent);return h.length===2&&h[0].startsWith("1.")&&h[1].startsWith("2.")&&document.getElementById("btn-nt-read").textContent.length>1&&document.getElementById("nt-body").textContent.includes("AI")&&document.documentElement.scrollWidth<=window.innerWidth+1})()');
+      if (c !== 'ja' && c !== 'zh') await check('9 ' + c + '：かな・漢字が混ざっていない', '!/[\\u3040-\\u30ff\\u4e00-\\u9fff]/.test(document.getElementById("scr-notice").querySelector(".panel").innerText.replace("ことば ・ Language",""))');
+      if (c !== 'ja' && c !== 'en') await shot('lang-' + c + '.png');
+    }
+
     await check('JS の例外なし', exceptions.length === 0);
   } finally {
     const ok = checks.filter(c => c.ok).length;

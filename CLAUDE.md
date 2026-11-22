@@ -317,7 +317,7 @@
   画面が先に出ている間は「版が違う」ので出ないだけ。DB が先だと、古い文で「よみました」が押せてしまう（`ack_notice` は古い版を 409 で断る）。誤字の直しでは版を上げない
 - マスターのスマホ：ホーム →「まだ読んでいない学生を確認する」→ クラス → 名前と人数（`notice_unread`・「名簿と学生の詳細を見る」を持つ人だけ・開いたことは操作の記録に残る）。
   クラスの選択には人数を出さない（全クラスぶんの名前を一度に取りに行かないため）
-- 検査＝`node tests/run_e2e_notice.cjs`（30・学生画面）／`node tests/run_e2e_policy_preview.cjs`（35・見本）／`node tests/run_e2e_master_phone.cjs`（44）／`tests/sql/notice_acks_check.sql`（41・ロールバック）。どれも通信なし・ダミーだけ
+- 検査＝`node tests/run_e2e_notice.cjs`（51・学生画面。9言語ぶんの通しを含む）／`node tests/run_e2e_policy_preview.cjs`（35・見本）／`node tests/run_e2e_master_phone.cjs`（44）／`tests/sql/notice_acks_check.sql`（41・ロールバック）。どれも通信なし・ダミーだけ
 - 訳は Claude が作る（2026-11-22 きあ）。訳の正しさは担保しない。重要で、間違えてはならないものは、できる限りネイティブの確認を挟む。
   ★「できる限り」＝校内で完結する範囲で（校内にいる人に頼む）。外に費用を払って翻訳や確認を頼むことは含まない。
   ★訳の作り方は3段＝Sonnet が訳す → Opus が見直して直す → Fable が最後に確かめる（JLPT 語彙のときと同じ）。すぐ出せる範囲での「できる限り」はこれ。
