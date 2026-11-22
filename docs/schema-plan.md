@@ -179,6 +179,18 @@ quiz_runs に足す：  pass_pct  integer         始めた瞬間の線の写し
 | `caps.set` | 人ごとの足し引きを変えた |
 | `caps.bundle.set` | 束を付け替えた |
 | `homeroom.set` | 担任を付けた・外した（記録には人数だけ） |
+| `quiz.kind.set` | 回の種類を手で変えた |
+
+## 4本目で決めたこと（設計案からの差）
+
+- 種類は、取り込んだ教材のファイル名から付ける（「漢字」→ kanji／「まとめテスト」→ matome／「文法チェック」→ daily／それ以外は付けない）。回を入れるときに空なら自動で入る。違っていたら `set_quiz_kind` で直す。漢字の決まりは仮
+- 線の写しは、回を入れるときのトリガで入れる（`start_quiz_run` を書き換えない）
+- `retest_exempt`：再テストの対象にしない回の印。この SQL を流す前からあった回は全部 true
+- 状態は5つ：`not_taken`（まだ・1回目）／`retest`（再テストの対象）／`passed`／`retest_passed`／`retest_failed`。先生の一覧には、前の2つと、受け終わってから1週間以内の後ろの2つを出す
+- 再テストの回の線は、元の回の写しを使う（線を変えても、もう終わったテストの再テストは元の線のまま）
+- 「同じ日には開けない」の日付は日本時間。閉じ忘れは、日本時間のその日の終わりまで
+- 集計 `run_pass_stats` は、名前も個人の点も返さないので、先生（`quiz.result.one`）も見られる
+- ⚠ 職員は今も `quiz_sets` を直接書き換えられる（既存のポリシー）ので、`kind_key` を直に変えることはできてしまう。5本目で締める
 
 ## 進み具合（SQL にしたもの）
 
@@ -187,7 +199,7 @@ quiz_runs に足す：  pass_pct  integer         始めた瞬間の線の写し
 | 1 | `db/2026-11-21_capabilities.sql` | `tests/sql/capabilities_check.sql`（25項目） | ✅ **2026-11-22 適用済み**（適用前・適用後とも全項目 OK） |
 | 2 | `db/2026-11-22_audit_log.sql` | `tests/sql/audit_log_check.sql`（32項目） | ✅ **2026-11-22 適用済み**（同上）。診断は ERROR 0件。WARN は4件増えた（`my_caps`・`log_view`・`set_staff_cap`・`set_staff_bundle`＝どれも中で権限を見ている・仕様） |
 | 3 | `db/2026-11-22_account_status.sql`（状態・担任・学籍番号の形） | `tests/sql/account_status_check.sql`（39項目） | ✅ **2026-11-22 適用済み**（適用前・適用後とも全項目 OK・本物の提出の関数を通して確認）。`.env` が要る live の検査（`test_security.py`・`test_drafts.py --live`・`test_choices.py --live`・`test_integrity.py --live`）は未実施＝会社PCで回す。🔴 今ある動きに触る（学生が書く4つの表にトリガ・開いている回の一覧2本を置き換え） |
-| 4 | テストの種類と再テスト | — | まだ書いていない |
+| 4 | `db/2026-11-22_quiz_kinds_retest.sql`（種類・合格の線・再テスト・集計） | `tests/sql/quiz_kinds_retest_check.sql`（51項目） | ロールバック検査は通過（2026-11-22・本物の提出の関数で、合格／不合格／休み／再テスト1回だけ、を通しで確認）。**未適用**。今ある回は全部 `retest_exempt=true`＝流しても、過去の回から対象は出ない |
 | 5 | 既存の関数の締め直し | — | まだ書いていない |
 
 2本目で決めたこと：権限を変える口は `set_staff_cap`（人ごとの足し引き）と `set_staff_bundle`（束の付け替え）の2つ。どちらも承認者の記入が必須。自分の「権限を変える」と自分の束は、自分では変えられない（うっかり外して、だれも直せなくなるのを防ぐ）。
