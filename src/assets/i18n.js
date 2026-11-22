@@ -3,7 +3,8 @@
  * 言語の追加: ① LANGS に ready:true を付ける ② I18N[コード] を ja と同じキーで埋める
  *            ③ surveys.js の {ja,en} にそのコードを足す。無いキーは日本語に落ちる（画面が空にならない）。
  * 選んだ言語は localStorage "sp_lang" に保存し、次に開いたときもその言語で出る。
- * 翻訳の確認は学校の翻訳確認スタッフ（中国語・ネパール語・ミャンマー語・シンハラ語）に回す前提。
+ * 訳は Claude が作る。重要で間違えてはならないものは、できる限り（校内で完結する範囲で）ネイティブの確認を挟む（docs/yakusoku.md 4-2）。
+ * 言語は9つ（2026-11-22）：日本語・英語・中国語・ネパール語・ミャンマー語・シンハラ語・ベンガル語・ベトナム語・ウズベク語。
  */
 const LANGS = [
   { code: "ja", native: "日本語",   en: "Japanese", ready: true },
@@ -13,6 +14,8 @@ const LANGS = [
   { code: "my", native: "မြန်မာ",   en: "Burmese" },
   { code: "si", native: "සිංහල",   en: "Sinhala" },
   { code: "bn", native: "বাংলা",    en: "Bengali" },
+  { code: "vi", native: "Tiếng Việt", en: "Vietnamese" },
+  { code: "uz", native: "Oʻzbekcha", en: "Uzbek" },
 ];
 
 const I18N = {

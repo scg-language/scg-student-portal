@@ -19,7 +19,7 @@
     readOn: L("よみました（{d}）", "Read ({d})"), again: L("もういちど よむ", "Read again"), back: L("もどる", "Back"),
     logout: L("ログアウト", "Log out"), soon: L("じゅんびちゅう", "coming soon"),
   };
-  const LANGS = [["ja", "日本語", true], ["en", "English", true], ["zh", "中文", false], ["ne", "नेपाली", false], ["my", "မြန်မာ", false], ["si", "සිංහල", false], ["bn", "বাংলা", false]];
+  const LANGS = [["ja", "日本語", true], ["en", "English", true], ["zh", "中文", false], ["ne", "नेपाली", false], ["my", "မြန်မာ", false], ["si", "සිංහල", false], ["bn", "বাংলা", false], ["vi", "Tiếng Việt", false], ["uz", "Oʻzbekcha", false]];
   const ACTION_LABEL = { read: "よみました" };
 
   // ---------- ダミーデータ（ブラウザのメモリだけ） ----------

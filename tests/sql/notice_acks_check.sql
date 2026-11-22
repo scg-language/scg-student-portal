@@ -1,5 +1,5 @@
 -- notice_versions / notice_acks（「よみました」の記録）の検査（2026-11-22）。★最後に必ず例外で止める＝何も残らない（ロールバック）
---   流し方（適用前）：db/2026-11-22_notice_acks.sql の、begin と commit の「あいだ」を
+--   流し方（適用前）：db/2026-11-22_notice_acks.sql と db/2026-11-22_notice_langs.sql の、begin と commit の「あいだ」を、この順で
 --           このファイルの上に貼り、全体を begin; … rollback; で包んで1回で流す
 --           🔴 貼るときに commit; の行を入れない（入れると取り消されずに残る。流す前に目で見ること）
 --   流し方（適用後）：このファイルだけを begin; … rollback; で包んで流す
@@ -109,9 +109,11 @@ begin
   r := r || case when (j->>'required')::boolean and (j->>'read_before')::boolean and (j->>'version')::int = 2 then ' 5a:OK' else ' 5a:NG' end;
   begin perform public.ack_notice('student_privacy', 1, 'ja'); r := r || ' 5b:NG';
   exception when sqlstate 'PT409' then r := r || ' 5b:OK'; end;
-  perform public.ack_notice('student_privacy', 2, 'ja');
+  perform public.ack_notice('student_privacy', 2, 'vi');       -- ベトナム語・ウズベク語も受け付ける（db/2026-11-22_notice_langs.sql）
   select count(*) into n from public.notice_acks;
   r := r || case when n = 2 then ' 5c:OK' else ' 5c:NG' end;
+  select count(*) into n from public.notice_acks where lang = 'vi';
+  r := r || case when n = 1 then ' 5d:OK' else ' 5d:NG' end;
   execute 'reset role';
 
   -- 6 在籍していない学生：押せない。「出さない」。クラスの数にも入らない
