@@ -71,6 +71,11 @@ begin
   j := public.start_survey_round('test_tighten_check', '検査の回');
   v_round := (j->>'round_id')::uuid;
   r := r || case when v_round is not null then ' 3c:OK' else ' 3c:NG' end;
+  -- ★同じ取引の中では now() が動かないので、始めた時刻を1時間前にずらしてから閉じる
+  execute 'reset role';
+  update public.survey_rounds set opens_at = opens_at - interval '1 hour' where id = v_round;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_m, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
   j := public.close_survey_round(v_round, true);
   r := r || case when (j->>'is_void')::boolean then ' 3d:OK' else ' 3d:NG' end;
   j := public.reset_student_password(v_s);

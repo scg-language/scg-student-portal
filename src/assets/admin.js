@@ -128,7 +128,10 @@
 
   /* ════════ アンケート結果（管理①） ════════ */
   const S = { key: null, rounds: [], rid: null, resp: [], prevRound: null, prevResp: [], all: [], tab: "sum", cls: "", compare: false, loadedAt: 0, busy: false, pastOpen: null };
-  const sdef = () => defOf(S.key) || SURVEYS[0];
+  /* 回の「配ったときの設問の写し」（survey-db.js・2026-11-21）。あればそれで読む。無い回・DB 適用前は今までどおり、いまの定義 */
+  const snapOf = rid => (window.SurveyDB && SurveyDB.roundDef ? SurveyDB.roundDef(rid) : null);
+  const snapLoad = async rounds => { try { if (window.SurveyDB && SurveyDB.loadRoundDefs) await SurveyDB.loadRoundDefs(rounds); } catch (e) { /* 読めなくても画面は出す */ } };
+  const sdef = () => snapOf(S.rid) || defOf(S.key) || SURVEYS[0];
   const curRound = () => S.rounds.find(r => r.id === S.rid) || null;
   const respQ = rid => "/rest/v1/survey_responses?select=student_id,answers,submitted_at,profiles(student_no,display_name,class_name)&round_id=eq." + rid + "&order=submitted_at.desc";
 
@@ -157,6 +160,7 @@
         S.rid = pick ? pick.id : null;
         if (S.pastOpen == null) S.pastOpen = !!(pick && rst(pick) === "past");   // いまの回が無いときは、おわった回を開いておく
       }
+      await snapLoad(S.rounds.map(r => ({ id: r.id, survey_key: S.key })));
       await svLoadResp();
       S.loadedAt = Date.now();
       svRender();
@@ -572,7 +576,7 @@
     document.querySelectorAll("[data-bld-lang]").forEach(b => { b.onclick = () => { B.lang = b.dataset.bldLang; document.querySelectorAll("[data-bld-lang]").forEach(x => x.classList.toggle("on", x === b)); bldPreview(); }; });
     byId("bld-start").onclick = async () => {
       const r = await openSurveyRoundDialog(B.key);
-      if (r) { try { await SurveyDB.loadAll(); } catch (e) {} build(); showMsg("bld-msg", "「" + r.title + "」を はじめました" + (r.target_count != null ? "（" + r.target_count + "人対象）" : "") + "。結果は「アンケート 結果」で見られます。"); }
+      if (r) { try { await SurveyDB.saveRoundDef(r.round_id, r.survey_key); await SurveyDB.loadAll(); } catch (e) {} build(); showMsg("bld-msg", "「" + r.title + "」を はじめました" + (r.target_count != null ? "（" + r.target_count + "人対象）" : "") + "。結果は「アンケート 結果」で見られます。"); }
     };
     byId("bld-new").onclick = () => bldOpenEditor(null, null, "新しい アンケートを 作る");
     byId("bld-copy").onclick = () => {
@@ -721,7 +725,8 @@
       body.appendChild(mk("div", "note", "出席率・同意の記録・アカウントの停止は、学校の名簿とのつなぎ込みと管理用の権限ができてから追加します。"));
       api.get("/rest/v1/survey_responses?select=survey_key,round_id,answers,submitted_at,survey_rounds(title,is_void)&student_id=eq." + o.s.id + "&order=submitted_at.desc")
         .catch(() => api.get("/rest/v1/survey_responses?select=survey_key,round_id,answers,submitted_at&student_id=eq." + o.s.id + "&order=submitted_at.desc"))
-        .then(rows => {
+        .then(async rows => {
+          await snapLoad(rows.map(r => ({ id: r.round_id, survey_key: r.survey_key })));
           box.replaceChildren();
           // ★取り消した回の回答は並べない（2026-11-21。アンケート結果・スマホ画面と同じ線）。件数だけ下に出す
           const nVoid = rows.filter(r => r.survey_rounds && r.survey_rounds.is_void).length;
@@ -729,7 +734,7 @@
           if (!rows.length) { box.appendChild(mk("div", "muted", nVoid ? "表示できる回答はありません（取り消した回の回答 " + nVoid + "件は表示しません）。" : "まだ答えていません。")); return; }
           if (nVoid) box.appendChild(mk("div", "muted", "取り消した回の回答 " + nVoid + "件は表示していません。"));
           rows.forEach((r, i) => {
-            const def = defOf(r.survey_key); if (!def) return;
+            const def = snapOf(r.round_id) || defOf(r.survey_key); if (!def) return;
             const head = mk("div", "arow");
             head.appendChild(mk("div", "q", mdhm(r.submitted_at) + (r.survey_rounds && r.survey_rounds.title && r.survey_rounds.title !== "常設" ? " ・ " + r.survey_rounds.title : "")));
             head.appendChild(mk("div", "a", def.title.ja));

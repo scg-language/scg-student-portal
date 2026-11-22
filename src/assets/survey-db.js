@@ -84,5 +84,80 @@
     return api.rpc("set_survey_def_status", { p_survey_key: key, p_status: status });
   }
 
-  window.SurveyDB = { ensure, loadAll, list, find, row, save, setStatus, clean, _state: state };
+  /* ── 回ごとの「配ったときの設問の写し」（2026-11-21 作・11-24 拾い直し・db/2026-11-24_survey_round_snapshot.sql） ──
+   * 回答には選択肢の値（v）しか入っていない。名前に戻すとき「いまの定義」で引くと、あとで surveys.js を
+   * 書き換えたときに過去の回答の読み方まで変わる。だから職員が回答を読むときは、回の写しを先に使う。
+   *   roundDef(回の id)        … 写しがあればその定義、無ければ null（呼ぶ側は今までどおり SURVEYS から引く）
+   *   loadRoundDefs([{id, survey_key}]) … 写しを読む。写しの無い回がコードの定義のものなら、その場で保存する
+   *   saveRoundDef(回の id, key)        … 回をはじめた直後に呼ぶ（コードの定義の写しを送る。1回だけ書ける）
+   * ★画面で作った定義の回は、サーバーが回を作った瞬間に自分で写す（ここからは送らない）。
+   * 🔴 列や RPC がまだ無い DB（適用前）でも画面を止めない＝無ければ黙って今までどおり。
+   *    「列が無い」と分かったときだけ以後たずねない。通信の失敗は次の読み込みでもう一度たずねる。 */
+  const snap = { known: {}, noColumn: false, noRpc: false };
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function snapDef(key, raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const d = clean(key, raw);
+    d.q = d.q.filter(q => q && typeof q === "object" && typeof q.k === "string");
+    d._snapshot = true;
+    return d;
+  }
+  function codeDefBody(key) {
+    const def = SURVEYS.find(s => s.key === key && !s._db);
+    if (!def) return null;
+    const body = JSON.parse(JSON.stringify(def));
+    delete body.key; delete body._db;
+    return body;
+  }
+  function roundDef(roundId) { return (roundId && snap.known[roundId]) || null; }
+
+  async function saveRoundDef(roundId, key) {
+    if (snap.noRpc || !roundId || snap.known[roundId]) return false;
+    const body = codeDefBody(key);
+    if (!body) return false;
+    try {
+      const res = await api._authed("/rest/v1/rpc/save_survey_round_def",
+        { method: "POST", body: JSON.stringify({ p_round_id: roundId, p_def: body }) });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        if (res.status === 404 || b.code === "PGRST202") snap.noRpc = true;   // RPC がまだ無い（DB 適用前）
+        return false;
+      }
+      const r = await res.json();
+      if (r && r.saved) { snap.known[roundId] = snapDef(key, body); return true; }
+      delete snap.known[roundId];                // 先にだれかが保存していた＝次の読み込みでその写しを取りに行く
+      return false;
+    } catch (e) { return false; }
+  }
+
+  async function loadRoundDefs(rounds) {
+    if (snap.noColumn) return;
+    const want = {};
+    (rounds || []).forEach(r => {
+      if (r && UUID_RE.test(String(r.id || "")) && !(r.id in snap.known)) want[r.id] = r.survey_key || null;
+    });
+    const ids = Object.keys(want);
+    for (let i = 0; i < ids.length; i += 40) {
+      let rows;
+      try {
+        const res = await api._authed("/rest/v1/survey_rounds?select=id,survey_key,def_snapshot&id=in.(" + ids.slice(i, i + 40).join(",") + ")");
+        if (!res.ok) {
+          const b = await res.json().catch(() => ({}));
+          if (b.code === "42703" || b.code === "PGRST204") snap.noColumn = true;   // 列がまだ無い（DB 適用前）
+          return;
+        }
+        rows = await res.json();
+      } catch (e) { return; }
+      const missing = [];
+      (rows || []).forEach(r => {
+        const d = snapDef(r.survey_key, r.def_snapshot);
+        snap.known[r.id] = d;                     // null＝写しなし（この画面を開いている間は、もう一度たずねない）
+        if (!d) missing.push(r);
+      });
+      for (const r of missing) await saveRoundDef(r.id, r.survey_key);
+    }
+  }
+
+  window.SurveyDB = { ensure, loadAll, list, find, row, save, setStatus, clean, roundDef, loadRoundDefs, saveRoundDef, _state: state, _snap: snap };
 })();

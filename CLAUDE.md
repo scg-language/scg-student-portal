@@ -352,7 +352,7 @@
 - 🔴 **本物の名簿（学生の氏名・学籍番号）は、個人の部屋の Claude では扱わない。** 発行の操作は、きあがマスター画面で行う
 - 入れていないもの：停止・卒業への切り替えの画面（DB の口 `set_account_status` はある）／担任の割り当て／ほかのシステムからの自動取りこみ
 - 検査＝`node tests/run_e2e_accounts.cjs`（34・通信なし）／`node tests/test_issue_accounts_core.cjs`（18・手順）／
-  `tests/sql/account_issue_edge_check.sql`（36・ロールバック。11/24 に「外す行」を除いて流し、0b 以外は全部 OK）。
+  `tests/sql/account_issue_edge_check.sql`（38・ロールバック。11/24 に「外す行」を除いて流し、0b 以外は全部 OK）。
   ⚠ `index.ts` は、この PC に Deno が無いので動かしていない（文法だけ確かめた）。置いたあとに実物で見ること＝README の4つ
   ⚠ 通しの検査は外への通信を止めているので、Excel のファイルを選んで読む所は動かしていない（貼り付けと、表から名簿への変換は確かめている）
 
@@ -1001,10 +1001,33 @@ await until(() => {                                  // ← こう待つ
 
 🔴 **保留の4つは、ローカルブランチ `work/2026-11-21-jisou`（家PC・未 push）に残してある。そのまま合流しない。**
 `docs/yakusoku.md`（約束事）に合わせて作り直す。
-- 回に配布時の設問の写しを持たせる（1E）＝考え方は使える。記録の残し方を共通の表に合わせて拾い直す
+- 回に配布時の設問の写しを持たせる（1E）＝**2026-11-24 に拾い直した**（ブランチ `work/2026-11-24-yoru`・DB は未適用）。下の「配ったときの設問の写し」
 - アカウントの発行と停止（1C）＝ID の書式・卒業生の役割・権限の持ち方が変わったので作り直す
 - テストごとの合格点と不合格者リスト（2D）＝**拾わない**（合格の線は種類ごとに正解率で持つ、に決まった）
 - 正解の印と採点し直し（2C）＝**作らない**（小テストは成績に入らない。受験後も自由に直せる、は 9/13 のまま）
+
+### 配ったときの設問の写し（1E の残り・2026-11-24 に拾い直し・DB は未適用）
+- なぜ＝回答には選択肢の値しか入っていない。読むときに「いまの定義」で名前に戻すので、あとで設問を書き換えると、過去の回答の読み方まで変わる
+- DB＝`db/2026-11-24_survey_round_snapshot.sql`。`survey_rounds` に `def_snapshot`・`def_snapshot_at` を足す。
+  画面で作った定義の回は、回を作った瞬間にサーバーが写す。コードの定義（`surveys.js`）の回は、職員の画面が `save_survey_round_def` で送る
+- 🔴 写しは1回だけ書ける。入ったあとは、だれも直せない・空に戻せない（SQL エディタからでも）。表へ直接は書けない
+- 保存できる人＝`survey.manage` か `survey.read` を持つ人（11/21 の版は「職員ならだれでも」だった。ここだけ変えた）
+- 画面＝`survey-db.js`（`roundDef`・`loadRoundDefs`・`saveRoundDef`）／`admin.js`（アンケート結果と学生の詳細で、写しを先に使う。無ければ今までどおり）
+- 🔴 列や関数がまだ無い DB でも、画面は止まらない（無ければ黙って今までどおり）
+- 検査＝`node tests/test_survey_round_snapshot.cjs`（29）／`python tests/test_survey_round_snapshot.py`（14）／
+  `tests/sql/survey_round_snapshot_check.sql`（18・ロールバック。11/24 に適用前の形で流して全部 OK）
+
+### 既存の関数の締め直し（設計の5本目・2026-11-24・DB は未適用・未確認）
+- `db/2026-11-24_tighten_existing.sql`。入口の検査を「職員ならだれでも」から `app_hidden.can()` に替える：
+  `delete_quiz_set`＝`quiz.edit`／`start_survey_round`・`close_survey_round`＝`survey.manage`／
+  `close_quiz_run`・`void_quiz_run`＝自分の回は `quiz.run`・ほかの人の回は `quiz.run.any`／`reset_student_password`＝`student.pwreset`
+- あわせて、閉じる・取り消す・パスワードを戻す、を操作の記録に書く。テストの種類（`kind_key`）は、画面から直接は書き換えられなくする
+- 🔴 **流すと、先生（非常勤）は、ほかの人が始めた回を閉じる・取り消すことができなくなる。** 断られた理由は画面に出るが、
+  ボタンそのものは出たまま（`teacher.html` の「今日の回」）。ボタンを隠すかどうかは決めていない
+- 🔴 `quiz_stats` は入れていない。`teacher.html` は、回を開いていないときに「回を指定しない」形で呼ぶ（866行目あたり）。
+  そのまま締めると先生のライブ画面が止まる。画面の直し方を決めてから締める
+- ⚠ `tests/sql/tighten_existing_check.sql`（37項目）は、まだ1回も通していない。取り消しつきで流そうとすると、
+  関数の中の「消す」文のために、きあの確認が要る操作として止まる（2026-11-24）。きあがいるときに流す
 
 ### 回ごとの集計の照合（1G）と、検査の競合つぶし（1F）
 - 検査＝`node tests/run_e2e_survey_rounds.cjs`（78・通信なし・偽の PostgREST がダミーを条件どおりに返す）。
