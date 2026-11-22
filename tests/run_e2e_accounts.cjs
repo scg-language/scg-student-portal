@@ -1,6 +1,6 @@
 /* マスター画面の「アカウントの発行」の通し検査 — 2026-11-23
  * ★通信なし（Supabase への要求は CDP で横取りして見本を返す）。値はすべてダミー（学籍番号は 999 から降順の帯）
- *   A 名簿の読み取り（通信・画面なし）：タブ区切り・CSV・見出し・全角とハイフンを7桁に正す／3つに分ける／見本の Excel の中身
+ *   A 名簿の読み取り（通信・画面なし）：タブ区切り・CSV・Excel の表・見出し・全角とハイフンを7桁に正す／3つに分ける
  *   B 発行：名簿を貼る → 確認 → 新しく作る・すでにある・形式がおかしい の件数 → 確認ダイアログ → 発行 → 結果
  *           確認するだけでは送らない／やめる なら送らない／20件ずつ送る／断られた理由
  *   C 発行できる権限が無い人（常勤）には出さない
@@ -43,9 +43,6 @@ async function main() {
     const cl = A.classify(A.parseRoster('2604999\tA\tC\n2604998\tB\tC\n26-04998\tB\tC\n999\tD\tC'), new Set(['2604999']));
     note('A6 3つに分ける（すでにある1・新しく作る1・形式がおかしい2＝書き方ちがいの重なりと、桁の不足）',
       cl.existing.length === 1 && cl.fresh.length === 1 && cl.fresh[0].no === '2604998' && cl.invalid.length === 2 && cl.invalid[0].reason === 'duplicate_in_list');
-    const tp = A.templateSheets();
-    note('A7 見本の Excel：名簿のシートは見出しだけ（見本の行を入れない＝そのまま発行されない）', tp['名簿'].length === 1 && tp['名簿'][0].join() === '学籍番号,氏名,クラス' && A.parseRoster(tp['名簿'].map(r => r.join('\t')).join('\n')).length === 0);
-    note('A7 見本の Excel：書き方のシートがある', Array.isArray(tp['書き方']) && tp['書き方'].length >= 5);
 
     /* ── ここからブラウザ ── */
     const portFile = path.join(profile, 'DevToolsActivePort');
@@ -119,10 +116,7 @@ async function main() {
     /* ── B 発行 ── */
     await open();
     await check('B1 発行できる人：「アカウントの発行」の置き場が出る', until('(()=>{const p=document.getElementById("ac-panel");return p&&!p.hidden&&p.offsetParent!==null&&p.querySelector("h2").textContent==="アカウントの発行"&&!!document.getElementById("ac-text")})()'));
-    await check('B1 見本の Excel を保存するボタンと、ファイルを選ぶ欄がある（Excel も選べる）', '(()=>{const b=document.getElementById("ac-template"),f=document.getElementById("ac-file");return b&&b.textContent.includes("見本")&&f&&f.accept.includes(".xlsx")})()');
-    // ★この検査は外への通信を全部止めているので、Excel を組み立てる道具（CDN から読む）が無い。そのときも画面は落ちず、理由を出す
-    await click('#ac-template');
-    await check('B1 Excel の道具が読めないときも落ちない（保存できなかった、と出す）', until(txt('ac-msg') + '.includes("保存できませんでした")'));
+    await check('B1 ファイルを選ぶ欄がある（Excel も選べる）。見本を保存するボタンは無い', '(()=>{const f=document.getElementById("ac-file");return f&&f.accept.includes(".xlsx")&&!document.getElementById("ac-template")})()');
     await check('B1 発行のボタンは、確認するまで出ない', 'document.getElementById("ac-issue").hidden');
     const roster = ['学籍番号\t氏名\tクラス', '2604998\tテスト花子\tA1クラス', '26-04997\tテスト次郎\tB2クラス', '２６０４９９６\tテスト三郎\tA1クラス',
       '2604999\tテスト太郎\tA1クラス', '260499\tテスト四郎\tA1クラス', '2604994\t\tA1クラス', '2604998\tテスト花子\tA1クラス'].join('\n');

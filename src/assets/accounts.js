@@ -1,8 +1,10 @@
 /* 学生アカウントの発行（2026-11-23・db/2026-11-23_account_issue.sql）
  *
  * 置き場：マスター画面「学生」の下の「アカウントの発行」（master.html の #ac-panel。中身はここで組み立てる）
- *   見本の Excel を保存する → 事務が名簿を入れる → ファイルを選ぶ（または貼る）→「名簿を確認する」
+ *   名簿のファイルを選ぶ（または3列を貼る）→「名簿を確認する」
  *   → 新しく作る・すでにある・形式がおかしい の件数 → 確認 → 発行 → 結果
+ *   ★名簿は、学生マスタDB（またはリンガル）から「学籍番号・氏名・クラス」の3列を書き出したものを使う（2026-11-23 きあ）。
+ *     事務に見本の Excel を配って埋めてもらう形はやめた（見本を保存するボタンは外した）
  *
  * 🔴 作るのはサーバーの RPC（issue_student_accounts）だけ。発行できる人かどうかはサーバーが見る（account.manage＝情報管理者）。
  *    ここの「持っている人だけに出す」は案内であって権限ではない
@@ -18,8 +20,6 @@
 (function () {
   "use strict";
   const CHUNK = 20;          // 1回の送信で作る件数（サーバーは30件まで。パスワードの計算に時間がかかるため小分け）
-  const HEAD = ["学籍番号", "氏名", "クラス"];
-  const TEMPLATE_NAME = "【名簿】アカウント発行用.xlsx";
   const REASON = {
     bad_student_no: "学籍番号が7桁の数字ではありません",
     bad_name: "氏名が空か、長すぎます（100字まで）",
@@ -90,22 +90,6 @@
     });
     return out;
   }
-  /* 見本の Excel の中身（表）。1枚目＝名簿（見出しだけ）、2枚目＝書き方。見本の行は入れない（そのまま発行されないように） */
-  function templateSheets() {
-    return {
-      "名簿": [HEAD],
-      "書き方": [
-        ["「名簿」のシートに、1行に1人ずつ入れてください。1行目の見出しは消さないでください。"],
-        [""],
-        ["学籍番号", "7桁の数字。ハイフンや全角で入れても、取りこむときに直します（例：2604999）"],
-        ["氏名", "学生の名前。ポータルの画面と、先生が見る一覧に出ます"],
-        ["クラス", "クラスの名前。ほかの学生と同じ書き方にそろえてください（1文字でも違うと、別のクラスになります）"],
-        [""],
-        ["すでにアカウントがある学生は、作り直しません（名前やクラスも変わりません）。"],
-        ["初期パスワードは「scg＋学籍番号」です。学生は、最初のログインで新しいパスワードを決めます。"],
-      ],
-    };
-  }
 
   /* ── ここから画面 ── */
   const byId = id => document.getElementById(id);
@@ -137,15 +121,6 @@
     try { const caps = await api.rpc("my_caps", {}); return Array.isArray(caps) && caps.includes("account.manage"); }
     catch (e) { return false; }
   }
-  function saveTemplate() {
-    const sheets = templateSheets(), wb = XLSX.utils.book_new();
-    Object.keys(sheets).forEach(name => {
-      const ws = XLSX.utils.aoa_to_sheet(sheets[name]);
-      ws["!cols"] = name === "名簿" ? [{ wch: 14 }, { wch: 28 }, { wch: 16 }] : [{ wch: 14 }, { wch: 90 }];
-      XLSX.utils.book_append_sheet(wb, ws, name);
-    });
-    XLSX.writeFile(wb, TEMPLATE_NAME);
-  }
   /* Excel（1枚目か「名簿」のシート）を、貼り付けと同じ形（タブ区切りの文字）にする。番号は文字のまま読む */
   function textFromWorkbook(buf) {
     const wb = XLSX.read(buf, { type: "array" });
@@ -165,14 +140,13 @@
     if (!ok) return;
     P.built = true;
     panel.appendChild(mk("h2", "", "アカウントの発行"));
-    panel.appendChild(mk("div", "note", "新しい学生のアカウントを、名簿からまとめて作ります。見本の Excel に「学籍番号・氏名・クラス」を入れて、そのファイルを選んでください"
-      + "（Excel の3列をコピーして、下の欄に貼ることもできます）。"
+    panel.appendChild(mk("div", "note", "新しい学生のアカウントを、名簿からまとめて作ります。左から「学籍番号・氏名・クラス」の3列が並んだ Excel か CSV を選んでください"
+      + "（3列をコピーして、下の欄に貼ることもできます）。1行目が見出しなら、飛ばして読みます。"
       + "初期パスワードは「scg＋学籍番号」です。学生は、最初のログインで新しいパスワードを決めます。"
       + "すでにアカウントがある学生は作り直しません（名前やクラスも変わりません）。"));
     const row1 = mk("div"); row1.style.cssText = "display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;";
-    const tmpl = mk("button", "abtn", "見本の Excel を保存する"); tmpl.type = "button"; tmpl.id = "ac-template";
     const file = mk("input"); file.type = "file"; file.id = "ac-file"; file.accept = ".xlsx,.csv,.tsv,.txt"; file.setAttribute("aria-label", "名簿のファイル");
-    row1.append(tmpl, file);
+    row1.append(file);
     const ta = mk("textarea"); ta.id = "ac-text"; ta.rows = 6; ta.spellcheck = false;
     ta.placeholder = "2604999\tテスト太郎\tA1クラス";
     ta.setAttribute("aria-label", "名簿（学籍番号・氏名・クラス）");
@@ -186,7 +160,6 @@
 
     const forget = () => { P.plan = null; pv.replaceChildren(); issue.hidden = true; };   // 名簿を直したら、確認からやり直し
     ta.oninput = () => { forget(); say(msg, ""); };
-    tmpl.onclick = () => { try { saveTemplate(); } catch (e) { say(msg, "見本を保存できませんでした。", "ng"); } };
     file.onchange = () => {
       const f = file.files && file.files[0]; if (!f) return;
       const rd = new FileReader();
@@ -298,7 +271,7 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
   }
 
-  const Accounts = { normalizeNo, parseRoster, rowsFromSheet, checkRow, classify, reasonText, templateSheets, CHUNK, HEAD, TEMPLATE_NAME };
+  const Accounts = { normalizeNo, parseRoster, rowsFromSheet, checkRow, classify, reasonText, CHUNK };
   if (typeof window !== "undefined") window.Accounts = Accounts;
   if (typeof module !== "undefined" && module.exports) module.exports = Accounts;
 })();
