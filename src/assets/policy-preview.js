@@ -34,10 +34,10 @@
     { id: "s7", h: L("7. 学生ポータルが どうしても いやな とき", "7. If you really do not want to use the Student Portal"), body: [
       L("先生に 言って ください。テストは 紙で 受けます。アンケートは 先生が 直接 聞きます。", "Please tell your teacher. You will take tests on paper, and your teacher will ask you the survey questions directly.") ] },
   ];
-  // AI の所。「お知らせだけ」の形では 8 番として読むだけ、「同意」の形では別のページで選ぶ
+  // AI の所。同意は取らず、8番として知らせる（一律お知らせ）。使い道は例として広く書く
   const AI = {
     h: L("AI の 利用", "Use of AI"),
-    lead: L("学校は、仕事を はやく する ために、AI を つかう ことが あります。", "The school sometimes uses AI to work faster."),
+    lead: L("学校は、仕事や、あなたの 学習を 手伝う ために、AI を つかう ことが あります。たとえば、つぎの ような ことです。", "The school sometimes uses AI for its work and to support your learning. For example:"),
     uses: [
       L("名簿や 記録の 整理・集計", "Organizing and counting rosters and records"),
       L("お知らせや 資料を つくる・翻訳 する", "Writing and translating notices and materials"),
@@ -47,7 +47,6 @@
       L("AI だけで、あなたの 成績・進級・進路を 決める ことは ありません。さいごは かならず 先生と 職員が 決めます。", "AI alone never decides your grades, promotion, or future path. Teachers and staff always make the final decision."),
       L("学校が つかう AI は、学校が 契約 している もの だけ です。AI の 会社は、あなたの 情報を AI の 学習に つかいません。", "The school only uses AI services it has a contract with. The AI company does not use your information to train its AI.") ],
     worry: L("しんぱいな ことが ある ときは、先生に 言って ください。", "If you are worried about anything, please tell your teacher."),
-    free: L("同意 しなくても、授業・テスト・成績で こまる ことは ありません。あとで 変える ことも できます。", "If you do not agree, it will not affect your classes, tests, or grades. You can change your answer later."),
   };
   const UI = {
     login: L("ログイン", "Log in"), loginNote: L("（見本です。おすと ログイン します）", "(Preview: press to log in)"),
@@ -55,25 +54,21 @@
     sub: L("学校が あなたの 情報を どう あつかうか", "How the school handles your information"),
     read: L("よみました", "I have read this"),
     changed: L("まえに よんだ ときから、かわった ところが あります。色の ついた ところです。", "Something has changed since you last read this. The change is highlighted."),
-    agree: L("同意 します", "I agree"), decline: L("同意 しません", "I do not agree"), later: L("あとで きめます", "I will decide later"),
-    askAi: L("AI の 利用に 同意 しますか。", "Do you agree to the use of AI?"),
     hello: L("{name} さん", "Hello, {name}"), quiz: L("テストを うける", "Take a quiz"), survey: L("アンケートに こたえる", "Answer a survey"),
     dummy: L("（見本では うごきません）", "(Not active in this preview)"),
     noticeCard: L("学校からの 大事な お知らせ", "Important notice from the school"),
     readOn: L("よみました（{d}）", "Read ({d})"), again: L("もういちど よむ", "Read again"), back: L("もどる", "Back"),
-    aiCard: L("AI の 利用", "Use of AI"), aiAgree: L("同意 しました", "You agreed"), aiDecline: L("同意 しませんでした", "You did not agree"),
-    aiLater: L("まだ きめて いません", "Not decided yet"), aiChange: L("かえる", "Change"), aiDecide: L("きめる", "Decide"),
     logout: L("ログアウト", "Log out"), soon: L("じゅんびちゅう", "coming soon"),
   };
   const LANGS = [["ja", "日本語", true], ["en", "English", true], ["zh", "中文", false], ["ne", "नेपाली", false], ["my", "မြန်မာ", false], ["si", "සිංහල", false], ["bn", "বাংলা", false]];
-  const ACTION_LABEL = { read: "よみました", agree: "同意します", decline: "同意しません", later: "あとできめます" };
+  const ACTION_LABEL = { read: "よみました" };
 
   // ---------- ダミーデータ（ブラウザのメモリだけ） ----------
   const names = ["テスト太郎", "テスト花子", "テスト次郎", "テスト三郎", "テスト桜", "テスト一郎"];
   const classOf = ["1A", "1A", "1A", "1A", "1B", "1B"];
   const students = names.map((name, i) => ({ id: String(2604999 - i), name, cls: classOf[i] }));
   const log = []; // 押すたびに1行ふえる。直さない・消さない
-  const state = { version: 1, mode: "notice", who: students[0].id, lang: "ja", screen: "login", tab: "student", cls: "1A" };
+  const state = { version: 1, who: students[0].id, lang: "ja", screen: "login", tab: "student", cls: "1A" };
   let clock = new Date(2026, 11, 15, 10, 0).getTime();
   const pad = n => String(n).padStart(2, "0");
   const stamp = d => d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
@@ -84,7 +79,6 @@
   const last = (sid, actions, version) => { for (let i = log.length - 1; i >= 0; i--) { const r = log[i]; if (r.sid === sid && actions.includes(r.action) && (version == null || r.version === version)) return r; } return null; };
   const hasRead = sid => Boolean(last(sid, ["read"], state.version));
   const readBefore = sid => log.some(r => r.sid === sid && r.action === "read" && r.version < state.version);
-  const aiAnswer = sid => last(sid, ["agree", "decline", "later"], state.version);
 
   // ---------- 部品 ----------
   const $ = id => document.getElementById(id);
@@ -110,25 +104,22 @@
     });
     parent.appendChild(bar);
   }
-  function aiBlock(parent, withHeading) {
-    if (withHeading) parent.appendChild(el("h3", "", (state.mode === "notice" ? "8. " : "") + tx(AI.h)));
+  function aiBlock(parent) {
+    parent.appendChild(el("h3", "", "8. " + tx(AI.h)));
     parent.appendChild(el("p", "", tx(AI.lead)));
     const ul = el("ul"); AI.uses.forEach(u => ul.appendChild(fill(el("li"), tx(u))));
     if (state.version >= 2) { const li = fill(el("li", "pp-new"), tx(AI.added)); li.id = "st-new"; ul.appendChild(li); }
     parent.appendChild(ul);
     AI.rules.forEach(r => parent.appendChild(el("p", "", tx(r))));
+    parent.appendChild(el("p", "", tx(AI.worry)));
   }
 
   // ---------- 学生の画面 ----------
   const me = () => students.find(s => s.id === state.who);
-  function nextScreen() {
-    if (!hasRead(state.who)) return "gate";
-    if (state.mode === "consent" && !aiAnswer(state.who)) return "ai";
-    return "home";
-  }
+  const nextScreen = () => hasRead(state.who) ? "home" : "gate";
   function noticeDoc(card) {
     SECTIONS.forEach(sec => { card.appendChild(el("h3", "", tx(sec.h))); body(card, sec.body); });
-    if (state.mode === "notice") { aiBlock(card, true); card.appendChild(el("p", "", tx(AI.worry))); }
+    aiBlock(card);
   }
   function renderStudent() {
     const phone = $("st-phone"); phone.replaceChildren(); phone.dataset.screen = state.screen;
@@ -147,14 +138,6 @@
       noticeDoc(card);
       if (state.screen === "gate") card.appendChild(button(tx(UI.read), "pp-primary pp-wide", "st-read", () => { record(state.who, "read"); state.screen = nextScreen(); render(); }));
       else card.appendChild(button(tx(UI.back), "pp-wide", "st-back", () => { state.screen = "home"; render(); }));
-    } else if (state.screen === "ai") {
-      langBar(card);
-      card.appendChild(el("h2", "", tx(AI.h)));
-      aiBlock(card, false);
-      card.appendChild(el("p", "", tx(AI.free)));
-      card.appendChild(el("p", "pp-big", tx(UI.askAi)));
-      [["agree", UI.agree, "pp-primary pp-wide"], ["decline", UI.decline, "pp-wide"], ["later", UI.later, "pp-wide"]].forEach(([action, label, cls]) =>
-        card.appendChild(button(tx(label), cls, "st-" + action, () => { record(state.who, action); state.screen = "home"; render(); })));
     } else {
       card.appendChild(el("h2", "", tx(UI.hello).replace("{name}", me().name)));
       [UI.quiz, UI.survey].forEach(label => { const b = button(tx(label), "pp-wide", null, () => {}); b.disabled = true; card.appendChild(b); });
@@ -164,27 +147,17 @@
       const r = last(state.who, ["read"], state.version);
       const done = el("p", "pp-done", tx(UI.readOn).replace("{d}", stamp(r.at))); done.id = "st-done"; notice.appendChild(done);
       notice.appendChild(button(tx(UI.again), "", "st-again", () => { state.screen = "reread"; render(); }));
-      if (state.mode === "consent") {
-        const ai = el("div", "pp-card"); phone.appendChild(ai);
-        ai.appendChild(el("h2", "", tx(UI.aiCard)));
-        const a = aiAnswer(state.who), row = el("div", "pp-row");
-        const text = el("span", "", tx(a.action === "agree" ? UI.aiAgree : a.action === "decline" ? UI.aiDecline : UI.aiLater)); text.id = "st-ai-state"; text.dataset.state = a.action;
-        row.appendChild(text);
-        row.appendChild(button(tx(a.action === "later" ? UI.aiDecide : UI.aiChange), "", "st-ai-change", () => { state.screen = "ai"; render(); }));
-        ai.appendChild(row);
-      }
       phone.appendChild(button(tx(UI.logout), "pp-wide", "st-logout", () => { state.screen = "login"; render(); }));
     }
   }
 
-  // ---------- 先生のスマホ（ふつうの日本語。名前は「まだ」の学生だけ。同意の中身は出さない） ----------
+  // ---------- 先生のスマホ（ふつうの日本語。名前は「まだ」の学生だけ） ----------
   function renderTeacher() {
     const inClass = students.filter(s => s.cls === state.cls), notYet = inClass.filter(s => !hasRead(s.id));
     $("tc-count").textContent = "まだ読んでいない学生　" + notYet.length + "名";
     const list = $("tc-list"); list.replaceChildren();
     notYet.forEach(s => list.appendChild(el("li", "", s.name + "（" + s.id + "）")));
     $("tc-done").textContent = "読んだ学生　" + (inClass.length - notYet.length) + "名 ／ クラス " + inClass.length + "名";
-    $("tc-note").textContent = state.mode === "consent" ? "AIの利用に同意したかどうかは、この画面には出しません。" : "";
   }
   function renderLog() {
     const tbody = $("lg-body"); tbody.replaceChildren();
@@ -207,7 +180,6 @@
   students.forEach(s => { const o = el("option", "", s.name + "（" + s.cls + "）"); o.value = s.id; $("ctl-who").appendChild(o); });
   ["1A", "1B"].forEach(c => { const o = el("option", "", c); o.value = c; $("tc-class").appendChild(o); });
   $("ctl-who").addEventListener("change", e => { state.who = e.target.value; state.screen = "login"; render(); });
-  $("ctl-mode").addEventListener("change", e => { state.mode = e.target.value; state.screen = "login"; render(); });
   $("ctl-bump").addEventListener("click", () => { state.version = 2; state.screen = "login"; render(); });
   $("tc-class").addEventListener("change", e => { state.cls = e.target.value; render(); });
   ["student", "teacher", "log"].forEach(t => $("tab-" + t).addEventListener("click", () => { state.tab = t; render(); }));

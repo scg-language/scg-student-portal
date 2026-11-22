@@ -78,7 +78,8 @@ async function main() {
     await check('Unread student is stopped at the notice before home', (await screen()) === 'gate');
     await check('Notice has 7 sections plus the AI section', 'document.querySelectorAll("#st-phone h3").length===8');
     await check('Undecided parts are marked', 'document.querySelectorAll("#st-phone .pp-todo").length>=5');
-    await check('Notice-only form has no agree/decline buttons', '!document.getElementById("st-agree")&&!document.getElementById("st-decline")');
+    await check('There is one button only: no agree/decline choice anywhere', '!document.getElementById("st-agree")&&!document.getElementById("st-decline")&&!document.getElementById("ctl-mode")');
+    await check('AI uses are written as examples, with a way to ask', (await text('#st-phone')).includes('たとえば') && (await text('#st-phone')).includes('しんぱいな'));
     await check('AI-only-decides promise is in the notice', (await text('#st-phone')).includes('AI だけで'));
     await screenshot('gate-desktop.png');
     const readBefore = await logCount('read');
@@ -120,17 +121,8 @@ async function main() {
     await click('#tab-teacher'); await select('tc-class', '1A');
     await check('Teacher count resets for the new version', (await text('#tc-count')).includes('3名'));
 
-    // --- 同意ありの形 ---
-    await click('#tab-student'); await select('ctl-mode', 'consent'); await select('ctl-who', '2604998'); await click('#st-login');
-    await check('Consent form: a student who already read goes to the AI question', (await screen()) === 'ai');
-    await click('#st-later');
-    await check('Decide-later reaches home and shows not decided', (await screen()) === 'home' && (await evaluate('document.getElementById("st-ai-state").dataset.state')) === 'later');
-    await click('#st-ai-change'); await click('#st-decline');
-    await check('Declining is shown on home', (await evaluate('document.getElementById("st-ai-state").dataset.state')) === 'decline');
-    await click('#st-ai-change'); await click('#st-agree');
-    await check('Changing the answer adds rows instead of rewriting', (await logCount('later')) === 1 && (await logCount('decline')) === 1 && (await logCount('agree')) === 1);
-    await click('#tab-teacher');
-    await check('Teacher view never shows who agreed or declined', '(()=>{const t=document.getElementById("view-teacher").textContent;return !t.includes("同意しません")&&!t.includes("同意します")&&t.includes("出しません");})()');
+    // --- 残る記録 ---
+    await check('Only read presses are recorded', 'window.policyPreview.log.every(r=>r.action==="read")');
     await click('#tab-log');
     await check('Record tab lists every press', 'document.querySelectorAll("#lg-body tr").length===window.policyPreview.log.length');
     await check('No internal terms on screen', '!/RLS|Supabase|テーブル|DB|api/i.test(document.body.innerText)');
