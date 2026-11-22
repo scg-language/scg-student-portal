@@ -331,7 +331,7 @@
 マスター画面「学生」の下の「アカウントの発行」。**発行できる権限（`account.manage`＝情報管理者）を持つ人にだけ出る。**
 流れ＝見本の Excel を保存する → 事務が「学籍番号・氏名・クラス」を入れる → ファイルを選ぶ（または3列を貼る）→「名簿を確認する」→ 件数を見て発行。
 
-- 画面＝`src/assets/accounts.js`（中身と動き）＋ `master.html` の `#ac-panel`。DB＝`db/2026-11-23_account_issue.sql`（RPC `issue_student_accounts`）
+- 画面＝`src/assets/accounts.js`（中身と動き）＋ `master.html` の `#ac-panel`。DB＝`db/2026-11-23_account_issue.sql`（RPC `issue_student_accounts`）。**2026-11-23 に適用済み**
 - 🔴 **学籍番号の決まりは画面とサーバーで同じ**＝全角・ハイフン・空白を取ってから、7桁の数字だけを通す
   （画面 `Accounts.normalizeNo`／サーバー `app_hidden.normalize_student_no`）。片方だけ直さない
 - 初期パスワードは「scg＋学籍番号」。発行した学生は、最初のログインで「パスワードの決め直し → お知らせ → ホーム」と進む
