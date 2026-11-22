@@ -17,7 +17,7 @@ async function main() {
   const staticChecks = [
     ['No innerHTML/outerHTML/insertAdjacentHTML in the preview script', !/innerHTML|outerHTML|insertAdjacentHTML/.test(js)],
     ['No fetch/XHR/WebSocket/storage in the preview script', !/\bfetch\(|XMLHttpRequest|WebSocket|localStorage|sessionStorage|indexedDB/.test(js)],
-    ['Page loads neither api.js nor any external script/style', !/api\.js/.test(html) && !/(src|href)="https?:/.test(html)],
+    ['Page loads neither api.js nor any external script/style', !/assets\/api\.js/.test(html) && !/(src|href)="https?:/.test(html)],
   ];
 
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'scg-policy-e2e-'));
@@ -77,7 +77,7 @@ async function main() {
     await click('#st-login');
     await check('Unread student is stopped at the notice before home', (await screen()) === 'gate');
     await check('Notice has 7 sections plus the AI section', 'document.querySelectorAll("#st-phone h3").length===8');
-    await check('Undecided parts are marked', 'document.querySelectorAll("#st-phone .pp-todo").length>=5');
+    await check('Undecided parts are marked', 'document.querySelectorAll("#st-phone .pn-todo").length>=5');
     await check('There is one button only: no agree/decline choice anywhere', '!document.getElementById("st-agree")&&!document.getElementById("st-decline")&&!document.getElementById("ctl-mode")');
     await check('AI uses are written as examples, with a way to ask', (await text('#st-phone')).includes('たとえば') && (await text('#st-phone')).includes('しんぱいな'));
     await check('AI-only-decides promise is in the notice', (await text('#st-phone')).includes('AI だけで'));
@@ -115,7 +115,7 @@ async function main() {
     // --- 版を上げる：読んだ学生にも、もう1回出る ---
     await click('#ctl-bump'); await click('#tab-student'); await select('ctl-who', '2604998'); await click('#st-login');
     await check('After a new version, a student who read v1 is stopped again', (await screen()) === 'gate');
-    await check('The changed-part note and the highlighted line are shown', 'Boolean(document.getElementById("st-changed"))&&Boolean(document.getElementById("st-new"))');
+    await check('The changed-part note and the highlighted line are shown', 'Boolean(document.getElementById("st-changed"))&&Boolean(document.querySelector("#st-phone .pn-new"))');
     await click('#st-read');
     await check('The new record carries version 2', 'window.policyPreview.log[window.policyPreview.log.length-1].version===2');
     await click('#tab-teacher'); await select('tc-class', '1A');

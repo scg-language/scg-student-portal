@@ -133,6 +133,10 @@
             <span class="ic" style="background:#B45309"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
             <span class="lb" data-i18n="set.pw"></span><span class="chev"></span>
           </button>
+          <button type="button" class="set-row" id="set-notice" hidden>
+            <span class="ic" style="background:#1D4ED8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7M9 8h3"/></svg></span>
+            <span class="lb" data-i18n="set.notice"></span><span class="chev"></span>
+          </button>
         </div>
       </section>
       <button type="button" class="set-out" id="set-logout" data-i18n="my.logout">ログアウト</button>
@@ -166,6 +170,26 @@
       <p class="pw-forget" data-i18n="pw.forget"></p>
       <button type="button" class="set-out" id="btn-pw-back" data-i18n="pw.back" hidden>もどる</button>
       <button type="button" class="set-out" id="btn-pw-logout" data-i18n="my.logout" hidden>ログアウト</button>
+    </div>
+  </section>
+
+  <!-- はじめのお知らせ（個人情報のあつかい・2026-11-22）。docs/yakusoku.md 4-2
+       ・在籍中の学生で、いまの版をまだ読んでいないとき、ログインのあと（パスワードの次）に必ず出る（もどるボタンなし）
+       ・同意を取るものではない。ボタンは「よみました」1つ
+       ・マイから開いたときは読むだけ（もどれる）
+       ・文は assets/policy-notice.js。そこの ready が false の間は出さない -->
+  <section id="scr-notice" hidden>
+    <div class="panel">
+      <button type="button" class="nt-lang" id="btn-nt-lang" data-i18n="nt.lang"></button>
+      <h2 id="nt-title"></h2>
+      <p class="nt-sub" id="nt-sub"></p>
+      <p class="nt-changed" id="nt-changed" data-i18n="nt.changed" hidden></p>
+      <div class="nt-body" id="nt-body"></div>
+      <p class="nt-readon" id="nt-readon" hidden></p>
+      <button class="btn" id="btn-nt-read" data-i18n="nt.read">よみました</button>
+      <div class="msg" id="nt-msg"></div>
+      <button type="button" class="set-out" id="btn-nt-back" data-i18n="pw.back" hidden>もどる</button>
+      <button type="button" class="set-out" id="btn-nt-logout" data-i18n="my.logout" hidden>ログアウト</button>
     </div>
   </section>
 
@@ -1248,6 +1272,7 @@
 <script src="assets/exam-dates.js"></script>
 <script src="assets/ruby.js"></script>
 <script src="assets/i18n.js"></script>
+<script src="assets/policy-notice.js"></script>
 <script src="assets/pw-eye.js"></script>
 <script src="assets/api.js"></script>
 <script src="assets/surveys.js"></script>
@@ -1255,7 +1280,7 @@
 <script src="assets/survey-form.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const screens = ["scr-login","scr-mypage","scr-settings","scr-quizlist","scr-quiz","scr-result","scr-surveylist","scr-survey","scr-survey-done","scr-password"];
+const screens = ["scr-login","scr-mypage","scr-settings","scr-quizlist","scr-quiz","scr-result","scr-surveylist","scr-survey","scr-survey-done","scr-password","scr-notice"];
 /* 下のタブ: 一覧系の画面だけに出す。回答中（テスト・アンケート）と結果は隠して集中させる */
 const TAB_OF = { "scr-mypage":"home", "scr-surveylist":"home", "scr-quizlist":"learn", "scr-settings":"me" };
 function setTab(name){
@@ -1551,8 +1576,61 @@ $("set-a2hs").onclick = () => sheet.open(body => {
 let pwForced = false;
 async function afterLogin(){
   if(await api.passwordIsInitial()){ openPassword(true); return; }
-  await goMyPage();
+  await afterPassword();
 }
+/* ---- はじめのお知らせ（個人情報のあつかい・2026-11-22）----
+   パスワードの次に挟む。在籍中の学生で、いまの版をまだ読んでいないときだけ出す（判定はサーバー）。
+   ★出さない場合：文が決まっていない（ready=false）／RPC が無い・通信の失敗／画面の文の版と DB の版が違う
+     ＝どれも今までどおりホームへ進む（ログインを止めない）。
+   返り値＝ホームへ進んだら true、お知らせを出したら false */
+let ntForced = false, ntStatus = null;
+async function noticeStatus(){
+  const N = window.POLICY_NOTICE;
+  if(!N || !N.ready) return null;
+  const st = await api.noticeStatus(N.key);
+  if(!st || st.version !== N.version) return null;
+  return st;
+}
+async function afterPassword(){
+  const st = await noticeStatus();
+  if(st && st.required){ openNotice(true, st); return false; }
+  await goMyPage();
+  return true;
+}
+function openNotice(forced, st){
+  ntForced = !!forced; ntStatus = st || null;
+  renderNotice();
+  show("scr-notice");
+}
+function renderNotice(){
+  const N = window.POLICY_NOTICE;
+  $("nt-title").textContent = tx(N.title);
+  $("nt-sub").textContent = tx(N.sub);
+  $("nt-changed").hidden = !(ntForced && ntStatus && ntStatus.read_before);
+  const body = $("nt-body"); body.replaceChildren(); N.render(body, LANG);
+  const at = !ntForced && ntStatus && ntStatus.read_at ? new Date(ntStatus.read_at) : null;
+  $("nt-readon").hidden = !at;
+  if(at) $("nt-readon").textContent = t("nt.readon", { d: at.getFullYear() + "/" + (at.getMonth()+1) + "/" + at.getDate() });
+  $("btn-nt-read").hidden = !ntForced;
+  $("btn-nt-logout").hidden = !ntForced;
+  $("btn-nt-back").hidden = ntForced;
+  clearMsg("nt-msg");
+}
+$("btn-nt-read").onclick = async () => {
+  const N = window.POLICY_NOTICE, b = $("btn-nt-read");
+  clearMsg("nt-msg"); b.disabled = true; b.textContent = t("nt.busy");
+  try{
+    await api.ackNotice(N.key, N.version, LANG);
+    await goMyPage();
+  }catch(e){
+    err("nt-msg", t(e.code === "PT409" || e.code === "409" ? "nt.err.reload" : "nt.err.other"));
+  }finally{ b.disabled = false; b.textContent = t("nt.read"); }
+};
+$("btn-nt-lang").onclick = () => openLangSheet();
+$("btn-nt-back").onclick = () => goSettings();
+$("btn-nt-logout").onclick = () => doLogout();
+$("set-notice").hidden = !(window.POLICY_NOTICE && window.POLICY_NOTICE.ready);
+$("set-notice").onclick = async () => { openNotice(false, await noticeStatus()); };
 function openPassword(forced){
   pwForced = !!forced;
   const p = api.profile || {};
@@ -1600,7 +1678,7 @@ $("btn-pw-save").onclick = async () => {
     await api.changePassword(pw);
     $("pw-new").value = ""; $("pw-new2").value = "";
     const wasForced = pwForced;
-    if(wasForced) await goMyPage(); else goSettings();
+    if(wasForced) await afterPassword(); else goSettings();   // 初回はこのあと「はじめのお知らせ」へ進むことがある
     sheet.open(body => {
       const h = el("div","sh-title", t("pw.done")); h.id = "sheet-title";
       body.append(h, el("p","sh-text", t("pw.done.save")), el("p","sh-text", t("pw.forget")),
@@ -2294,6 +2372,7 @@ window.addEventListener("sp:lang", ()=>{
     renderSurveyBadge();
     if(!$("scr-mypage").hidden) renderHome();
     if(!$("scr-settings").hidden) goSettings();
+    if(!$("scr-notice").hidden) renderNotice();
     if(!$("scr-password").hidden){ $("pw-title").textContent = t(pwForced ? "pw.title.first" : "pw.title"); $("pw-lead").textContent = pwForced ? t("pw.lead.first") : ""; }
   }
   if(!$("scr-quiz").hidden && questions.length) render();
@@ -2322,7 +2401,7 @@ window.addEventListener("sp:lang", ()=>{
   if(api.token && api.profile){
     try{
       if(await api.passwordIsInitial()){ openPassword(true); return; }
-      await goMyPage();
+      if(!(await afterPassword())) return;      // はじめのお知らせを出した
       // ハッシュ直リンク: #survey / #test（QRからの深リンク用）
       if(location.hash==="#survey") $("btn-gosurvey").click();
       else if(location.hash==="#test") $("btn-gotest").click();

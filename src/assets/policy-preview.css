@@ -31,9 +31,9 @@ main{max-width:900px;margin:0 auto;padding:16px}
 .pp-langs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .pp-langs button{min-height:40px;padding:4px 12px;font-size:15px}
 .pp-langs button[aria-pressed=true]{background:var(--brand);color:#fff;border-color:var(--brand)}
-.pp-todo{background:var(--warnbg);color:var(--warn);border-radius:4px;padding:0 2px}
+.pn-todo{background:var(--warnbg);color:var(--warn);border-radius:4px;padding:0 2px}
 .pp-changed{background:var(--warnbg);border-left:5px solid #b78818;border-radius:4px;padding:8px 12px;margin:0 0 12px}
-.pp-new{background:var(--warnbg)}
+.pn-new{background:var(--warnbg)}
 .pp-done{background:var(--okbg);color:var(--ok);border-radius:8px;padding:8px 12px;font-weight:700}
 .pp-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .pp-big{font-size:22px;font-weight:800;margin:10px 0 4px}

@@ -90,6 +90,29 @@ const api = {
     } catch (e) { return false; }
   },
 
+  /* はじめのお知らせ（個人情報のあつかい）を読んだか（2026-11-22・RPC my_notice_status）。
+   * 返す形＝{ key, version, read, read_at, read_before, required }。
+   * ★RPC がまだ無い DB や通信の失敗では null＝今までどおりホームへ進む（ログインを止めない） */
+  async noticeStatus(key) {
+    try {
+      const res = await this._authed("/rest/v1/rpc/my_notice_status", { method: "POST", body: JSON.stringify({ p_key: key }) });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) { return null; }
+  },
+
+  /* 「よみました」（RPC ack_notice）。断られたら code を持つ Error を投げる（PT409＝文が新しくなった） */
+  async ackNotice(key, version, lang) {
+    const res = await this._authed("/rest/v1/rpc/ack_notice", {
+      method: "POST", body: JSON.stringify({ p_key: key, p_version: version, p_lang: lang }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const e = new Error("ack_notice " + res.status); e.code = body.code || String(res.status); throw e;
+    }
+    return res.json();
+  },
+
   /* 自分のパスワードを変える（Supabase Auth の PUT /auth/v1/user）。
    * 断られたら { code, reasons } を持つ Error を投げる＝画面が学生の言葉に置き換える（サーバーの英文を見せない） */
   async changePassword(newPw) {
