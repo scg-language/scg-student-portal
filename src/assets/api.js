@@ -57,12 +57,18 @@ const api = {
 
   async login(studentNo, password) {
     const email = studentNo.trim().toLowerCase() + "@" + MAIL_DOMAIN;
-    const res = await this._fetch("/auth/v1/token?grant_type=password", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
+    let res;
+    try {
+      res = await this._fetch("/auth/v1/token?grant_type=password", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+    } catch (e) {   // 混んでいて（429）やり直しても通らなかった・通信が切れた＝英文を見せない
+      throw new Error(M("err.busy", "いま こんでいます。すこし まってから、もういちど おしてください"));
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
+      if (res.status === 429) throw new Error(M("err.busy", "いま こんでいます。すこし まってから、もういちど おしてください"));
       if (body.error_code === "invalid_credentials" || res.status === 400)
         throw new Error(M("err.badlogin", "番号かパスワードがちがいます"));
       throw new Error(M("err.login", "ログインできませんでした（{s}）", { s: res.status }));
@@ -132,27 +138,43 @@ const api = {
     _store.removeItem("sp_refresh");
   },
 
-  /* トークン失効時: リフレッシュトークンで静かにログインし直す。だめなら再ログインへ */
-  async _refresh() {
+  /* トークン失効時: リフレッシュトークンで静かにログインし直す（2026-11-24 に作り直し）。
+   * 返すのは3つ： "ok"＝新しいトークンになった／"denied"＝サーバーが断った（ログインし直しが要る）／
+   *              "busy"＝混んでいる・通信が切れた（ログインは生きているかもしれない）
+   * 🔴 "busy" でログアウトしない。この更新には「同じ場所から何回まで」の制限があり、教室で全員が一斉に開くと
+   *    断られることがある（429）。そこでログイン画面に戻すと、全員がパスワードを入れ直して、今度はログインの制限に当たる。
+   * ★1人の画面から同時に2本送らない（_refreshing）。画面は読み込みを何本も並べて送るので、
+   *   そのままだと1人で何回も更新を送り、制限を自分たちで食いつぶす。 */
+  _refreshing: null,
+  _refresh() {
+    if (!this._refreshing) {
+      this._refreshing = this._refreshOnce().finally(() => { this._refreshing = null; });
+    }
+    return this._refreshing;
+  },
+  async _refreshOnce() {
     const rt = _store.getItem("sp_refresh");
-    if (!rt) return false;
+    if (!rt) return "denied";
     try {
+      // 6回まで（待ちは およそ 0.6→1.2→2.4→4.8→9.6 秒。合わせて20秒ほど）
       const res = await this._fetch("/auth/v1/token?grant_type=refresh_token", {
         method: "POST", body: JSON.stringify({ refresh_token: rt }),
-      }, 2);
-      if (!res.ok) return false;
+      }, 6);
+      if (!res.ok) return "denied";
       const data = await res.json();
       this.token = data.access_token;
       _store.setItem("sp_token", this.token);
       if (data.refresh_token) _store.setItem("sp_refresh", data.refresh_token);
-      return true;
-    } catch (e) { return false; }
+      return "ok";
+    } catch (e) { return "busy"; }
   },
 
   async _authed(path, opts) {
     let res = await this._fetch(path, opts);
-    if (res.status === 401 && await this._refresh()) {
-      res = await this._fetch(path, opts); // 新トークンで1回だけやり直す
+    if (res.status === 401) {
+      const r = await this._refresh();
+      if (r === "ok") res = await this._fetch(path, opts); // 新トークンで1回だけやり直す
+      else if (r === "busy") throw new Error(M("err.busy", "いま こんでいます。すこし まってから、もういちど おしてください"));
     }
     if (res.status === 401) { this.logout(); location.reload(); throw new Error(M("err.relogin", "再ログインしてください")); }
     return res;
@@ -195,7 +217,7 @@ const api = {
   async fn(name, body) {
     const path = "/functions/v1/" + name, opts = { method: "POST", body: JSON.stringify(body || {}) };
     let res = await this._fetch(path, opts, 1);
-    if (res.status === 401 && await this._refresh()) res = await this._fetch(path, opts, 1);
+    if (res.status === 401 && (await this._refresh()) === "ok") res = await this._fetch(path, opts, 1);
     if (!res.ok) {
       const b = await res.json().catch(() => ({}));
       const e = new Error((b && b.message) || M("err.send", "送信に失敗しました（{s}）", { s: res.status }));
