@@ -75,6 +75,17 @@ const api = {
     } catch (e) {   // 混んでいて（429）やり直しても通らなかった・通信が切れた＝英文を見せない
       throw new Error(M("err.busy", "いま こんでいます。すこし まってから、もういちど おしてください"));
     }
+    /* はじめのパスワード（scg＋学籍番号）を、SCG… や Scg… と打った人を通す（2026-11-24 きあ）。
+     * スマホが頭を大文字にしてしまうことがある。断られたときだけ、「scg＋数字7けた」の形なら小文字に直して1回だけ試す。
+     * ★この形にしか効かない＝自分で決めたパスワードの大文字・小文字は、今までどおり区別する */
+    if (!res.ok && res.status !== 429 && /^scg[0-9]{7}$/i.test(password) && password !== password.toLowerCase()) {
+      try {
+        const again = await this._fetch("/auth/v1/token?grant_type=password", {
+          method: "POST", body: JSON.stringify({ email, password: password.toLowerCase() }),
+        });
+        if (again.ok) res = again;
+      } catch (e) { /* 通らなければ、はじめの返事で断る */ }
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       if (res.status === 429) throw new Error(M("err.busy", "いま こんでいます。すこし まってから、もういちど おしてください"));

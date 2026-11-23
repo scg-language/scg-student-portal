@@ -130,6 +130,36 @@ const isData = c => c.path.startsWith('/rest/v1/');
     note('10 マスターのログアウトは、先生の画面のログインを消さない', !sess.has('sp_token') && local.get('sp_token') === 'left-by-teacher-page');
   }
 
+  // 11 はじめのパスワードを SCG… や Scg… と打った人を通す。自分で決めたパスワードの大文字・小文字は区別したまま
+  {
+    const pwOf = c => JSON.parse(c.body).password;
+    const server = async (c) => {
+      if (c.path.includes('grant_type=password')) return pwOf(c) === 'scg2604999' ? [200, { access_token: 't', refresh_token: 'r', user: { id: 'u' } }] : [400, { error_code: 'invalid_credentials' }];
+      return [200, [{ student_no: '2604999', display_name: 'テスト太郎', role: 'student', class_name: 'A1' }]];
+    };
+    for (const typed of ['SCG2604999', 'Scg2604999']) {
+      e = boot(server);
+      let ok = false; try { await e.api.login('2604999', typed); ok = true; } catch (x) {}
+      const sent = e.calls.filter(c => c.path.includes('grant_type=password')).map(pwOf);
+      note('11 ' + typed + ' で入れる（打ったまま → 小文字、の順に1回ずつ）', ok && sent.join() === typed + ',scg2604999');
+    }
+    e = boot(server);
+    await e.api.login('2604999', 'scg2604999');
+    note('11 小文字で打った人は、1回で入る', e.calls.filter(c => c.path.includes('grant_type=password')).length === 1);
+    for (const typed of ['Kiwi2026x', 'SCG260499', 'SCG2604999x', 'scg2604998']) {
+      e = boot(server); err = null;
+      try { await e.api.login('2604999', typed); } catch (x) { err = x; }
+      note('11 ' + typed + ' は、直さずに1回で断る', err && err.message.includes('ちがいます') && e.calls.filter(c => c.path.includes('grant_type=password')).length === 1);
+    }
+    // 自分で決めたパスワードが、たまたま「SCG＋数字7けた」の形でも入れる（打ったままを先に試すため）
+    e = boot(async (c) => {
+      if (c.path.includes('grant_type=password')) return pwOf(c) === 'SCG1234567' ? [200, { access_token: 't', refresh_token: 'r', user: { id: 'u' } }] : [400, { error_code: 'invalid_credentials' }];
+      return [200, [{ student_no: '2604999', display_name: 'テスト太郎', role: 'student', class_name: 'A1' }]];
+    });
+    let ok2 = false; try { await e.api.login('2604999', 'SCG1234567'); ok2 = true; } catch (x) {}
+    note('11 自分で決めた大文字のパスワードは、打ったままで入れる', ok2 && e.calls.filter(c => c.path.includes('grant_type=password')).length === 1);
+  }
+
   const ng = checks.filter(c => !c.ok).length;
   console.log(JSON.stringify({ total: checks.length, ng }));
   process.exit(ng ? 1 : 0);
