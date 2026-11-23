@@ -20,3 +20,6 @@
 .sv-form .sv-page-off{display:none!important}
 .sv-form .sv-number{display:grid;gap:8px}
 .sv-form .sv-number input[type=text]{max-width:12em}
+.sv-form .sv-option input[type=radio]{flex:0 0 auto;width:20px;height:20px;padding:0;margin:3px 0 0;accent-color:var(--blue,#3175a7)}
+.sv-form ruby{ruby-position:over}.sv-form rt{font-size:.58em;font-weight:400}
+.sv-form .sv-qtext,.sv-form .sv-option span,.sv-form .sv-hint,.sv-form .sv-section{line-height:2.1}

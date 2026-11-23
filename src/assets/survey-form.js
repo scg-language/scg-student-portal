@@ -27,9 +27,38 @@
     }
   };
   const UNKNOWN = "unknown";   // number の「おぼえていない」。保存する値（言語に依らない）
-  function words(lang) { return MESSAGES[lang] || MESSAGES.ja; }
+  /* やさしい日本語の版（def.easy）で、日本語のときに使う言葉。漢字は使わない（ここにはルビを付けられない所があるため） */
+  const EASY_JA = {
+    choose: "えらんで ください", required: "こたえて ください。", choice: "ならんでいる ものから えらんで ください。",
+    type: "こたえの かたちが ちがいます。", exclusive: "いっしょに えらべない ものが あります。",
+    date: "ただしい ひにちを いれて ください。", length: "ながすぎます。", empty: "1つ いじょう こたえて ください。",
+    requiredMark: "かならず", optional: "こたえなくても いい", multi: "いくつ えらんでも いいです", identity: "あなたの こと",
+    number: "がくせき ばんごう", name: "なまえ", className: "クラス", advisor: "たんにん", unknown: "がっこうが かくにん します",
+    num: "{min}から {max}までの すうじを いれて ください。", forgot: "おぼえていない"
+  };
+  function words(lang, def) { return def && def.easy && (lang || "ja") === "ja" ? EASY_JA : (MESSAGES[lang] || MESSAGES.ja); }
   function label(value, lang) {
     return value && typeof value === "object" ? (value[lang] || value.ja || value.en || "") : String(value || "");
+  }
+  /* 学生に見せる文。やさしい日本語の版では、日本語のときだけ jy（やさしい日本語・ルビの記法つき）を先に使う。
+   * ja は、職員の画面と訳のもとになる ふつうの日本語のまま残す */
+  function shown(def, value, lang) {
+    return def && def.easy && (lang || "ja") === "ja" && value && typeof value === "object" && value.jy ? value.jy : label(value, lang);
+  }
+  /* ルビの記法 ${漢字}(よみ) を外して、ただの文字にする（プルダウン・控え・入力例など、ルビを出せない所） */
+  function plain(text) { return String(text == null ? "" : text).replace(/\$\{([^}]*)\}\(([^)]*)\)/g, "$1"); }
+  /* ルビの記法を <ruby> にして要素へ入れる。innerHTML は使わない（文字は全部 文字として入る） */
+  function fill(el, text) {
+    const doc = el.ownerDocument, str = String(text == null ? "" : text), re = /\$\{([^}]*)\}\(([^)]*)\)/g;
+    let last = 0, m;
+    while ((m = re.exec(str))) {
+      if (m.index > last) el.appendChild(doc.createTextNode(str.slice(last, m.index)));
+      const ruby = doc.createElement("ruby"), rt = doc.createElement("rt");
+      ruby.appendChild(doc.createTextNode(m[1])); rt.textContent = m[2]; ruby.appendChild(rt); el.appendChild(ruby);
+      last = m.index + m[0].length;
+    }
+    if (last < str.length) el.appendChild(doc.createTextNode(str.slice(last)));
+    return el;
   }
   function isVisible(q, answers) {
     if (!q.showWhen) return true;
@@ -63,7 +92,7 @@
     return d.getUTCFullYear() === parts[0] && d.getUTCMonth() === parts[1] - 1 && d.getUTCDate() === parts[2];
   }
   function validate(def, raw, options) {
-    const msg = words((options || {}).lang || "ja"), answers = normalize(def, raw), errors = [];
+    const msg = words((options || {}).lang || "ja", def), answers = normalize(def, raw), errors = [];
     const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
     let filled = 0;
     for (const q of def.q || []) {
@@ -95,8 +124,10 @@
   }
   function mount(container, def, options) {
     options = options || {};
-    const lang = options.lang || "ja", msg = words(lang), doc = container.ownerDocument;
-    const initial = options.answers || {}, controls = new Map(), rows = new Map(), errorNodes = new Map();
+    const lang = options.lang || "ja", msg = words(lang, def), doc = container.ownerDocument;
+    const say = value => shown(def, value, lang);      // 学生に見せる文（ルビの記法つきのことがある）
+    const rich = (tag, value, className) => { const el = make(tag, null, className); return fill(el, say(value)); };
+    const initial = options.answers || {}, controls = new Map(), rows = new Map(), errorNodes = new Map(), numbers = new Map();
     container.replaceChildren();
     container.classList.add("sv-form");
     const make = (tag, text, className) => {
@@ -121,32 +152,34 @@
       const sectionKey = q.section || "";
       if (pageOf(sectionKey) < 0) {
         const section = (def.sections || []).find(s => s.key === sectionKey);
-        pages.push({key: sectionKey, title: section ? label(section.title, lang) : "", keys: [], nodes: []});
+        pages.push({key: sectionKey, title: section ? plain(say(section.title)) : "", keys: [], nodes: []});
       }
       const page = pages[pageOf(sectionKey)];
       if (q.section && q.section !== currentSection) {
         const section = (def.sections || []).find(s => s.key === q.section);
-        if (section) { const h = make("h2", label(section.title, lang), "sv-section"); container.appendChild(h); page.nodes.push(h); }
+        if (section) { const h = rich("h2", section.title, "sv-section"); container.appendChild(h); page.nodes.push(h); }
         currentSection = q.section;
       }
       const id = "sv-" + q.k, field = make("div", null, "field sv-question");
       field.dataset.question = q.k;
       page.keys.push(q.k); page.nodes.push(field);
-      const title = make("label", (i + 1) + ". " + label(q.l, lang));
-      title.htmlFor = id;
+      // 番号は、出ている質問だけで数え直す（updateVisibility）。番号と文を分けて持つ（文にはルビの要素が入るため）
+      const title = make("label"), number = make("span", (i + 1) + ". ", "sv-qno");
+      title.append(number, rich("span", q.l, "sv-qtext"));
+      title.htmlFor = id; numbers.set(q.k, number);
       title.appendChild(make("span", q.required ? msg.requiredMark : msg.optional, "sv-required"));
       field.appendChild(title);
-      if (q.hint) field.appendChild(make("p", label(q.hint, lang), "sv-hint"));
+      if (q.hint) field.appendChild(rich("p", q.hint, "sv-hint"));
       let input;
       if (q.t === "multi") {
         input = make("div", null, "sv-options"); input.id = id;
-        input.setAttribute("role", "group"); input.setAttribute("aria-label", label(q.l, lang));
+        input.setAttribute("role", "group"); input.setAttribute("aria-label", plain(say(q.l)));
         field.appendChild(make("p", msg.multi, "sv-hint"));
         (q.o || []).forEach(o => {
           const option = make("label", null, "sv-option"), box = make("input");
           box.type = "checkbox"; box.value = o.v; box.id = id + "-" + o.v;
           box.checked = Array.isArray(initial[q.k]) && initial[q.k].includes(o.v);
-          option.append(box, make("span", label(o, lang))); input.appendChild(option);
+          option.append(box, rich("span", o)); input.appendChild(option);
           box.addEventListener("change", () => {
             if (box.checked) {
               const exclusive = q.exclusive || [];
@@ -158,10 +191,27 @@
             updateVisibility(); clearErrors();
           });
         });
+      } else if (q.t === "select" && def.easy) {
+        // やさしい日本語の版：選択肢を全部ならべて押す形（プルダウンの中にはルビを出せない・開かなくても見える）。
+        // もう一度押すと外れる（任意の質問で、選んだものを取り消せるように）
+        input = make("div", null, "sv-options sv-radio"); input.id = id;
+        input.setAttribute("role", "radiogroup"); input.setAttribute("aria-label", plain(say(q.l)));
+        let picked = canonical(q, initial[q.k]);      // いま選ばれている値（押す前の状態を覚えておく）
+        (q.o || []).forEach(o => {
+          const option = make("label", null, "sv-option"), box = make("input");
+          box.type = "radio"; box.name = id; box.value = o.v; box.id = id + "-" + o.v; box.checked = picked === o.v;
+          option.append(box, rich("span", o)); input.appendChild(option);
+          box.addEventListener("click", () => {
+            if (picked === box.value && !q.required) {
+              box.checked = false; picked = "";
+              box.dispatchEvent(new Event("change", {bubbles: true}));
+            } else picked = box.value;
+          });
+        });
       } else if (q.t === "select") {
         input = make("select"); input.id = id;
         const empty = make("option", msg.choose); empty.value = ""; input.appendChild(empty);
-        (q.o || []).forEach(o => { const option = make("option", label(o, lang)); option.value = o.v; input.appendChild(option); });
+        (q.o || []).forEach(o => { const option = make("option", plain(say(o))); option.value = o.v; input.appendChild(option); });
         input.value = canonical(q, initial[q.k]);
       } else if (q.t === "number") {
         // 数字の欄。q.unknown があれば「おぼえていない」のチェックを下に付ける（どちらか片方だけが入る）
@@ -169,7 +219,7 @@
         const num = make("input"); num.id = id; num.type = "text"; num.inputMode = "numeric"; num.maxLength = 6; num.autocomplete = "off";
         const first = canonical(q, initial[q.k]);
         num.value = first === UNKNOWN ? "" : first;
-        if (q.ph) num.placeholder = label(q.ph, lang);
+        if (q.ph) num.placeholder = plain(say(q.ph));
         input.appendChild(num);
         if (q.unknown) {
           const option = make("label", null, "sv-option"), box = make("input");
@@ -181,7 +231,7 @@
       } else {
         input = make("input"); input.id = id; input.type = q.t === "date" ? "date" : "text";
         input.value = canonical(q, initial[q.k]);
-        if (q.ph) input.placeholder = label(q.ph, lang);
+        if (q.ph) input.placeholder = plain(say(q.ph));
         if (q.t !== "date") input.maxLength = q.maxLength || 2000;
       }
       input.setAttribute("aria-describedby", id + "-error");
@@ -198,6 +248,7 @@
         const el = controls.get(q.k);
         if (q.t === "multi") result[q.k] = Array.from(el.querySelectorAll("input:checked"), x => x.value);
         else if (q.t === "number") result[q.k] = el.querySelector("input[type=checkbox]:checked") ? UNKNOWN : el.querySelector("input").value;
+        else if (q.t === "select" && def.easy) { const on = el.querySelector("input:checked"); result[q.k] = on ? on.value : ""; }
         else result[q.k] = el.value;
       });
       return result;
@@ -208,7 +259,7 @@
       (def.q || []).forEach(q => {
         const hidden = !isVisible(q, values), row = rows.get(q.k);
         row.hidden = hidden;
-        if (!hidden) row.firstElementChild.firstChild.nodeValue = (++visibleNumber) + ". " + label(q.l, lang);
+        if (!hidden) numbers.get(q.k).textContent = (++visibleNumber) + ". ";
         row.querySelectorAll("input, select").forEach(el => { el.disabled = hidden; });
       });
     }
@@ -253,13 +304,14 @@
     const values = normalize(def, answers), out = [];
     (def.q || []).forEach(q => {
       if (!Object.prototype.hasOwnProperty.call(values, q.k)) return;
-      const v = values[q.k], pick = x => { const o = (q.o || []).find(o => o.v === x); return o ? label(o, lang) : x; };
+      const say = value => plain(shown(def, value, lang));
+      const v = values[q.k], pick = x => { const o = (q.o || []).find(o => o.v === x); return o ? say(o) : x; };
       const text = Array.isArray(v) ? v.map(pick).join(lang === "ja" ? "、" : ", ")
-        : q.t === "select" ? (v ? pick(v) : "") : (q.t === "number" && v === UNKNOWN ? words(lang).forgot : v);
+        : q.t === "select" ? (v ? pick(v) : "") : (q.t === "number" && v === UNKNOWN ? words(lang, def).forgot : v);
       const section = (def.sections || []).find(s => s.key === q.section);
-      out.push({key: q.k, section: section ? label(section.title, lang) : "", label: label(q.l, lang), value: text});
+      out.push({key: q.k, section: section ? say(section.title) : "", label: say(q.l), value: text});
     });
     return out;
   }
-  return {normalize, validate, isVisible, mount, validDate, describe, UNKNOWN};
+  return {normalize, validate, isVisible, mount, validDate, describe, UNKNOWN, plain, fill};
 });

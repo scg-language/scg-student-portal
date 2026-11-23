@@ -320,80 +320,196 @@ const SURVEYS = [
     ] },
 ];
 
-/* 進路アンケート（2026年12月）。2026-11-23 きあ・MTG のメモから。
- * 1月の版（shinro_2027_jan_v1）は書きかえない（答えの形が変わるため、新しい key にした）。変えた所：
- *   ・JLPT に N5 を足した／JLPT 以外の試験（級を選ぶ4つ・点数を入れる3つ）を足した。点数は自己申告・「おぼえていない」可
- *   ・②の順番＝やりたい仕事 → 勉強したい分野 → 卒業後の進路（第1〜第3希望）→ 気になっている学校
- *   ・やりたい仕事は複数選べる
- * 級の名前は、各試験の公式サイトの表記（2026-11-23 に確認。合格証そのものの表記は見ていない）。
- * 文が1月の版と同じ質問は、そこから写す（同じ文を2か所に持たない）。 */
+/* 進路アンケート（2026年12月）。2026-11-23 きあ・MTG のメモから。12/15 の HR で、いちばん下のクラスも答える。
+ * 1月の版（shinro_2027_jan_v1）は書きかえない（答えの形が変わるため、新しい key にした）。
+ *
+ * ■ 文の持ち方（easy:true の定義だけ）
+ *   ja … ふつうの日本語。職員の画面・CSV・訳のもと
+ *   jy … 学生に見せる やさしい日本語。ルビは ${漢字}(よみ)。日本語の画面では、こちらを出す
+ *   en … 英語
+ *   🔴 文を直すときは ja と jy の両方を直す（片方だけだと、職員が見ている文と学生が読んだ文がずれる）
+ *   title・desc・intro は、一覧など ルビを出せない所にも出るので、ひらがなで書く
+ *
+ * ■ 1月の版との違い
+ *   ・JLPT に N5／JLPT 以外の試験（点数を入れる3つ・級を選ぶ4つ）。任意。点数は自己申告・「おぼえていない」可
+ *   ・次の JLPT で受けたい級（N3 を足した）と、ほかに受けたい試験（任意）を分けた
+ *   ・②の順番＝やりたい仕事（複数）→ 勉強したい分野 → 卒業後の進路（第1〜第3希望）→ 気になっている学校
+ *   ・進学先の場所の選択肢を、京都・大阪・その他関西・東京…に分けた
+ * 級の名前は、各試験の公式サイトの表記（2026-11-23 に確認。合格証そのものの表記は見ていない）。 */
 (function () {
-  const jan = SURVEYS.find(s => s.key === "shinro_2027_jan_v1");
-  const from = k => ({ ...jan.q.find(q => q.k === k) });
-  const lv = (v, ja, en) => ({ v, ja, en: en || ja });
-  const PATHS = [
-    { v: "vocational_school", ja: "専門学校", en: "Vocational school" },
-    { v: "university", ja: "大学", en: "University" },
-    { v: "graduate_school", ja: "大学院", en: "Graduate school" },
-    { v: "employment", ja: "就職", en: "Employment" },
+  const o = (v, ja, jy, en, flag) => { const x = { v, ja, en: en || ja }; if (jy) x.jy = jy; if (flag) x.flag = flag; return x; };
+  const OTHER = o("other", "その他", "そのほか", "Other");
+  const FIELDS = [
+    o("it", "IT・コンピューター", "IT・コンピューター", "IT / computers"),
+    o("business", "ビジネス・経営", "ビジネス・${経営}(けいえい)", "Business / management"),
+    o("trans", "通訳・翻訳", "${通訳}(つうやく)・${翻訳}(ほんやく)", "Interpreting / translation"),
+    o("hotel", "観光・ホテル", "${観光}(かんこう)・ホテル", "Tourism / hotel"),
+    o("care", "介護・医療", "${介護}(かいご)・${医療}(いりょう)", "Care / medical"),
+    o("design", "デザイン・アニメ・アート", "デザイン・アニメ・アート", "Design / anime / art"),
+    o("cook", "料理・製菓", "${料理}(りょうり)・お${菓子}(かし)", "Cooking / confectionery"),
+    o("auto", "自動車・機械", "${自動車}(じどうしゃ)・${機械}(きかい)", "Automobile / machinery"),
+    OTHER,
+    o("unknown", "未定", "まだ ${決}(き)まって いない", "Not decided yet"),
   ];
-  const score = (k, test, name, max) => ({ k, t: "number", section: "current", required: true, unknown: true, min: 0, max, sl: name + "の点数",
+  const PATHS = [
+    o("vocational_school", "専門学校", "${専門学校}(せんもんがっこう)", "Vocational school"),
+    o("university", "大学", "${大学}(だいがく)", "University"),
+    o("graduate_school", "大学院", "${大学院}(だいがくいん)", "Graduate school"),
+    o("employment", "就職", "${就職}(しゅうしょく)（${仕事}(しごと)を する）", "Employment"),
+  ];
+  const FORGOT_HINT = { ja: "おぼえていないときは、「おぼえていない」を選んでください。", jy: "おぼえていない ときは、「おぼえていない」を えらんで ください。",
+    en: "If you do not remember your score, choose “I do not remember”." };
+  const score = (k, test, name, max) => ({ k, t: "number", section: "current", unknown: true, min: 0, max, sl: name + "の点数",
     showWhen: { key: "other_tests", is: test },
-    l: { ja: name + "の点数（" + max + "点満点）", en: name + " score (out of " + max + ")" },
-    hint: { ja: "おぼえていないときは、「おぼえていない」を選んでください。", en: "If you do not remember your score, choose “I do not remember”." },
-    ph: { ja: "数字", en: "Number" } });
-  const level = (k, test, name, o) => ({ k, t: "select", section: "current", required: true, sl: name + "の級",
+    l: { ja: name + "の点数（" + max + "点満点）", jy: name + "の ${点数}(てんすう)（${満点}(まんてん)は " + max + "${点}(てん)）", en: name + " score (out of " + max + ")" },
+    hint: FORGOT_HINT, ph: { ja: "数字", jy: "すうじ", en: "Number" } });
+  const level = (k, test, name, opts) => ({ k, t: "select", section: "current", sl: name + "の級",
     showWhen: { key: "other_tests", is: test },
-    l: { ja: name + "で合格した級（いちばん上のもの）", en: "Highest " + name + " level you have passed" }, o });
-  SURVEYS.push({ key: "shinro_2026_dec_v1", schemaVersion: 1,
+    l: { ja: name + "で合格した級（いちばん上のもの）", jy: name + "で ${合格}(ごうかく)した ${級}(きゅう)（いちばん ${上}(うえ)の もの）", en: "Highest " + name + " level you have passed" }, o: opts });
+  const text = (k, section, parent, is, sl, ja, jy, en, phJa, phJy, phEn, maxLength, required) => ({ k, t: "text", section, required: required !== false, maxLength,
+    showWhen: { key: parent, is }, sl, l: { ja, jy, en }, ph: { ja: phJa, jy: phJy, en: phEn } });
+  const kyu = n => o("k" + n, n + "級", n + "${級}(きゅう)", "Level " + n);
+  const topj = (v, band, yomi, en, c) => o(v, band + c, "${" + band + "}(" + yomi + ")" + c, en + " " + c);
+
+  SURVEYS.push({ key: "shinro_2026_dec_v1", schemaVersion: 1, easy: true,
     studentIdentity: true, sb: "Career", color: "#2f9e44",
-    title: { ja: "進路アンケート（2026年12月）", en: "Career survey (December 2026)" },
-    desc: { ...jan.desc }, intro: { ...jan.intro },
-    sections: jan.sections.map(x => ({ ...x })),
+    title: { ja: "しんろアンケート（2026年12月）", en: "Career survey (December 2026)" },
+    desc: { ja: "しんがく・しごとの きぼう、おかね、めんだん", en: "Your future plans, study costs and guidance needs" },
+    intro: {
+      ja: "いまの かんがえを こたえて ください。まだ きまって いない ときは、「まだ きまって いない」を えらべます。<br>この アンケートは、しんろの そうだんの じゅんびに つかいます。しめきりまでは、なんかいでも だしなおせます。",
+      en: "Please tell us what you are thinking now. You can choose “Not decided yet” where available.<br>This survey will help us prepare for your career guidance. You can submit again until the deadline.",
+    },
+    sections: [
+      { key: "current", title: { ja: "① あなたのこと・今の状況", jy: "① あなたの こと・${今}(いま)の こと", en: "1. About you and your current situation" } },
+      { key: "plans", title: { ja: "② これからの希望", jy: "② これからの ${希望}(きぼう)", en: "2. Your future plans" } },
+      { key: "finance", title: { ja: "③ お金と家族のこと", jy: "③ お${金}(かね)と ${家族}(かぞく)の こと", en: "3. Study costs and your family" } },
+      { key: "support", title: { ja: "④ 心配なことと面談の希望", jy: "④ ${心配}(しんぱい)な ことと ${面談}(めんだん)", en: "4. Your concerns and guidance preferences" } },
+    ],
     q: [
+      // ───── ① ─────
       { k: "jlpt_level", t: "select", section: "current", required: true, sl: "JLPT保有資格",
-        l: { ja: "現在持っているJLPTの資格", en: "Which JLPT qualification do you currently hold?" },
-        o: [lv("n1", "N1"), lv("n2", "N2"), lv("n3", "N3"), lv("n4", "N4"), lv("n5", "N5"),
-          { v: "none", ja: "まだ持っていない", en: "I do not hold any yet" }] },
-      { k: "other_tests", t: "multi", section: "current", required: true, sl: "JLPT以外の試験",
-        l: { ja: "JLPT以外で、合格した・点数を持っている日本語の試験（複数選択可）", en: "Other Japanese tests you have passed or have a score for (select all that apply)" },
-        exclusive: ["none"],
-        o: [lv("jcert", "J-cert"), lv("jlct", "JLCT"), lv("topj", "TOPJ"), lv("nat", "NAT-TEST"),
-          lv("jtest", "J.TEST"), lv("jpt", "JPT"), lv("jft", "JFT-Basic"),
-          { v: "none", ja: "持っていない", en: "None" }] },
-      level("jcert_level", "jcert", "J-cert", [lv("a1", "A1"), lv("a2_1", "A2.1（初級）", "A2.1"), lv("a2_2", "A2.2（準中級）", "A2.2"),
-        lv("b1", "B1（中級）", "B1"), lv("b2", "B2（準上級）", "B2"), lv("c1", "C1（上級）", "C1")]),
-      level("jlct_level", "jlct", "JLCT", [lv("jct5", "JCT5"), lv("jct4", "JCT4"), lv("jct3", "JCT3"), lv("jct2", "JCT2"), lv("jct1", "JCT1")]),
-      level("topj_level", "topj", "TOPJ", [lv("sho_c", "初級C", "Beginner C"), lv("sho_b", "初級B", "Beginner B"),
-        lv("sho_a5", "初級A-5", "Beginner A-5"), lv("sho_a4", "初級A-4", "Beginner A-4"),
-        lv("chu_c", "中級C", "Intermediate C"), lv("chu_b", "中級B", "Intermediate B"), lv("chu_a", "中級A", "Intermediate A"),
-        lv("jo_c", "上級C", "Advanced C"), lv("jo_b", "上級B", "Advanced B"), lv("jo_a", "上級A", "Advanced A")]),
-      level("nat_level", "nat", "NAT-TEST", [lv("k5", "5級", "Level 5"), lv("k4", "4級", "Level 4"), lv("k3", "3級", "Level 3"),
-        lv("k2", "2級", "Level 2"), lv("k1", "1級", "Level 1")]),
-      { k: "jtest_kind", t: "select", section: "current", required: true, sl: "J.TESTの種類",
-        showWhen: { key: "other_tests", is: "jtest" },
-        l: { ja: "J.TESTで受けた試験の種類", en: "Which J.TEST did you take?" },
-        o: [lv("ac", "A-Cレベル試験", "A-C level test"), lv("de", "D-Eレベル試験", "D-E level test"), lv("fg", "F-Gレベル試験", "F-G level test"),
-          { v: "unknown", ja: "おぼえていない", en: "I do not remember" }] },
-      score("jtest_score", "jtest", "J.TEST", 1000),
+        l: { ja: "現在持っているJLPTの資格", jy: "${今}(いま) ${持}(も)っている JLPTの ${級}(きゅう)", en: "Which JLPT level do you currently hold?" },
+        o: [o("n1", "N1"), o("n2", "N2"), o("n3", "N3"), o("n4", "N4"), o("n5", "N5"),
+          o("none", "まだ持っていない", "まだ ${持}(も)って いない", "I do not hold any yet")] },
+      { k: "other_tests", t: "multi", section: "current", sl: "JLPT以外の試験", exclusive: ["none"],
+        l: { ja: "JLPT以外で、合格した・点数を持っている日本語の試験（複数選択可）",
+          jy: "JLPTの ほかに ${持}(も)っている ${日本語}(にほんご)の ${試験}(しけん)（${合格}(ごうかく)した もの・${点数}(てんすう)が ある もの）",
+          en: "Other Japanese tests you have passed or have a score for (select all that apply)" },
+        o: [o("jpt", "JPT"), o("nat", "NAT-TEST"), o("jtest", "J.TEST"), o("jft", "JFT-Basic"), o("jcert", "J-cert"), o("jlct", "JLCT"), o("topj", "TOPJ"),
+          o("none", "持っていない", "${持}(も)って いない", "None")] },
       score("jpt_score", "jpt", "JPT", 990),
+      level("nat_level", "nat", "NAT-TEST", [kyu(5), kyu(4), kyu(3), kyu(2), kyu(1)]),
+      { k: "jtest_kind", t: "select", section: "current", sl: "J.TESTの種類", showWhen: { key: "other_tests", is: "jtest" },
+        l: { ja: "J.TESTで受けた試験の種類", jy: "J.TESTで ${受}(う)けた ${試験}(しけん)", en: "Which J.TEST did you take?" },
+        o: [o("ac", "A-Cレベル試験", "A-Cレベル", "A-C level test"), o("de", "D-Eレベル試験", "D-Eレベル", "D-E level test"), o("fg", "F-Gレベル試験", "F-Gレベル", "F-G level test"),
+          o("unknown", "おぼえていない", "おぼえていない", "I do not remember")] },
+      score("jtest_score", "jtest", "J.TEST", 1000),
       score("jft_score", "jft", "JFT-Basic", 250),
-      from("future_exams"), from("future_exams_other"), from("education"), from("education_other"),
-      { ...from("job"), t: "multi", exclusive: ["undecided"],
-        l: { ja: "将来やってみたい仕事（複数選択可）", en: "What kind of work would you like to do in the future? (Select all that apply.)" } },
-      from("job_other"),
-      from("field_first"), from("field_first_other"), from("field_second"), from("field_second_other"),
+      level("jcert_level", "jcert", "J-cert", [o("a1", "A1"), o("a2_1", "A2.1（初級）", "A2.1（${初級}(しょきゅう)）", "A2.1"),
+        o("a2_2", "A2.2（準中級）", "A2.2（${準中級}(じゅんちゅうきゅう)）", "A2.2"), o("b1", "B1（中級）", "B1（${中級}(ちゅうきゅう)）", "B1"),
+        o("b2", "B2（準上級）", "B2（${準上級}(じゅんじょうきゅう)）", "B2"), o("c1", "C1（上級）", "C1（${上級}(じょうきゅう)）", "C1")]),
+      level("jlct_level", "jlct", "JLCT", [o("jct5", "JCT5"), o("jct4", "JCT4"), o("jct3", "JCT3"), o("jct2", "JCT2"), o("jct1", "JCT1")]),
+      level("topj_level", "topj", "TOPJ", [
+        topj("sho_c", "初級", "しょきゅう", "Beginner", "C"), topj("sho_b", "初級", "しょきゅう", "Beginner", "B"),
+        topj("sho_a5", "初級", "しょきゅう", "Beginner", "A-5"), topj("sho_a4", "初級", "しょきゅう", "Beginner", "A-4"),
+        topj("chu_c", "中級", "ちゅうきゅう", "Intermediate", "C"), topj("chu_b", "中級", "ちゅうきゅう", "Intermediate", "B"), topj("chu_a", "中級", "ちゅうきゅう", "Intermediate", "A"),
+        topj("jo_c", "上級", "じょうきゅう", "Advanced", "C"), topj("jo_b", "上級", "じょうきゅう", "Advanced", "B"), topj("jo_a", "上級", "じょうきゅう", "Advanced", "A")]),
+      { k: "next_jlpt", t: "select", section: "current", required: true, sl: "次のJLPTで受けたい級",
+        l: { ja: "次のJLPT（2027年7月）で受けたい級", jy: "${次}(つぎ)の JLPT（2027${年}(ねん)7${月}(がつ)）で ${受}(う)けたい ${級}(きゅう)", en: "Which level would you like to take at the next JLPT (July 2027)?" },
+        o: [o("n1", "N1"), o("n2", "N2"), o("n3", "N3"),
+          o("none", "受けない", "${受}(う)けない", "I will not take it"),
+          o("undecided", "まだ決まっていない", "まだ ${決}(き)まって いない", "Not decided yet")] },
+      { k: "other_exams", t: "multi", section: "current", sl: "ほかに受けたい試験",
+        l: { ja: "ほかに受けたい試験（複数選択可）", jy: "ほかに ${受}(う)けたい ${試験}(しけん)", en: "Other exams you would like to take (select all that apply)" },
+        o: [o("eju", "EJU（日本留学試験）", "EJU（${日本留学試験}(にほんりゅうがくしけん)）", "EJU (Examination for Japanese University Admission for International Students)"), OTHER] },
+      text("other_exams_other", "current", "other_exams", "other", "その他の受けたい試験", "その他の試験名", "${試験}(しけん)の ${名前}(なまえ)", "Name of the other exam",
+        "受けたい試験名を記入してください", "しけんの なまえを かいて ください", "Enter the name of the exam", 200),
+      { k: "education", t: "select", section: "current", required: true, sl: "母国の最終学歴",
+        l: { ja: "母国で最後に卒業した学校", jy: "${国}(くに)で ${最後}(さいご)に ${卒業}(そつぎょう)した ${学校}(がっこう)", en: "What is the highest level of education you completed in your home country?" },
+        o: [o("high_school", "高校卒業", "${高校}(こうこう)", "High school"),
+          o("vocational_or_junior_college", "専門学校・短大卒業", "${専門学校}(せんもんがっこう)・${短期大学}(たんきだいがく)", "Vocational college / junior college"),
+          o("university", "大学卒業", "${大学}(だいがく)", "University"), OTHER] },
+      text("education_other", "current", "education", "other", "その他の最終学歴", "卒業した学校の種類", "${卒業}(そつぎょう)した ${学校}(がっこう)", "Type of school you completed",
+        "学校の種類を記入してください", "どんな がっこうか かいて ください", "Enter the type of school", 200),
+
+      // ───── ② ─────
+      { k: "job", t: "multi", section: "plans", required: true, sl: "希望する仕事", exclusive: ["undecided"],
+        l: { ja: "将来やってみたい仕事（複数選択可）", jy: "${将来}(しょうらい) やって みたい ${仕事}(しごと)", en: "What kind of work would you like to do in the future? (Select all that apply.)" },
+        o: [o("it_engineer", "ITエンジニア", "ITエンジニア", "IT engineer"), o("hotel_tourism", "ホテル・観光", "ホテル・${観光}(かんこう)", "Hotel / tourism"),
+          o("automobile_maintenance", "自動車整備", "${自動車}(じどうしゃ)の ${整備}(せいび)", "Automobile maintenance"),
+          o("trade_interpreting", "貿易・通訳", "${貿易}(ぼうえき)・${通訳}(つうやく)", "International trade / interpreting"),
+          o("design_web", "デザイン・WEB", "デザイン・WEB", "Design / web"), o("care", "介護", "${介護}(かいご)", "Care work"),
+          o("business", "ビジネス", "ビジネス", "Business"), OTHER,
+          o("undecided", "まだ決まっていない", "まだ ${決}(き)まって いない", "Not decided yet")] },
+      text("job_other", "plans", "job", "other", "その他の希望職種", "やってみたい仕事を記入してください", "やって みたい ${仕事}(しごと)を ${書}(か)いて ください", "Please describe the work you would like to do",
+        "仕事の名前や内容", "しごとの なまえ", "Job title or type of work", 300),
+      { k: "field_first", t: "select", section: "plans", required: true, sl: "第1希望の分野",
+        l: { ja: "勉強したい分野・第1希望", jy: "${勉強}(べんきょう)したい こと・1ばん", en: "What would you like to study? First choice" }, o: FIELDS.map(x => ({ ...x })) },
+      text("field_first_other", "plans", "field_first", "other", "第1希望のその他分野", "第1希望の分野を記入してください", "${勉強}(べんきょう)したい ことを ${書}(か)いて ください（1ばん）", "Please enter your first-choice field",
+        "勉強したい分野", "べんきょう したい こと", "Field you would like to study", 200),
+      { k: "field_second", t: "select", section: "plans", required: true, sl: "第2希望の分野",
+        l: { ja: "勉強したい分野・第2希望（未定でも可）", jy: "${勉強}(べんきょう)したい こと・2ばん", en: "What would you like to study? Second choice (you may choose “Not decided yet”)" }, o: FIELDS.map(x => ({ ...x })) },
+      text("field_second_other", "plans", "field_second", "other", "第2希望のその他分野", "第2希望の分野を記入してください", "${勉強}(べんきょう)したい ことを ${書}(か)いて ください（2ばん）", "Please enter your second-choice field",
+        "勉強したい分野", "べんきょう したい こと", "Field you would like to study", 200),
       { k: "path_1", t: "select", section: "plans", required: true, sl: "卒業後の進路・第1希望",
-        l: { ja: "卒業後の進路・第1希望", en: "What would you like to do after Japanese language school? First choice" },
-        o: PATHS.concat([{ v: "undecided", ja: "まだ決まっていない・悩んでいる", en: "Not decided yet / still considering", flag: "進路未定" }]) },
+        l: { ja: "卒業後の進路・第1希望", jy: "この ${学校}(がっこう)を ${卒業}(そつぎょう)した あと・1ばん", en: "What would you like to do after Japanese language school? First choice" },
+        o: PATHS.map(x => ({ ...x })).concat([o("undecided", "まだ決まっていない・悩んでいる", "まだ ${決}(き)まって いない・${考}(かんが)えて いる", "Not decided yet / still considering", "進路未定")]) },
       { k: "path_2", t: "select", section: "plans", sl: "卒業後の進路・第2希望",
-        l: { ja: "卒業後の進路・第2希望（あれば）", en: "Second choice (if any)" }, o: PATHS.map(o => ({ ...o })) },
+        l: { ja: "卒業後の進路・第2希望（あれば）", jy: "この ${学校}(がっこう)を ${卒業}(そつぎょう)した あと・2ばん（あれば）", en: "Second choice (if any)" }, o: PATHS.map(x => ({ ...x })) },
       { k: "path_3", t: "select", section: "plans", sl: "卒業後の進路・第3希望",
-        l: { ja: "卒業後の進路・第3希望（あれば）", en: "Third choice (if any)" }, o: PATHS.map(o => ({ ...o })) },
-      from("schools_status"), from("school_1"), from("school_2"), from("school_3"),
-      from("areas"), from("oc_status"), from("oc_school"),
-      from("funding"), from("family_status"), from("family_talk_by"),
-      from("concerns"), from("interview_preference"),
+        l: { ja: "卒業後の進路・第3希望（あれば）", jy: "この ${学校}(がっこう)を ${卒業}(そつぎょう)した あと・3ばん（あれば）", en: "Third choice (if any)" }, o: PATHS.map(x => ({ ...x })) },
+      { k: "schools_status", t: "select", section: "plans", required: true, sl: "学校の検討状況",
+        l: { ja: "気になっている学校はありますか", jy: "${行}(い)きたい ${学校}(がっこう)は ありますか", en: "Are there any schools you are interested in?" },
+        o: [o("decided", "気になっている学校がある", "ある", "Yes, I have some schools in mind"),
+          o("undecided", "全く決まっていない", "まだ ない", "I have not decided on any schools yet")] },
+      text("school_1", "plans", "schools_status", "decided", "第1希望の学校", "気になっている学校・第1希望", "${行}(い)きたい ${学校}(がっこう)・1ばん", "School you are interested in: first choice", "学校名", "がっこうの なまえ", "School name", 200),
+      text("school_2", "plans", "schools_status", "decided", "第2希望の学校", "気になっている学校・第2希望（任意）", "${行}(い)きたい ${学校}(がっこう)・2ばん（あれば）", "School you are interested in: second choice (optional)", "学校名", "がっこうの なまえ", "School name", 200, false),
+      text("school_3", "plans", "schools_status", "decided", "第3希望の学校", "気になっている学校・第3希望（任意）", "${行}(い)きたい ${学校}(がっこう)・3ばん（あれば）", "School you are interested in: third choice (optional)", "学校名", "がっこうの なまえ", "School name", 200, false),
+      { k: "areas", t: "multi", section: "plans", required: true, sl: "希望エリア", exclusive: ["anywhere"],
+        l: { ja: "進学先に希望する場所（複数選択可）", jy: "どこの ${学校}(がっこう)に ${行}(い)きたいですか（${場所}(ばしょ)）", en: "Where would you like to study? (Select all that apply.)" },
+        o: [o("kyoto", "京都", "${京都}(きょうと)", "Kyoto"), o("osaka", "大阪", "${大阪}(おおさか)", "Osaka"),
+          o("kansai_other", "その他の関西（兵庫・奈良・滋賀など）", "${関西}(かんさい)の ほかの ところ（${兵庫}(ひょうご)・${奈良}(なら)・${滋賀}(しが)など）", "Other parts of Kansai (Hyogo, Nara, Shiga, etc.)"),
+          o("tokyo", "東京都内", "${東京}(とうきょう)", "Tokyo"),
+          o("near_tokyo", "東京の近く（神奈川・埼玉・千葉など）", "${東京}(とうきょう)の ${近}(ちか)く（${神奈川}(かながわ)・${埼玉}(さいたま)・${千葉}(ちば)など）", "Near Tokyo (Kanagawa, Saitama, Chiba, etc.)"),
+          o("nagoya", "名古屋とその近く", "${名古屋}(なごや)と その ${近}(ちか)く", "Nagoya and nearby"),
+          o("commutable", "今の家から通えるところ", "${今}(いま)の ${家}(いえ)から ${通}(かよ)える ところ", "Somewhere I can commute to from my current home"),
+          o("anywhere", "日本のどこでもよい", "${日本}(にほん)の どこでも いい", "Anywhere in Japan")] },
+      { k: "oc_status", t: "select", section: "plans", required: true, sl: "学校見学の経験",
+        l: { ja: "オープンキャンパス（学校見学）に行ったことがありますか", jy: "オープンキャンパス（${学校}(がっこう)を ${見}(み)に ${行}(い)く こと）に ${行}(い)った ことが ありますか", en: "Have you attended an open campus or visited a school?" },
+        o: [o("yes", "行ったことがある", "ある", "Yes"), o("no", "まだ行ったことがない", "まだ ない", "Not yet")] },
+      text("oc_school", "plans", "oc_status", "yes", "見学した学校", "見学した学校の名前", "${見}(み)に ${行}(い)った ${学校}(がっこう)の ${名前}(なまえ)", "Name of the school or schools you visited", "学校名", "がっこうの なまえ", "School name(s)", 400),
+
+      // ───── ③ ─────
+      { k: "funding", t: "multi", section: "finance", required: true, sl: "学費の準備方法", exclusive: ["unknown"],
+        l: { ja: "進学先の1年目の学費（目安80万〜130万円）をどのように準備する予定ですか（複数選択可）",
+          jy: "${次}(つぎ)の ${学校}(がっこう)の 1${年目}(ねんめ)の お${金}(かね)（80${万円}(まんえん)〜130${万円}(まんえん)ぐらい）は、どう しますか",
+          en: "How do you plan to pay for your first year of further study (around JPY 800,000–1,300,000)? (Select all that apply.)" },
+        o: [o("family", "母国の家族から送ってもらう", "${国}(くに)の ${家族}(かぞく)に ${送}(おく)って もらう", "Money sent by my family in my home country"),
+          o("savings", "自分で貯めたお金から払う", "${自分}(じぶん)で ためた お${金}(かね)で ${払}(はら)う", "My savings"),
+          o("part_time_installments", "アルバイト代で分けて払いたい", "アルバイトの お${金}(かね)で、${少}(すこ)しずつ ${払}(はら)いたい", "I would like to pay in installments using my part-time income"),
+          o("scholarship_needed", "奨学金がないと払えない", "${奨学金}(しょうがくきん)が ないと ${払}(はら)えない", "I cannot pay without a scholarship", "学費"),
+          o("unknown", "分からない・相談したい", "わからない・${相談}(そうだん)したい", "I am not sure / I would like advice", "学費")] },
+      { k: "family_status", t: "select", section: "finance", required: true, sl: "家族の同意",
+        l: { ja: "進学について、家族と相談していますか", jy: "${次}(つぎ)の ${学校}(がっこう)の ことを、${家族}(かぞく)と ${話}(はな)して いますか", en: "Have you discussed your further study plans with your family?" },
+        o: [o("agree", "家族は賛成している", "${家族}(かぞく)は 「いい」と ${言}(い)って いる", "My family agrees with my plans"),
+          o("discussing", "今、家族と相談している", "${今}(いま)、${家族}(かぞく)と ${話}(はな)して いる", "I am discussing my plans with my family"),
+          o("not_yet", "まだ家族に話していない", "まだ ${家族}(かぞく)に ${話}(はな)して いない", "I have not talked to my family yet", "家族にまだ話していない")] },
+      { k: "family_talk_by", t: "date", section: "finance", required: true, showWhen: { key: "family_status", is: "not_yet" }, sl: "家族と話す予定日",
+        l: { ja: "いつまでに家族と話す予定ですか", jy: "いつまでに ${家族}(かぞく)と ${話}(はな)しますか", en: "By what date do you plan to talk to your family?" } },
+
+      // ───── ④ ─────
+      { k: "concerns", t: "multi", section: "support", required: true, sl: "心配なこと", exclusive: ["none"],
+        l: { ja: "今、心配なこと（いくつでも選べます）", jy: "${今}(いま)、${心配}(しんぱい)な こと", en: "What are you worried about now? (Select all that apply.)" },
+        o: [o("plans", "やりたいことや行きたい学校が見つからない", "やりたい ことや ${行}(い)きたい ${学校}(がっこう)が ${見}(み)つからない", "I cannot find work I want to do or a school I want to attend"),
+          o("money", "学費や生活費が払えるか心配", "${学校}(がっこう)の お${金}(かね)や ${生活}(せいかつ)の お${金}(かね)が ${払}(はら)えるか ${心配}(しんぱい)", "I am worried about paying tuition or living costs", "学費"),
+          o("attendance", "出席率が足りるか心配", "${出席率}(しゅっせきりつ)が ${足}(た)りるか ${心配}(しんぱい)", "I am worried about my attendance rate", "出席率"),
+          o("japanese", "日本語（面接や作文）に自信がない", "${日本語}(にほんご)（${面接}(めんせつ)や ${作文}(さくぶん)）が ${心配}(しんぱい)", "I am not confident in my Japanese for interviews or writing"),
+          o("family_opposes", "家族に反対されている", "${家族}(かぞく)が 「だめ」と ${言}(い)って いる", "My family is against my plans", "家族に反対"),
+          o("none", "特になし", "ない", "No particular concerns")] },
+      { k: "interview_preference", t: "select", section: "support", required: true, sl: "面談の希望",
+        l: { ja: "先生との面談について", jy: "${先生}(せんせい)との ${面談}(めんだん)（${話}(はな)す こと）", en: "When would you like to talk with a teacher?" },
+        o: [o("soon", "できるだけ早く相談したい", "できるだけ ${早}(はや)く ${相談}(そうだん)したい", "I would like to talk as soon as possible", "早く相談したい"),
+          o("regular", "通常の予定（1〜2月）でよい", "いつもの ${予定}(よてい)（1${月}(がつ)〜2${月}(がつ)）で いい", "The regular schedule (January–February) is fine")] },
     ] });
 })();
 
