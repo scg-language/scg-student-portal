@@ -336,6 +336,16 @@
   ベトナム語とウズベク語は、画面の言語の一覧（`i18n.js` の `LANGS`）と DB の記録の決まり（`db/2026-11-22_notice_langs.sql`・適用済み）に足した。
   ⚠ 言語を足すときは3か所＝`LANGS`／`notice_acks_lang_check`／`ack_notice` の中の一覧。訳が入るまでは、メニューに「じゅんびちゅう」で並ぶだけ
 
+## 公開の URL と独自ドメイン（2026-11-24）
+
+- 学生に配る URL＝**`https://apps.scg-language.com/scg-student-portal/`**。古い `scg-language.github.io/scg-student-portal/` は、ここへ自動で送られる
+- しくみ＝組織の表紙のリポ `scg-language/scg-language.github.io` に独自ドメインを付けた（B 案・きあ）。
+  ほかのアプリを足すときは `apps.scg-language.com/<リポの名前>/` になる。DNS は、学校のドメインの担当者が設定した
+- 🔴 **URL は「変えにくい部分」。** 紙に刷り、学生がホーム画面に入れる。表紙のリポの `CNAME` を消すと、全部開けなくなる
+- 🔴 **場所（オリジン）が変わると、ログインの控えは引き継がれない**（ブラウザの決まり）。URL を変えたら、全員が入り直しになる
+- 🔴 **発行の関数（`supabase/functions/issue-accounts/index.ts`）は、呼んでよい場所を決め打ちしている**（`ORIGINS`）。
+  URL を変えたら、ここを直して置き直す。直さないと、発行だけが止まる（ほかは動く）
+
 ## 学生アカウントの発行（2026-11-23）
 
 マスター画面「学生」の下の「アカウントの発行」。**発行できる権限（`account.manage`＝情報管理者）を持つ人にだけ出る。**
@@ -583,11 +593,11 @@
 - 旧合成状態の `demo-run-*` をUUIDへ変換しないよう、実受験への移行時の判定を追補した。SQLのAND条件の評価順には依存しない。版競合は `PT409`（HTTP 409）で拒否する。
 - 実鍵・鍵付き教室URL・ログイン情報はGitやチャットへ出さず、指定のDrive案内と非公開の保存先で管理する。配布案内の通常の学生／先生／マスター入口・旧QR・アカウント説明は全て復元した。マスターQRを追加し、後半へ教室PC／先生スマホ／生徒役の手順を併記した。生成器も元の案内を必ず合成するよう修正済み。
 - 検証：コア20件、操作アダプターのオフライン5件、ローカル見本とlive描画のブラウザ24項目、実DB API8件が成功。独立した先生・教室・生徒の3プロファイルでは、既存学生画面の実回答・送信から先生／PCの1/40への反映、＋5分、終了、答え合わせ、双方の再読込、投影停止、次回準備まで24項目が成功（手元版、JS例外・未許可通信・合成提出0件）。`babff41` のPages反映後、公開URLでも同じ3プロファイルの24項目が全て成功。全体Python検査は453件（420成功・既存の1失敗・32スキップ）で、新規のSQL検査27件も成功した。既存の失敗は管理画面の説明文に内部台帳名が出る検査。
-- 先生の入口は `https://scg-language.github.io/scg-student-portal/teacher-two-device-demo.html`。学生は従来のポータルURL。教室PCの鍵付き入口はDriveの配布案内を使う。現地の物理iPhone／Android・PC・校内回線での試験は未実施。本番の実学生配信・出席突合・管理の実施記録は別工程。
+- 先生の入口は `https://apps.scg-language.com/scg-student-portal/teacher-two-device-demo.html`。学生は従来のポータルURL。教室PCの鍵付き入口はDriveの配布案内を使う。現地の物理iPhone／Android・PC・校内回線での試験は未実施。本番の実学生配信・出席突合・管理の実施記録は別工程。
 
 ### ローカル見本：単一ブラウザ用（遠隔デモとは別）
 
-- 確認用は `src/teacher-two-device-preview.html`。公開先は `https://scg-language.github.io/scg-student-portal/teacher-two-device-preview.html`。
+- 確認用は `src/teacher-two-device-preview.html`。公開先は `https://apps.scg-language.com/scg-student-portal/teacher-two-device-preview.html`。
 - 同じブラウザ内で先生の操作と投影の2画面を連動させる。投影だけを別ウィンドウで開くこともできる。スマホ幅では切替表示にする。
 - `teacher-two-device-core.js` は開始・模擬提出・延長・終了・正答率切替・問題送り・投影停止を扱い、投影用の応答を許可項目だけから作る。
 - `teacher-two-device-preview.js` は投影用応答だけをiframe／別ウィンドウへ渡す。先生の個別の見本データや操作履歴を送らない。

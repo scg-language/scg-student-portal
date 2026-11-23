@@ -22,7 +22,7 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const ADMIN = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 /* 呼んでよい画面の場所。増やすときは、Supabase の画面で ALLOWED_ORIGINS（カンマ区切り）を入れる */
-const ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://scg-language.github.io")
+const ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://apps.scg-language.com,https://scg-language.github.io")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 function cors(req: Request): Record<string, string> {

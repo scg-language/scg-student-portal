@@ -5,8 +5,8 @@
 
 | | |
 |---|---|
-| 学生用URL | https://scg-language.github.io/scg-student-portal/ |
-| 教師モニター | https://scg-language.github.io/scg-student-portal/master.html |
+| 学生用URL | https://apps.scg-language.com/scg-student-portal/ |
+| 教師モニター | https://apps.scg-language.com/scg-student-portal/master.html |
 | 裏方 | Supabase（無料枠・東京リージョン・project ref: `egdcbxzpgwenmfabpodd`） |
 | 状態 | **デモ**（2026-09-04 MTG用。データは全部ダミー・実在の学生情報ゼロ） |
 
