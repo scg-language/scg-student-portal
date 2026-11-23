@@ -22,9 +22,9 @@ begin
   -- 下ごしらえ：検査用のセット2つ（片方は種類なし）と、回3つ（常勤が始めた・先生が始めた・始めた人が空）
   insert into public.quiz_sets (title) values ('検査用のセット') returning id into v_set;
   insert into public.quiz_sets (title) values ('検査用のセット2') returning id into v_set2;
-  insert into public.quiz_runs (quiz_set_id, closes_at, created_by) values (v_set, now() + interval '1 hour', v_m) returning id into v_run_m;
-  insert into public.quiz_runs (quiz_set_id, closes_at, created_by) values (v_set, now() + interval '1 hour', v_t) returning id into v_run_t;
-  insert into public.quiz_runs (quiz_set_id, closes_at, created_by) values (v_set, now() + interval '1 hour', null) returning id into v_run_old;
+  insert into public.quiz_runs (quiz_set_id, opens_at, closes_at, created_by) values (v_set, now() - interval '1 hour', now() + interval '1 hour', v_m) returning id into v_run_m;
+  insert into public.quiz_runs (quiz_set_id, opens_at, closes_at, created_by) values (v_set, now() - interval '1 hour', now() + interval '1 hour', v_t) returning id into v_run_t;
+  insert into public.quiz_runs (quiz_set_id, opens_at, closes_at, created_by) values (v_set, now() - interval '1 hour', now() + interval '1 hour', null) returning id into v_run_old;
   select count(*) into a0 from public.audit_log;
 
   -- 1 学生：どれも呼べない
@@ -45,6 +45,7 @@ begin
   begin perform public.close_quiz_run(v_run_m); r := r || ' 2c:NG'; exception when sqlstate '42501' then r := r || ' 2c:OK'; end;
   begin perform public.void_quiz_run(v_run_m); r := r || ' 2d:NG'; exception when sqlstate '42501' then r := r || ' 2d:OK'; end;
   begin perform public.close_quiz_run(v_run_old); r := r || ' 2e:NG'; exception when sqlstate '42501' then r := r || ' 2e:OK'; end;
+  begin perform public.void_quiz_run(v_run_old); r := r || ' 2e2:NG'; exception when sqlstate '42501' then r := r || ' 2e2:OK'; end;   -- 始めた人が空の回（空との比較のすり抜け）
   begin perform public.reset_student_password(v_s); r := r || ' 2f:NG'; exception when sqlstate '42501' then r := r || ' 2f:OK'; end;
   begin perform public.close_quiz_run(gen_random_uuid()); r := r || ' 2g:NG'; exception when sqlstate '22023' then r := r || ' 2g:OK'; end;   -- 無い回
   j := public.close_quiz_run(v_run_t);
@@ -58,8 +59,8 @@ begin
   exception when others then r := r || ' 2k:NG'; end;
   begin perform public.set_quiz_kind(v_set, 'kanji'); r := r || ' 2l:NG'; exception when sqlstate '42501' then r := r || ' 2l:OK'; end;   -- 先生は種類も変えられない
   execute 'reset role';
-  select count(*) into n from public.quiz_runs where id = v_run_m and not is_void and closes_at > now();
-  r := r || case when n = 1 then ' 2m:OK' else ' 2m:NG' end;                         -- 断られた回は、そのまま
+  select count(*) into n from public.quiz_runs where id in (v_run_m, v_run_old) and not is_void and closes_at > now();
+  r := r || case when n = 2 then ' 2m:OK' else ' 2m:NG' end;                         -- 断られた回は、そのまま
 
   -- 3 常勤（マスター）：全部できる。ほかの人の回・古い回も閉じられる
   perform set_config('request.jwt.claims', json_build_object('sub', v_m, 'role', 'authenticated')::text, true);
@@ -106,7 +107,7 @@ begin
 
   -- 5 人ごとの足し引きが効く：先生に「問題の登録・編集」を足すと消せる／常勤から「他の人の回」を外すと閉じられない
   insert into public.quiz_sets (title) values ('検査用のセット3') returning id into v_set2;
-  insert into public.quiz_runs (quiz_set_id, closes_at, created_by) values (v_set, now() + interval '1 hour', v_t) returning id into v_run_t;
+  insert into public.quiz_runs (quiz_set_id, opens_at, closes_at, created_by) values (v_set, now() - interval '1 hour', now() + interval '1 hour', v_t) returning id into v_run_t;
   insert into public.staff_caps (profile_id, cap_key, granted) values (v_t, 'quiz.edit', true), (v_m, 'quiz.run.any', false)
   on conflict (profile_id, cap_key) do update set granted = excluded.granted;
   perform set_config('request.jwt.claims', json_build_object('sub', v_t, 'role', 'authenticated')::text, true);

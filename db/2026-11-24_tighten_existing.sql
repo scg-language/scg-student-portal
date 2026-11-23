@@ -151,6 +151,7 @@ end $$;
 -- ---------------------------------------------------------------------
 -- 3. 小テストの回を閉じる・取り消す ＝ 自分が始めた回なら quiz.run／ほかの人の回なら quiz.run.any
 --    ★「始めた人」が入っていない古い回は、ほかの人の回として扱う
+--    🔴 空との比較は「不明」になり、そのままだと断る条件をすり抜ける。必ず coalesce(…, false) で包む（2026-11-24 に検査で見つけた）
 -- ---------------------------------------------------------------------
 create or replace function public.close_quiz_run(p_run_id uuid)
 returns jsonb
@@ -168,7 +169,7 @@ begin
     raise exception 'no such run' using errcode = '22023';
   end if;
   if not (app_hidden.can('quiz.run.any')
-          or (v_run.created_by = auth.uid() and app_hidden.can('quiz.run'))) then
+          or (coalesce(v_run.created_by = auth.uid(), false) and app_hidden.can('quiz.run'))) then
     raise exception 'ほかの人が始めた回は、閉じられません（始めた人か、常勤の職員に頼んでください）' using errcode = '42501';
   end if;
   update public.quiz_runs
@@ -195,7 +196,7 @@ begin
     raise exception 'no such run' using errcode = '22023';
   end if;
   if not (app_hidden.can('quiz.run.any')
-          or (v_run.created_by = auth.uid() and app_hidden.can('quiz.run'))) then
+          or (coalesce(v_run.created_by = auth.uid(), false) and app_hidden.can('quiz.run'))) then
     raise exception 'ほかの人が始めた回は、取り消せません（始めた人か、常勤の職員に頼んでください）' using errcode = '42501';
   end if;
   update public.quiz_runs

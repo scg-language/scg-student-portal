@@ -334,13 +334,14 @@
 
 - 🔴 **作る方式は「Supabase の正規の口」＝Edge Function**（2026-11-21 きあの決定・`docs/schema-plan.md` 5章の3）。
   11/23 に作って DB に適用した版（`db/2026-11-23_account_issue.sql`＝RPC `issue_student_accounts`）は、DB から auth の表へ直接書いていて、
-  この決定に反していた。**11/24 に作り直した（このブランチ `work/2026-11-24-yoru`。まだ置いていない・流していない・公開していない）。**
+  この決定に反していた。**11/24 に作り直して切り替えた（SQL を適用・Edge Function を配置・画面を公開。きあの了承のあと）。**
   - Edge Function＝`supabase/functions/issue-accounts/`（`index.ts`＝通信／`core.mjs`＝手順／`README.md`＝置き方と、実物で確かめること）。
     ログイン用のアカウントを作る・消すのは Auth の管理用 API だけ。強い鍵を使うのはそこだけ
-  - DB＝`db/2026-11-24_account_issue_edge.sql`（未適用）。`issue_precheck`（名簿の行を分ける）・`issue_attach_profile`（名簿の行を付ける）・
+  - DB＝`db/2026-11-24_account_issue_edge.sql`（適用済み）。`issue_precheck`（名簿の行を分ける）・`issue_attach_profile`（名簿の行を付ける）・
     `issue_log`（操作の記録）を足し、`issue_student_accounts` を外す。3つとも Edge Function が「押した人の資格」で呼ぶ＝発行できる人かは DB が見る
   - 画面＝`src/assets/accounts.js` ＋ `master.html` の `#ac-panel`。呼び出しは `api.fn("issue-accounts", …)`（`api.js`。やり直しをしない）
-  - 順番＝①SQL を流す → ②Edge Function を置く → ③画面を公開。**サイトに出ているのは 11/23 の版のまま**（発行の記録は0件）
+  - 切り替えた順番＝①SQL を流す → ②Edge Function を置く → ③画面を公開。切り替えの時点で、発行の記録は0件
+  - ⚠ Edge Function を直したら、置き直す（リポに入れただけでは変わらない）。置いたあとに実物で見ること＝その README の4つ（2〜4 はまだ）
 - 🔴 **学籍番号の決まりは画面とサーバーで同じ**＝全角・ハイフン・空白を取ってから、7桁の数字だけを通す
   （画面 `Accounts.normalizeNo`／サーバー `app_hidden.normalize_student_no`）。片方だけ直さない
 - 初期パスワードは「scg＋学籍番号」。発行した学生は、最初のログインで「パスワードの決め直し → お知らせ → ホーム」と進む
@@ -1006,7 +1007,7 @@ await until(() => {                                  // ← こう待つ
 - テストごとの合格点と不合格者リスト（2D）＝**拾わない**（合格の線は種類ごとに正解率で持つ、に決まった）
 - 正解の印と採点し直し（2C）＝**作らない**（小テストは成績に入らない。受験後も自由に直せる、は 9/13 のまま）
 
-### 配ったときの設問の写し（1E の残り・2026-11-24 に拾い直し・DB は未適用）
+### 配ったときの設問の写し（1E の残り・2026-11-24 に拾い直し・DB に適用済み）
 - なぜ＝回答には選択肢の値しか入っていない。読むときに「いまの定義」で名前に戻すので、あとで設問を書き換えると、過去の回答の読み方まで変わる
 - DB＝`db/2026-11-24_survey_round_snapshot.sql`。`survey_rounds` に `def_snapshot`・`def_snapshot_at` を足す。
   画面で作った定義の回は、回を作った瞬間にサーバーが写す。コードの定義（`surveys.js`）の回は、職員の画面が `save_survey_round_def` で送る
@@ -1017,17 +1018,19 @@ await until(() => {                                  // ← こう待つ
 - 検査＝`node tests/test_survey_round_snapshot.cjs`（29）／`python tests/test_survey_round_snapshot.py`（14）／
   `tests/sql/survey_round_snapshot_check.sql`（18・ロールバック。11/24 に適用前の形で流して全部 OK）
 
-### 既存の関数の締め直し（設計の5本目・2026-11-24・DB は未適用・未確認）
+### 既存の関数の締め直し（設計の5本目・2026-11-24・DB に適用済み）
 - `db/2026-11-24_tighten_existing.sql`。入口の検査を「職員ならだれでも」から `app_hidden.can()` に替える：
   `delete_quiz_set`＝`quiz.edit`／`start_survey_round`・`close_survey_round`＝`survey.manage`／
   `close_quiz_run`・`void_quiz_run`＝自分の回は `quiz.run`・ほかの人の回は `quiz.run.any`／`reset_student_password`＝`student.pwreset`
 - あわせて、閉じる・取り消す・パスワードを戻す、を操作の記録に書く。テストの種類（`kind_key`）は、画面から直接は書き換えられなくする
-- 🔴 **流すと、先生（非常勤）は、ほかの人が始めた回を閉じる・取り消すことができなくなる。** 断られた理由は画面に出るが、
+- 🔴 **先生（非常勤）は、ほかの人が始めた回を閉じる・取り消すことができない。** 断られた理由は画面に出るが、
   ボタンそのものは出たまま（`teacher.html` の「今日の回」）。ボタンを隠すかどうかは決めていない
 - 🔴 `quiz_stats` は入れていない。`teacher.html` は、回を開いていないときに「回を指定しない」形で呼ぶ（866行目あたり）。
   そのまま締めると先生のライブ画面が止まる。画面の直し方を決めてから締める
-- ⚠ `tests/sql/tighten_existing_check.sql`（37項目）は、まだ1回も通していない。取り消しつきで流そうとすると、
-  関数の中の「消す」文のために、きあの確認が要る操作として止まる（2026-11-24）。きあがいるときに流す
+- 🔴 **空との比較に注意。** 「始めた人」が空の古い回で、`created_by = auth.uid()` が「不明」になり、断る条件をすり抜けた
+  （適用直後の検査で見つけて直した）。持ち主を比べる所は `coalesce(…, false)` で包む
+- 検査＝`tests/sql/tighten_existing_check.sql`（38項目・ロールバック。適用後に全部 OK）。
+  ⚠ 取り消しつきでも、SQL の文に「消す・外す」があると、きあの確認画面が出る（押されないと10分で時間切れ）
 
 ### 回ごとの集計の照合（1G）と、検査の競合つぶし（1F）
 - 検査＝`node tests/run_e2e_survey_rounds.cjs`（78・通信なし・偽の PostgREST がダミーを条件どおりに返す）。
