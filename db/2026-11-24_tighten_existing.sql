@@ -260,6 +260,7 @@ end $$;
 create or replace function app_hidden.quiz_sets_guard_kind()
 returns trigger
 language plpgsql
+set search_path = pg_catalog, public, pg_temp
 as $$
 begin
   if new.kind_key is distinct from old.kind_key and current_user in ('authenticated', 'anon') then
