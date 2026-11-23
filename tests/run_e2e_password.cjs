@@ -73,7 +73,7 @@ async function main() {
     const fresh = async () => {
       await cdp('Page.navigate', { url: pathToFileURL(path.join(repo, 'src', 'index.html')).href });
       await until('(()=>{const b=document.getElementById("btn-login");return b&&typeof b.onclick==="function"})()');
-      await ev('localStorage.clear()');
+      await ev('localStorage.clear();sessionStorage.clear()');
       await cdp('Page.reload');      // ★前の検査のログインが残っていると、ログイン欄が出ないまま押してしまう
       await until('(()=>{const b=document.getElementById("btn-login");return b&&typeof b.onclick==="function"&&!document.getElementById("scr-login").hidden})()');
     };

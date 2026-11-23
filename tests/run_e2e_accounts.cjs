@@ -106,7 +106,7 @@ async function main() {
     const open = async () => {
       await cdp('Page.navigate', { url: pathToFileURL(path.join(repo, 'src', 'master.html')).href });
       await until(ready);
-      await ev('localStorage.clear()'); await cdp('Page.reload'); await until(ready);
+      await ev('localStorage.clear();sessionStorage.clear()'); await cdp('Page.reload'); await until(ready);
       await ev('document.getElementById("in-no").value="m001";document.getElementById("in-pw").value="x"');
       await click('#btn-login');
       await until('(()=>{const b=document.querySelector("[data-view=students]");return b&&b.offsetParent!==null})()');

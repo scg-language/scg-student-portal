@@ -19,10 +19,19 @@ const M = (key, fallback, vars) => {
  * 小テスト当日はログイン済みの状態で開くだけ → データAPIには制限がなく150同時OK（実測済）。 */
 // Room displays never restore or read a teacher's browser session.
 const _roomDisplayOnly = window.SCG_ROOM_DISPLAY_ONLY === true;
+/* マスターの画面（master.html・master-phone.html）は、ログインをブラウザに残さない（2026-11-24 きあ）。
+ * タブを閉じたら消える＝開くたびにログインする。パスワードそのものは、ブラウザの「パスワードを保存」で覚えさせてよい。
+ * なぜ：マスターは名簿と全員の結果を見られる。共用の PC に残ると、次に触った人が開けてしまう。
+ * 学生と先生の画面は、今までどおり残す（自分のスマホで使う・見られる範囲が狭い）。
+ * 🔴 残す場所が別なので、先生の画面でログインしていても、マスターの画面は別にログインが要る（逆も同じ）。 */
+const _sessionOnly = window.SCG_SESSION_ONLY === true;
 let _store = { getItem() { return null; }, setItem() {}, removeItem() {} };
 if (!_roomDisplayOnly) {
-  _store = localStorage;
-  try { _store.setItem("_t", "1"); _store.removeItem("_t"); } catch (e) { _store = sessionStorage; }
+  if (_sessionOnly) _store = sessionStorage;
+  else {
+    _store = localStorage;
+    try { _store.setItem("_t", "1"); _store.removeItem("_t"); } catch (e) { _store = sessionStorage; }
+  }
 }
 
 const api = {

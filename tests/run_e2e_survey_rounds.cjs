@@ -263,7 +263,7 @@ async function main() {
     const loginReady = '(()=>{const b=document.getElementById("btn-login");return !!b&&typeof b.onclick==="function"})()';
     await cdp('Page.navigate', { url: pathToFileURL(path.join(srcDir, 'master.html')).href });
     await until(loginReady, 'ログインのボタンにハンドラが付く');
-    await ev('localStorage.clear()'); await cdp('Page.reload'); await until(loginReady, 'ログインのボタンにハンドラが付く（読み直し後）');
+    await ev('localStorage.clear();sessionStorage.clear()'); await cdp('Page.reload'); await until(loginReady, 'ログインのボタンにハンドラが付く（読み直し後）');
     await ev('document.getElementById("in-no").value="m001";document.getElementById("in-pw").value="dummy";document.getElementById("btn-login").click()');
     await until('!document.getElementById("scr-dash").hidden', '管理画面が開く');
     // CSV の中身を横取りする口（保存そのものは止めない）
@@ -442,7 +442,7 @@ async function main() {
     const phoneUrl = pathToFileURL(path.join(srcDir, 'master-phone.html')).href;
     await cdp('Page.navigate', { url: phoneUrl });
     await until('document.readyState==="complete"', 'スマホ画面の読み込み');
-    await ev('localStorage.setItem("sp_token","dummy-token");localStorage.setItem("sp_profile",JSON.stringify({student_no:"m001",display_name:"ダミー マスター",role:"master",class_name:null}))');
+    await ev('sessionStorage.setItem("sp_token","dummy-token");sessionStorage.setItem("sp_profile",JSON.stringify({student_no:"m001",display_name:"ダミー マスター",role:"master",class_name:null}))');
     await cdp('Page.reload');
     const cardSel = 'document.querySelector(' + J('section.card[aria-label="進路アンケート（2027年1月） ' + T.cur + '"]') + ')';
     await until('!!' + cardSel, 'スマホのホームに今回の回のカード');

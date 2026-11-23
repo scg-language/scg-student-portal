@@ -110,6 +110,26 @@ const isData = c => c.path.startsWith('/rest/v1/');
   try { await e.api.fn('issue-accounts', { rows: [] }); } catch (x) { err = x; }
   note('9 発行の呼び出しも、混んでいるだけならログアウトしない', e.reloads === 0 && e.api.token === 'old' && err && err.status === 401);
 
+  // 10 マスターの画面（window.SCG_SESSION_ONLY）：ログインを localStorage に残さない・localStorage の控えを読まない
+  {
+    const local = new Map([['sp_token', 'left-by-teacher-page'], ['sp_profile', '{"role":"teacher"}']]), sess = new Map();
+    const mk = m => ({ getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) });
+    const ctx = {
+      window: { SCG_SESSION_ONLY: true }, console, localStorage: mk(local), sessionStorage: mk(sess),
+      location: { reload() {} }, setTimeout: (fn) => { Promise.resolve().then(fn); return 0; }, clearTimeout() {}, AbortController,
+      fetch: async (url) => (String(url).includes('/auth/v1/token')
+        ? { status: 200, ok: true, json: async () => ({ access_token: 'm-tok', refresh_token: 'm-rt', user: { id: 'm-id' } }) }
+        : { status: 200, ok: true, json: async () => [{ student_no: 'm001', display_name: 'マスター', role: 'master', class_name: null }] }),
+    };
+    vm.createContext(ctx);
+    vm.runInContext(code + '\n;globalThis.__api = api;', ctx);
+    note('10 マスターの画面は、先生の画面が残したログインを使わない', ctx.__api.token === null && ctx.__api.profile === null);
+    await ctx.__api.login('m001', 'x');
+    note('10 マスターのログインは、タブの中だけに置く（ブラウザには残さない）', sess.get('sp_token') === 'm-tok' && sess.has('sp_refresh') && local.get('sp_token') === 'left-by-teacher-page' && !local.has('sp_refresh'));
+    ctx.__api.logout();
+    note('10 マスターのログアウトは、先生の画面のログインを消さない', !sess.has('sp_token') && local.get('sp_token') === 'left-by-teacher-page');
+  }
+
   const ng = checks.filter(c => !c.ok).length;
   console.log(JSON.stringify({ total: checks.length, ng }));
   process.exit(ng ? 1 : 0);

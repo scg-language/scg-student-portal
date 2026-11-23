@@ -178,11 +178,11 @@
              マスターの画面なのに教師と名乗っていて、開いた人が見分けられなかった
              （2026-09-12 きあ報告）。画面の名前と、聞く相手の名前を必ず揃えること。 -->
         <label for="in-no">マスターID</label>
-        <input id="in-no" type="text" autocapitalize="none" placeholder="m001">
+        <input id="in-no" type="text" autocapitalize="none" autocomplete="username" placeholder="m001">
       </div>
       <div class="field">
         <label for="in-pw">パスワード</label>
-        <input id="in-pw" type="password">
+        <input id="in-pw" type="password" autocomplete="current-password">
       </div>
       <button class="btn" id="btn-login">ログイン</button>
       <div class="msg" id="login-msg"></div>
@@ -834,6 +834,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="assets/i18n.js"></script>
 <script src="assets/pw-eye.js"></script>
+<script>window.SCG_SESSION_ONLY=true;</script><!-- マスターはログインを残さない（api.js の頭を見よ） -->
 <script src="assets/api.js"></script>
 <script src="assets/surveys.js"></script>
 <script src="assets/ruby.js"></script>
