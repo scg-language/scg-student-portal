@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SCG 学生ポータル</title>
+<!-- ホーム画面に入れたときのアイコンと名前（2026-11-24 きあ：名前は「SCGポータル」・紫のマーク）。
+     🔴 manifest の display は "browser" のまま。"standalone" にすると、iPhone ではホーム画面から開いたときに
+        ブラウザと別の入れ物になり、ログインが引き継がれない（全員が入り直しになる） -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-title" content="SCGポータル">
 <meta name="theme-color" content="#10365e">
 <link rel="stylesheet" href="assets/app.css">
 <link rel="stylesheet" href="assets/preview.css">
