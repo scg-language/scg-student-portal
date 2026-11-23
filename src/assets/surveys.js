@@ -466,6 +466,17 @@ const SURVEYS = [
       text("school_2", "plans", "schools_status", "decided", "第2希望の学校", "気になっている学校・第2希望（任意）", "${行}(い)きたい ${学校}(がっこう)・2ばん（あれば）", "School you are interested in: second choice (optional)", "学校名", "がっこうの なまえ", "School name", 200, false),
       text("school_3", "plans", "schools_status", "decided", "第3希望の学校", "気になっている学校・第3希望（任意）", "${行}(い)きたい ${学校}(がっこう)・3ばん（あれば）", "School you are interested in: third choice (optional)", "学校名", "がっこうの なまえ", "School name", 200, false),
       { k: "areas", t: "multi", section: "plans", required: true, sl: "希望エリア", exclusive: ["anywhere"],
+        /* 地図（japan-map.js）。codes＝都道府県コード／at＝札を置く場所（地図の座標・幅400）／label＝札の文。
+           地図に無い選択肢（通える所・どこでも）は、下の一覧だけ。「どこでも」を選ぶと、地図の全部に色が付く（mapAll） */
+        mapAll: ["anywhere"],
+        map: {
+          kyoto: { codes: ["26"], at: [128, 258], label: { ja: "京都", jy: "${京都}(きょうと)", en: "Kyoto" } },
+          osaka: { codes: ["27"], at: [118, 388], label: { ja: "大阪", jy: "${大阪}(おおさか)", en: "Osaka" } },
+          kansai_other: { codes: ["28", "29", "25", "30"], at: [52, 222], to: [143, 306], label: { ja: "関西のほか", jy: "${関西}(かんさい)の ほか", en: "Other Kansai" } },
+          tokyo: { codes: ["13"], at: [338, 262], label: { ja: "東京", jy: "${東京}(とうきょう)", en: "Tokyo" } },
+          near_tokyo: { codes: ["14", "11", "12"], at: [322, 345], to: [262, 300], label: { ja: "東京の近く", jy: "${東京}(とうきょう)の ${近}(ちか)く", en: "Near Tokyo" } },
+          nagoya: { codes: ["23", "21", "24"], at: [212, 392], to: [196, 310], label: { ja: "名古屋", jy: "${名古屋}(なごや)", en: "Nagoya" } },
+        },
         l: { ja: "進学先に希望する場所（複数選択可）", jy: "どこの ${学校}(がっこう)に ${行}(い)きたいですか（${場所}(ばしょ)）", en: "Where would you like to study? (Select all that apply.)" },
         o: [o("kyoto", "京都", "${京都}(きょうと)", "Kyoto"), o("osaka", "大阪", "${大阪}(おおさか)", "Osaka"),
           o("kansai_other", "その他の関西（兵庫・奈良・滋賀など）", "${関西}(かんさい)の ほかの ところ（${兵庫}(ひょうご)・${奈良}(なら)・${滋賀}(しが)など）", "Other parts of Kansai (Hyogo, Nara, Shiga, etc.)"),

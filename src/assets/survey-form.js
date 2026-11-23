@@ -191,6 +191,18 @@
             updateVisibility(); clearErrors();
           });
         });
+        /* 地図（q.map）。押せる日本地図を一覧の上に置く。答えを持つのは下のチェックだけで、地図はそれを押す・映すだけ。
+         * 地図の部品（japan-map.js）を読んでいないページでは、何も出ない＝一覧だけで答えられる */
+        const G = typeof globalThis !== "undefined" ? globalThis : {};
+        if (q.map && G.JapanMap && G.JAPAN_MAP) {
+          const holder = make("div", null, "sv-map"); field.appendChild(holder);
+          const box = v => Array.from(input.querySelectorAll("input")).find(x => x.value === v);
+          const groups = (q.o || []).filter(o => q.map[o.v]).map(o => ({v: o.v, codes: q.map[o.v].codes, at: q.map[o.v].at, to: q.map[o.v].to, label: say(q.map[o.v].label || o)}));
+          const map = G.JapanMap.mount(holder, {groups, ariaLabel: plain(say(q.l)),
+            isOn: v => !!(box(v) && box(v).checked), allOn: () => (q.mapAll || []).some(v => box(v) && box(v).checked),
+            onToggle: v => { const b = box(v); if (b && !b.disabled) b.click(); }});
+          if (map) input.addEventListener("change", () => map.update());
+        }
       } else if (q.t === "select" && def.easy) {
         // やさしい日本語の版：選択肢を全部ならべて押す形（プルダウンの中にはルビを出せない・開かなくても見える）。
         // もう一度押すと外れる（任意の質問で、選んだものを取り消せるように）

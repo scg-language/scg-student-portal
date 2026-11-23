@@ -98,6 +98,17 @@ note('5 仕事の「その他」を選んだら、記入が要る', !v({ ...base
 note('5 進路の第2・第3希望は、空でも通る', v({ ...base, path_2: '', path_3: '' }).ok);
 note('5 場所：「どこでもいい」は、ほかと一緒に選べない', !v({ ...base, areas: ['anywhere', 'kyoto'] }).ok && v({ ...base, areas: ['anywhere'] }).ok);
 
+// 5b 地図（場所の質問）
+const MAP = require(path.join(root, 'src/assets/japan-map-data.js')), am = q('areas').map;
+note('5b 地図のデータ：47都道府県・コードは 01〜47・形がある', MAP.pref.length === 47 && MAP.pref.every((p, i) => p.c === String(i + 1).padStart(2, '0') && /^M[\d.,LMZ-]+Z$/.test(p.d) && p.ja));
+note('5b 沖縄は、左上の枠の中にある', (() => { const o = MAP.pref.find(p => p.c === '47'), n = MAP.inset; return o.b[0] >= n.x && o.b[1] >= n.y && o.b[2] <= n.x + n.w && o.b[3] <= n.y + n.h; })());
+note('5b 地図にある選択肢は6つで、どれも一覧にもある', Object.keys(am).join() === 'kyoto,osaka,kansai_other,tokyo,near_tokyo,nagoya' && Object.keys(am).every(k => q('areas').o.some(o => o.v === k)));
+const codes = Object.values(am).flatMap(g => g.codes);
+note('5b 都道府県は実在し、2つの選択肢に重ならない', codes.every(c => MAP.pref.some(p => p.c === c)) && new Set(codes).size === codes.length);
+note('5b 京都＝26・大阪＝27・東京＝13', am.kyoto.codes.join() === '26' && am.osaka.codes.join() === '27' && am.tokyo.codes.join() === '13');
+note('5b 札は地図の中に置く・文は3つの言語ぶん', Object.values(am).every(g => g.at[0] > 20 && g.at[0] < MAP.w - 20 && g.at[1] > 20 && g.at[1] < MAP.h - 20 && g.label.ja && g.label.jy && g.label.en));
+note('5b 「どこでも」で地図の全部に色を付ける', q('areas').mapAll.join() === 'anywhere');
+
 // 6 控えと、職員の画面での表示
 const rec = F.describe(d, base, 'ja');
 note('6 控え（日本語）：ルビの記法は外れて、読める形で出る', rec.find(x => x.key === 'jtest_score').value === 'おぼえていない'

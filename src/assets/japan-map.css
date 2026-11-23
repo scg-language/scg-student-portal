@@ -1,0 +1,15 @@
+/* 押せる日本地図（japan-map.js）。札は、地図の上に重ねた HTML のボタン */
+.jm{position:relative;max-width:440px;margin:4px auto 12px;background:#eef5fb;border:1px solid #cbd4df;border-radius:12px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.jm svg{display:block;width:100%;height:auto}
+.jm .jm-pref{fill:#d5dbe3;stroke:#fff;stroke-width:.7;stroke-linejoin:round}
+.jm .jm-can{fill:#aebccd;cursor:pointer}
+.jm .jm-inset{fill:#f8fbfe;stroke:#b6c2d0;stroke-width:1;stroke-dasharray:4 3}
+.jm .jm-line{stroke-width:1.4;stroke-linecap:round;opacity:.75}
+.jm.jm-all .jm-pref{fill:#8fb3d9}
+.jm .jm-chip{position:absolute;transform:translate(-50%,-50%);font:inherit;font-size:.82rem;font-weight:700;line-height:1.9;white-space:nowrap;
+  color:#10161c;background:#fff;border:2px solid var(--jm-c,#3175a7);border-radius:999px;padding:5px 11px 3px;min-height:40px;cursor:pointer;box-shadow:0 1px 3px rgba(16,22,28,.18)}
+.jm .jm-chip rt{font-size:.6em;font-weight:400}
+.jm .jm-chip.jm-on{background:var(--jm-c,#3175a7);color:#fff}
+.jm .jm-chip:focus-visible{outline:3px solid #10161c;outline-offset:2px}
+@media(max-width:380px){.jm .jm-chip{font-size:.74rem;padding:4px 8px 2px;min-height:36px}}
+@media print{.jm{display:none}}
