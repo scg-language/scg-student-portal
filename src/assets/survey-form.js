@@ -14,16 +14,19 @@
       type: "回答の形式が正しくありません。", exclusive: "同時には選べない項目が含まれています。",
       date: "正しい日付を入力してください。", length: "入力が長すぎます。", empty: "1つ以上回答してください。",
       requiredMark: "必須", optional: "任意", multi: "複数選択可", identity: "あなたの情報",
-      number: "学籍番号", name: "氏名", className: "クラス", advisor: "担任", unknown: "学校が確認します"
+      number: "学籍番号", name: "氏名", className: "クラス", advisor: "担任", unknown: "学校が確認します",
+      num: "{min}〜{max}の数字を入力してください。", forgot: "おぼえていない"
     },
     en: {
       choose: "Please choose", required: "Please answer this question.", choice: "Please select a listed option.",
       type: "This answer has an invalid format.", exclusive: "Some selected options cannot be chosen together.",
       date: "Please enter a valid date.", length: "This answer is too long.", empty: "Please answer at least one question.",
       requiredMark: "Required", optional: "Optional", multi: "Select all that apply", identity: "Your information",
-      number: "Student number", name: "Name", className: "Class", advisor: "Class teacher", unknown: "To be confirmed by the school"
+      number: "Student number", name: "Name", className: "Class", advisor: "Class teacher", unknown: "To be confirmed by the school",
+      num: "Please enter a number from {min} to {max}.", forgot: "I do not remember"
     }
   };
+  const UNKNOWN = "unknown";   // number の「おぼえていない」。保存する値（言語に依らない）
   function words(lang) { return MESSAGES[lang] || MESSAGES.ja; }
   function label(value, lang) {
     return value && typeof value === "object" ? (value[lang] || value.ja || value.en || "") : String(value || "");
@@ -36,6 +39,8 @@
   function canonical(q, raw) {
     if (q.t === "multi") return Array.isArray(raw) ? [...new Set(raw.filter(x => typeof x === "string").map(x => x.trim()).filter(Boolean))] : [];
     let value = typeof raw === "string" ? raw.trim() : "";
+    // number: 全角の数字を半角にそろえる。「おぼえていない」は UNKNOWN という値で持つ
+    if (q.t === "number") value = value.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
     // Older surveys stored Japanese/English labels rather than option values.
     if (q.t === "select" && q.o) {
       const hit = q.o.find(o => o.v === value || o.ja === value || o.en === value);
@@ -79,6 +84,10 @@
         if ((q.exclusiveGroups || []).some(group => group.filter(v => value.includes(v)).length > 1)) add(msg.exclusive);
       }
       if (q.t === "date" && !validDate(value)) add(msg.date);
+      if (q.t === "number" && !(q.unknown && value === UNKNOWN)) {
+        const min = q.min == null ? 0 : q.min, max = q.max == null ? 9999 : q.max;
+        if (!/^\d{1,6}$/.test(value) || Number(value) < min || Number(value) > max) add(msg.num.replace("{min}", min).replace("{max}", max));
+      }
       if (typeof value === "string" && value.length > (q.maxLength || 2000)) add(msg.length);
     }
     if (!filled && !errors.length) errors.push({key: "", message: msg.empty});
@@ -154,6 +163,21 @@
         const empty = make("option", msg.choose); empty.value = ""; input.appendChild(empty);
         (q.o || []).forEach(o => { const option = make("option", label(o, lang)); option.value = o.v; input.appendChild(option); });
         input.value = canonical(q, initial[q.k]);
+      } else if (q.t === "number") {
+        // 数字の欄。q.unknown があれば「おぼえていない」のチェックを下に付ける（どちらか片方だけが入る）
+        input = make("div", null, "sv-number");
+        const num = make("input"); num.id = id; num.type = "text"; num.inputMode = "numeric"; num.maxLength = 6; num.autocomplete = "off";
+        const first = canonical(q, initial[q.k]);
+        num.value = first === UNKNOWN ? "" : first;
+        if (q.ph) num.placeholder = label(q.ph, lang);
+        input.appendChild(num);
+        if (q.unknown) {
+          const option = make("label", null, "sv-option"), box = make("input");
+          box.type = "checkbox"; box.id = id + "-unknown"; box.checked = first === UNKNOWN;
+          option.append(box, make("span", msg.forgot)); input.appendChild(option);
+          box.addEventListener("change", () => { if (box.checked) num.value = ""; });
+          num.addEventListener("input", () => { if (num.value) box.checked = false; });
+        }
       } else {
         input = make("input"); input.id = id; input.type = q.t === "date" ? "date" : "text";
         input.value = canonical(q, initial[q.k]);
@@ -172,7 +196,9 @@
       const result = Object.create(null);
       (def.q || []).forEach(q => {
         const el = controls.get(q.k);
-        result[q.k] = q.t === "multi" ? Array.from(el.querySelectorAll("input:checked"), x => x.value) : el.value;
+        if (q.t === "multi") result[q.k] = Array.from(el.querySelectorAll("input:checked"), x => x.value);
+        else if (q.t === "number") result[q.k] = el.querySelector("input[type=checkbox]:checked") ? UNKNOWN : el.querySelector("input").value;
+        else result[q.k] = el.value;
       });
       return result;
     }
@@ -228,11 +254,12 @@
     (def.q || []).forEach(q => {
       if (!Object.prototype.hasOwnProperty.call(values, q.k)) return;
       const v = values[q.k], pick = x => { const o = (q.o || []).find(o => o.v === x); return o ? label(o, lang) : x; };
-      const text = Array.isArray(v) ? v.map(pick).join(lang === "ja" ? "、" : ", ") : (q.t === "select" ? (v ? pick(v) : "") : v);
+      const text = Array.isArray(v) ? v.map(pick).join(lang === "ja" ? "、" : ", ")
+        : q.t === "select" ? (v ? pick(v) : "") : (q.t === "number" && v === UNKNOWN ? words(lang).forgot : v);
       const section = (def.sections || []).find(s => s.key === q.section);
       out.push({key: q.k, section: section ? label(section.title, lang) : "", label: label(q.l, lang), value: text});
     });
     return out;
   }
-  return {normalize, validate, isVisible, mount, validDate, describe};
+  return {normalize, validate, isVisible, mount, validDate, describe, UNKNOWN};
 });

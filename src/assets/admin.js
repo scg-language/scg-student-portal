@@ -32,7 +32,7 @@
   const rst = r => RoundState.state(r);   // "now" / "past" / "void"（assets/round-state.js。スマホ画面と同じ線・2026-11-20）
   const defOf = key => SURVEYS.find(s => s.key === key) || null;
   const ansText = (q, v) => (v == null || v === "" || (Array.isArray(v) && !v.length)) ? "" : (Array.isArray(v) ? v.map(x => optLabel(q, x)).join("、") : optLabel(q, v));
-  const TYPE_JA = { select: "1つ選ぶ", multi: "いくつでも", text: "書いて答える", date: "日付" };
+  const TYPE_JA = { select: "1つ選ぶ", multi: "いくつでも", text: "書いて答える", date: "日付", number: "数字" };
 
   /* 学生の名簿（role=student）。1分だけ使い回す */
   let stuCache = null, stuAt = 0;

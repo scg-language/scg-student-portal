@@ -18,3 +18,5 @@
 @media(max-width:480px){.sv-form .sv-section{font-size:1.05rem;padding:10px 11px}.sv-form .sv-option{padding:10px}.sv-identity{padding:12px}.sv-identity dl{font-size:.85rem;gap:6px 10px}}
 @media print{.sv-form .sv-question{break-inside:avoid}.sv-form .sv-section{break-after:avoid}.sv-form .sv-option input{accent-color:#000}}
 .sv-form .sv-page-off{display:none!important}
+.sv-form .sv-number{display:grid;gap:8px}
+.sv-form .sv-number input[type=text]{max-width:12em}

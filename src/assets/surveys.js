@@ -320,6 +320,83 @@ const SURVEYS = [
     ] },
 ];
 
+/* 進路アンケート（2026年12月）。2026-11-23 きあ・MTG のメモから。
+ * 1月の版（shinro_2027_jan_v1）は書きかえない（答えの形が変わるため、新しい key にした）。変えた所：
+ *   ・JLPT に N5 を足した／JLPT 以外の試験（級を選ぶ4つ・点数を入れる3つ）を足した。点数は自己申告・「おぼえていない」可
+ *   ・②の順番＝やりたい仕事 → 勉強したい分野 → 卒業後の進路（第1〜第3希望）→ 気になっている学校
+ *   ・やりたい仕事は複数選べる
+ * 級の名前は、各試験の公式サイトの表記（2026-11-23 に確認。合格証そのものの表記は見ていない。NAT-TEST は未確認）。
+ * 文が1月の版と同じ質問は、そこから写す（同じ文を2か所に持たない）。 */
+(function () {
+  const jan = SURVEYS.find(s => s.key === "shinro_2027_jan_v1");
+  const from = k => ({ ...jan.q.find(q => q.k === k) });
+  const lv = (v, ja, en) => ({ v, ja, en: en || ja });
+  const PATHS = [
+    { v: "vocational_school", ja: "専門学校", en: "Vocational school" },
+    { v: "university", ja: "大学", en: "University" },
+    { v: "graduate_school", ja: "大学院", en: "Graduate school" },
+    { v: "employment", ja: "就職", en: "Employment" },
+  ];
+  const score = (k, test, name, max) => ({ k, t: "number", section: "current", required: true, unknown: true, min: 0, max, sl: name + "の点数",
+    showWhen: { key: "other_tests", is: test },
+    l: { ja: name + "の点数（" + max + "点満点）", en: name + " score (out of " + max + ")" },
+    hint: { ja: "おぼえていないときは、「おぼえていない」を選んでください。", en: "If you do not remember your score, choose “I do not remember”." },
+    ph: { ja: "数字", en: "Number" } });
+  const level = (k, test, name, o) => ({ k, t: "select", section: "current", required: true, sl: name + "の級",
+    showWhen: { key: "other_tests", is: test },
+    l: { ja: name + "で合格した級（いちばん上のもの）", en: "Highest " + name + " level you have passed" }, o });
+  SURVEYS.push({ key: "shinro_2026_dec_v1", schemaVersion: 1,
+    studentIdentity: true, sb: "Career", color: "#2f9e44",
+    title: { ja: "進路アンケート（2026年12月）", en: "Career survey (December 2026)" },
+    desc: { ...jan.desc }, intro: { ...jan.intro },
+    sections: jan.sections.map(x => ({ ...x })),
+    q: [
+      { k: "jlpt_level", t: "select", section: "current", required: true, sl: "JLPT保有資格",
+        l: { ja: "現在持っているJLPTの資格", en: "Which JLPT qualification do you currently hold?" },
+        o: [lv("n1", "N1"), lv("n2", "N2"), lv("n3", "N3"), lv("n4", "N4"), lv("n5", "N5"),
+          { v: "none", ja: "まだ持っていない", en: "I do not hold any yet" }] },
+      { k: "other_tests", t: "multi", section: "current", required: true, sl: "JLPT以外の試験",
+        l: { ja: "JLPT以外で、合格した・点数を持っている日本語の試験（複数選択可）", en: "Other Japanese tests you have passed or have a score for (select all that apply)" },
+        exclusive: ["none"],
+        o: [lv("jcert", "J-cert"), lv("jlct", "JLCT"), lv("topj", "TOPJ"), lv("nat", "NAT-TEST"),
+          lv("jtest", "J.TEST"), lv("jpt", "JPT"), lv("jft", "JFT-Basic"),
+          { v: "none", ja: "持っていない", en: "None" }] },
+      level("jcert_level", "jcert", "J-cert", [lv("a1", "A1"), lv("a2_1", "A2.1（初級）", "A2.1"), lv("a2_2", "A2.2（準中級）", "A2.2"),
+        lv("b1", "B1（中級）", "B1"), lv("b2", "B2（準上級）", "B2"), lv("c1", "C1（上級）", "C1")]),
+      level("jlct_level", "jlct", "JLCT", [lv("jct5", "JCT5"), lv("jct4", "JCT4"), lv("jct3", "JCT3"), lv("jct2", "JCT2"), lv("jct1", "JCT1")]),
+      level("topj_level", "topj", "TOPJ", [lv("sho_c", "初級C", "Beginner C"), lv("sho_b", "初級B", "Beginner B"),
+        lv("sho_a5", "初級A-5", "Beginner A-5"), lv("sho_a4", "初級A-4", "Beginner A-4"),
+        lv("chu_c", "中級C", "Intermediate C"), lv("chu_b", "中級B", "Intermediate B"), lv("chu_a", "中級A", "Intermediate A"),
+        lv("jo_c", "上級C", "Advanced C"), lv("jo_b", "上級B", "Advanced B"), lv("jo_a", "上級A", "Advanced A")]),
+      level("nat_level", "nat", "NAT-TEST", [lv("k5", "5級", "Level 5"), lv("k4", "4級", "Level 4"), lv("k3", "3級", "Level 3"),
+        lv("k2", "2級", "Level 2"), lv("k1", "1級", "Level 1")]),
+      { k: "jtest_kind", t: "select", section: "current", required: true, sl: "J.TESTの種類",
+        showWhen: { key: "other_tests", is: "jtest" },
+        l: { ja: "J.TESTで受けた試験の種類", en: "Which J.TEST did you take?" },
+        o: [lv("ac", "A-Cレベル試験", "A-C level test"), lv("de", "D-Eレベル試験", "D-E level test"), lv("fg", "F-Gレベル試験", "F-G level test"),
+          { v: "unknown", ja: "おぼえていない", en: "I do not remember" }] },
+      score("jtest_score", "jtest", "J.TEST", 1000),
+      score("jpt_score", "jpt", "JPT", 990),
+      score("jft_score", "jft", "JFT-Basic", 250),
+      from("future_exams"), from("future_exams_other"), from("education"), from("education_other"),
+      { ...from("job"), t: "multi", exclusive: ["undecided"],
+        l: { ja: "将来やってみたい仕事（複数選択可）", en: "What kind of work would you like to do in the future? (Select all that apply.)" } },
+      from("job_other"),
+      from("field_first"), from("field_first_other"), from("field_second"), from("field_second_other"),
+      { k: "path_1", t: "select", section: "plans", required: true, sl: "卒業後の進路・第1希望",
+        l: { ja: "卒業後の進路・第1希望", en: "What would you like to do after Japanese language school? First choice" },
+        o: PATHS.concat([{ v: "undecided", ja: "まだ決まっていない・悩んでいる", en: "Not decided yet / still considering", flag: "進路未定" }]) },
+      { k: "path_2", t: "select", section: "plans", sl: "卒業後の進路・第2希望",
+        l: { ja: "卒業後の進路・第2希望（あれば）", en: "Second choice (if any)" }, o: PATHS.map(o => ({ ...o })) },
+      { k: "path_3", t: "select", section: "plans", sl: "卒業後の進路・第3希望",
+        l: { ja: "卒業後の進路・第3希望（あれば）", en: "Third choice (if any)" }, o: PATHS.map(o => ({ ...o })) },
+      from("schools_status"), from("school_1"), from("school_2"), from("school_3"),
+      from("areas"), from("oc_status"), from("oc_school"),
+      from("funding"), from("family_status"), from("family_talk_by"),
+      from("concerns"), from("interview_preference"),
+    ] });
+})();
+
 /* 教師画面用: 保存された値（v）→ 日本語の選択肢名。昔の回答（日本語の文がそのまま入っている）はそのまま返す */
 function optLabel(q, v) {
   if (v == null || v === "") return "";
@@ -330,6 +407,7 @@ function optLabel(q, v) {
       return parts[0] + "年" + Number(parts[1]) + "月" + Number(parts[2]) + "日";
     }
   }
+  if (q.t === "number" && v === "unknown") return "おぼえていない";
   if ((q.t !== "select" && q.t !== "multi") || !q.o) return String(v);
   const label = value => {
     const hit = q.o.find(o => o.v === value || o.ja === value || o.en === value);
