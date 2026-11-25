@@ -29,6 +29,11 @@
     - 未提出の人を大きめの行（名前＋学籍番号）で並べる＝名前を読み上げて声をかけやすい
     - 提出済みは「提出済み n人（新着 n人）」の1行にたたむ。押すと絞り込みが「提出済み」に切り替わる。2分以内は「新着」
   🔴 文言はふつうの日本語（社員が使う画面）。やさしい日本語・分かち書きは学生画面（index.html）だけ（2026-11-20 きあ）
+
+  2026-11-25 ⑦「はじめてのログイン」の受付を足した（きあ決定。12/12 の会話テストの日に、五月雨式に来る学生を追う）
+    - #/first … 受付中（クラスをまたぐ）／今日の確認済み／クラス別。#/first/<クラス> … そのクラスの全員
+    - 自動で分かる：ログインしたか・パスワードを決め直したか。人が押す：「確認済みにする」（ホーム画面に入れたのを見たら）
+    - DB＝db/2026-11-25_first_login_board.sql（first_login_board / first_login_mark）
 -->
 <style>
 :root{
@@ -143,6 +148,22 @@ h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
 .olds button{display:flex;align-items:center;gap:10px;width:100%;min-height:60px;padding:8px 14px;background:none;border:0;color:var(--ink);cursor:pointer;text-align:left}
 .olds .l{font-size:13px;font-weight:800;color:var(--sub);flex:none;font-variant-numeric:tabular-nums}
 
+/* はじめてのログインの受付（2026-11-25）。押す行は大きめに（受付中に名前を探して押す） */
+.list.fl li{min-height:66px;gap:12px;padding:8px 14px}
+.list.fl .nm b{font-size:18px;font-weight:800}
+.list.fl .nm span{font-size:13px}
+.st{font-size:13px;font-weight:800;border-radius:999px;padding:4px 10px;flex:none;white-space:nowrap}
+.st.wait{color:var(--rest);background:var(--rest-l)}
+.st.unk{color:var(--sub);background:var(--line)}
+.mk{min-height:46px;padding:0 14px;border-radius:12px;border:0;background:var(--ok);color:#fff;font-size:15px;font-weight:800;cursor:pointer;flex:none;white-space:nowrap}
+.mk[disabled]{opacity:.55}
+.undo{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--edge);background:#fff;color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;flex:none;white-space:nowrap}
+.rows.flc button{grid-template-columns:52px minmax(0,1fr) 108px}
+.toast{position:fixed;left:12px;right:12px;bottom:16px;max-width:496px;margin:0 auto;background:#1F1A24;color:#fff;border-radius:14px;padding:10px 12px 10px 16px;
+  display:flex;align-items:center;gap:12px;z-index:30;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.toast .t{flex:1;min-width:0;font-size:14px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
+.toast button{min-height:42px;padding:0 14px;border-radius:10px;border:0;background:#fff;color:var(--ink);font-size:14px;font-weight:800;cursor:pointer;flex:none}
+
 /* ログイン */
 .login{background:#fff;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px}
 .login label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
@@ -178,6 +199,7 @@ h2.h-rest{color:var(--rest)} h2.h-ok{color:var(--ok)}
 <script src="assets/survey-db.js"></script>
 <script src="assets/round-state.js"></script>
 <script src="assets/policy-notice.js"></script>
+<script src="assets/first-login.js"></script>
 <script>
 (function(){
 "use strict";
@@ -244,6 +266,7 @@ async function loadAll(){
     + "&is_void=eq.false&order=opens_at.desc&limit=60");
   D.rounds = rounds.filter(r => ST(r) !== "void" && defOf(r.survey_key));
   D.resp = {};
+  D.flOk = await FirstLogin.can();   // はじめてのログインの受付を使えるか（案内。権限は DB が見る）
   await loadResp(nowRounds().map(r => r.id));   // おわった回の提出は、開いたときに読む（ensureResp）
   D.loadedAt = Date.now();
 }
@@ -299,6 +322,48 @@ function demoData(){
   D.loadedAt = now;
 }
 function demoTick(rid){ D.loadedAt = Date.now(); }
+/* はじめてのログインの見本：A1〜A4 が会話テストの途中（確認済み 14・11・8・5人＋受付中 2人ずつ）。B・C はまだだれも来ていない。
+   受付中の2人のうち、先に来た1人は決め直し済み・あとの1人はパスワードまだ。形は DB の first_login_board と同じ */
+const FLD = { init: false, signed: {}, pw: {}, chk: {} };
+function demoFirstInit(){
+  if(FLD.init) return; FLD.init = true;
+  const now = Date.now(), t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const at = minAgo => new Date(Math.max(t0.getTime() + 60000, now - minAgo * 60000)).toISOString();   // 日付をまたがない
+  ["A1","A2","A3","A4"].forEach((c, ci) => {
+    D.students.filter(s => s.class_name === c + "クラス").forEach((s, i) => {
+      const nDone = 14 - ci * 3;
+      if(i < nDone){ FLD.signed[s.id] = at(100 - ci * 14 - i); FLD.pw[s.id] = "changed"; FLD.chk[s.id] = at(96 - ci * 14 - i); }
+      else if(i < nDone + 2){ const k = i - nDone; FLD.signed[s.id] = at(9 - ci * 2 - k); FLD.pw[s.id] = k === 0 ? "changed" : "initial"; }
+    });
+  });
+}
+function demoFirst(c){
+  demoFirstInit();
+  const isToday = x => !!x && sameDay(new Date(x), new Date());
+  const st = D.students.map(s => ({ id: s.id, student_no: s.student_no, name: s.display_name, cls: s.class_name || "",
+    signed_at: FLD.signed[s.id] || null, pw: FLD.signed[s.id] && !FLD.chk[s.id] ? FLD.pw[s.id] : null,
+    checked: !!FLD.chk[s.id], checked_at: FLD.chk[s.id] || null }));
+  const g = {};
+  st.forEach(s => { const x = g[s.cls] = g[s.cls] || { class: s.cls, target: 0, not_yet: 0, checked: 0 };
+    x.target++; if(!s.signed_at) x.not_yet++; if(s.checked) x.checked++; });
+  return {
+    today: new Date().toISOString().slice(0, 10),
+    classes: Object.values(g),
+    active: st.filter(s => !s.checked && isToday(s.signed_at)).sort((a, b) => a.signed_at.localeCompare(b.signed_at))
+      .map(s => ({ id: s.id, student_no: s.student_no, name: s.name, class: s.cls, signed_at: s.signed_at, pw: s.pw })),
+    done: st.filter(s => s.checked && isToday(s.checked_at)).sort((a, b) => b.checked_at.localeCompare(a.checked_at))
+      .map(s => ({ id: s.id, student_no: s.student_no, name: s.name, class: s.cls, checked_at: s.checked_at })),
+    rows: c == null ? null : st.filter(s => s.cls === c)
+      .map(s => ({ id: s.id, student_no: s.student_no, name: s.name, signed_at: s.signed_at, pw: s.pw, checked: s.checked, checked_at: s.checked_at }))
+  };
+}
+function demoMark(id, on){
+  demoFirstInit();
+  if(on && FLD.pw[id] !== "changed") throw new Error("この学生は、まだパスワードを決め直していません");
+  const was = !!FLD.chk[id];
+  if(on && !was) FLD.chk[id] = new Date().toISOString(); else if(!on) delete FLD.chk[id];
+  return { student_id: id, checked: on, changed: was !== on };
+}
 
 /* ════════ 画面の切り替え（# で持つ＝スマホの「戻る」が効く） ════════ */
 let timer = null;
@@ -314,6 +379,7 @@ async function route(){
     try{ await ensureResp(need); }catch(e){ return showErr(e); }
     if(location.hash !== h) return;   // 読んでいる間に別の画面へ移った
   }
+  if(p[0] === "first" && flOn()) return p[1] != null ? viewFirstClass(p[1]) : viewFirst();
   if(p[0] === "notice" && noticeOn()) return p[1] != null ? viewNotice(p[1]) : viewNoticePick();
   if(p[0] === "past") return viewPast();
   if(p[0] === "pick" && r) return viewPick(r);
@@ -379,6 +445,14 @@ function viewHome(){
     const card = el("section", "card"); card.id = "nt-card"; card.setAttribute("aria-label", NT_NAME);
     const tt = el("div"); tt.appendChild(el("div", "svt", NT_NAME)); tt.appendChild(el("div", "svs", "学生がログインすると1回だけ出ます。読んだ学生は「よみました」を押します。")); card.appendChild(tt);
     card.appendChild(chevBtn("go", "まだ読んでいない学生を確認する", null, () => go("/notice")));
+    m.appendChild(card);
+  }
+  if(flOn()){
+    const card = el("section", "card"); card.id = "fl-card"; card.setAttribute("aria-label", FL_NAME);
+    const tt = el("div"); tt.appendChild(el("div", "svt", FL_NAME));
+    tt.appendChild(el("div", "svs", "はじめてログインする学生の受付です。パスワードを決め直したかは自動で分かります。ホーム画面に入れたのを確かめたら「確認済み」を押します。"));
+    card.appendChild(tt);
+    card.appendChild(chevBtn("go", "受付の画面を開く", null, () => { flTab = "active"; go("/first"); }));
     m.appendChild(card);
   }
   if(past.length) m.appendChild(chevBtn("sub-go", "終了したアンケート（" + past.length + "）", ICON.box, () => go("/past")));
@@ -452,6 +526,188 @@ function drawNotice(c, d, keepScroll){
     sec.appendChild(ul); }
   m.appendChild(sec);
   m.appendChild(el("p", "note", "学生がログインすると、お知らせが出ます。読んで「よみました」を押すと、ここから消えます。在籍中の学生だけを数えています。"));
+  if(keepScroll) window.scrollTo(0, y);
+}
+
+/* ⑦ はじめてのログインの受付（2026-11-25 きあ決定・12/12 の会話テストの日に使う）
+   ・学生は会話テストが終わった人から五月雨式に来る＝クラスごとにそろわない。だから「受付中」はクラスをまたいで出す
+   ・状態は3つ：ログインした（サーバーが知っている）／パスワードを決め直した（サーバーが照合する）／
+     ホーム画面に入れた（サーバーには分からない＝見て「確認済みにする」を押す）
+   ・決め直していない学生には「確認済みにする」を出さない（サーバーも断る）
+   ・10秒ごとに取り直す。ただし画面に触れた直後と、記録を送っている間は描き直さない（押そうとした行がずれないように）
+   ・押したら下に「○○ さんを確認済みにしました［取り消す］」を出す（押し間違えたら、その場で戻せる）
+   ・名前が出るのは、受付中・今日確認した人・開いたクラスだけ。クラスの一覧は人数だけ（DB の first_login_board が決める）
+   ・DB＝db/2026-11-25_first_login_board.sql。RPC が無いと「読み込みに失敗しました」になる（ほかの画面は動く） */
+const FL_NAME = "はじめてのログイン";
+const TOUCH_MS = FirstLogin.TOUCH_MS;   // 判定・送り先・権限の名前は assets/first-login.js（PC と同じもの）
+const flOn = () => DEMO || !!D.flOk;   // 受付の権限（first_login.check）を持つ人だけにカードを出す。見本データでは出す
+let flTab = "active", flLast = null, flCur = null, flBusy = false, flShowDone = false, lastTouch = 0, toastTimer = null;
+document.addEventListener("pointerdown", () => { lastTouch = Date.now(); }, true);
+async function loadFirst(c){
+  if(DEMO) return demoFirst(c);
+  return FirstLogin.load(c);
+}
+async function markFirst(id, on){
+  if(DEMO) return demoMark(id, on);
+  return FirstLogin.mark(id, on);
+}
+/* 開いている受付の画面を、いま取り直して描き直す */
+async function flRefresh(){
+  const cur = flCur; if(!cur || location.hash !== cur.h) return;
+  try{ const d = await cur.load(); if(location.hash === cur.h){ flLast = d; cur.draw(d, true); } }
+  catch(e){ const lv = $("live"); if(lv){ lv.classList.add("stop"); lv.lastChild.textContent = "更新が止まっています"; } }
+}
+async function flOpen(c, draw){
+  const h = location.hash;
+  flCur = { h, load: () => loadFirst(c), draw };
+  $("main").replaceChildren(el("div", "empty", "読み込み中…"));
+  let d;
+  try{ d = await loadFirst(c); }catch(e){ if(location.hash === h) showErr(e); return; }
+  if(location.hash !== h) return;
+  flLast = d; draw(d);
+  timer = setInterval(() => {
+    if(document.hidden || flBusy || Date.now() - lastTouch < TOUCH_MS) return;
+    flRefresh();
+  }, REFRESH_MS);
+}
+function toast(text, undo){
+  clearTimeout(toastTimer);
+  let t = $("toast");
+  if(!t){ t = el("div", "toast"); t.id = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+  t.replaceChildren(el("span", "t", text));
+  if(undo){ const b = el("button", null, "取り消す"); b.type = "button"; b.onclick = () => { t.hidden = true; undo(); }; t.appendChild(b); }
+  t.hidden = false;
+  toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
+}
+async function doMark(s, on, btn){
+  if(flBusy) return;
+  flBusy = true;
+  if(btn){ btn.disabled = true; btn.textContent = "記録中…"; }
+  const nm = (s.name || "（名前なし）") + " さん";
+  try{
+    await markFirst(s.id, on);
+    toast(FirstLogin.doneText(s, on), on ? () => doMark(s, false) : null);
+  }catch(e){
+    toast("記録できませんでした（" + e.message + "）");
+  }finally{
+    flBusy = false;
+  }
+  await flRefresh();
+}
+const dayOf = iso => { const d = new Date(iso); return sameDay(d, new Date()) ? hm(d) : (d.getMonth()+1) + "/" + d.getDate() + " " + hm(d); };
+/* 受付中の行：名前＋学籍番号・クラス・ログインの時刻／右に「確認済みにする」か状態 */
+function flActiveRow(s, withClass){
+  const li = el("li");
+  const nm = el("span", "nm"); nm.appendChild(el("b", null, s.name || "（名前なし）"));
+  nm.appendChild(el("span", null, [s.student_no || "", withClass ? short(s.class) || "クラスなし" : "", dayOf(s.signed_at) + " ログイン"].filter(Boolean).join("・")));
+  li.appendChild(nm);
+  if(FirstLogin.canMark(s)){
+    const b = el("button", "mk", "確認済みにする"); b.type = "button";
+    b.setAttribute("aria-label", (s.name || "") + " さんを確認済みにする");
+    b.onclick = () => doMark(s, true, b); li.appendChild(b);
+  } else li.appendChild(el("span", "st " + (s.pw === "initial" ? "wait" : "unk"), FirstLogin.pwLabel(s)));
+  return li;
+}
+/* 確認済みの行：取り消しは、確かめてから */
+function flDoneRow(s, withClass){
+  const li = el("li", "done"); li.appendChild(svg(ICON.check, 18, "#1E7B34", 2.6));
+  const nm = el("span", "nm"); nm.appendChild(el("b", null, s.name || "（名前なし）"));
+  nm.appendChild(el("span", null, [s.student_no || "", withClass ? short(s.class) || "クラスなし" : "", dayOf(s.checked_at) + " 確認"].filter(Boolean).join("・")));
+  li.appendChild(nm);
+  const b = el("button", "undo", "取り消す"); b.type = "button";
+  b.onclick = () => { if(confirm((s.name || "（名前なし）") + " さんの「確認済み」を取り消しますか？")) doMark(s, false, b); };
+  li.appendChild(b);
+  return li;
+}
+const ulOf = (cls, rows, fn) => { const ul = el("ul", cls); rows.forEach(s => ul.appendChild(fn(s))); return ul; };
+const secOf = (title, cls) => { const s = el("section"); s.style.cssText = "display:flex;flex-direction:column;gap:8px"; s.appendChild(el("h2", "sec " + (cls || ""), title)); return s; };
+
+function viewFirst(){
+  header({ back: "/", sub: FL_NAME, title: "受付", live: "on" });
+  $("tabs").hidden = true;
+  return flOpen(null, drawFirst);
+}
+function drawFirst(d, keepScroll){
+  const y = window.scrollY, act = d.active || [], done = d.done || [];
+  const ready = act.filter(FirstLogin.canMark).length;
+  const hd = header({ back: "/", sub: FL_NAME, title: "受付", live: "on" });
+  const big = el("div", "hd-big");
+  const lf = el("div"); lf.appendChild(el("div", "k", "受付中"));
+  const v = el("div", "v"); v.appendChild(el("b", null, String(act.length))); v.appendChild(el("span", null, "人")); lf.appendChild(v); big.appendChild(lf);
+  const rt = el("div", "of"); rt.appendChild(el("b", null, "今日の確認済み " + done.length + "人")); rt.appendChild(el("span", null, "確認できる人 " + ready + "人")); big.appendChild(rt);
+  hd.appendChild(big);
+  const tabs = $("tabs"); tabs.hidden = false; tabs.replaceChildren();
+  [["active", "受付中 " + act.length], ["done", "確認済み " + done.length], ["class", "クラス別"]].forEach(([k, label]) => {
+    const b = el("button", "tab", label); b.type = "button"; b.setAttribute("aria-pressed", k === flTab ? "true" : "false");
+    b.onclick = () => { flTab = k; drawFirst(flLast); window.scrollTo(0, 0); }; tabs.appendChild(b);
+  });
+  const m = $("main"); m.replaceChildren();
+  if(flTab === "done"){
+    const sec = secOf("今日 確認済みにした学生（" + done.length + "人）・新しい順", "h-ok"); sec.id = "fl-done";
+    if(!done.length) sec.appendChild(el("div", "empty", "今日はまだ、だれも確認済みにしていません。"));
+    else sec.appendChild(ulOf("list", done, s => flDoneRow(s, true)));
+    m.appendChild(sec);
+  } else if(flTab === "class"){
+    const sec = secOf("クラス別（名前はクラスを開くと出ます）"); sec.id = "fl-classes";
+    const cls = (d.classes || []).slice().sort((a, b) => a.class.localeCompare(b.class, "ja", {numeric:true}));
+    if(!cls.length) sec.appendChild(el("div", "empty", "在籍中の学生がいません。"));
+    else {
+      const ul = el("ul", "list rows flc");
+      cls.forEach(g => { const li = el("li"), b = el("button"); b.type = "button";
+        b.appendChild(el("span", "c", short(g.class) || "なし"));
+        const bb = el("span", "b"); bb.setAttribute("aria-hidden", "true"); const i = el("i"); i.style.width = pct(g.checked, g.target) + "%"; bb.appendChild(i); b.appendChild(bb);
+        b.appendChild(el("span", "l " + (g.checked < g.target ? "rest-t" : "ok-t"), g.checked < g.target ? "未ログイン " + g.not_yet : "全員確認済み"));
+        b.setAttribute("aria-label", (short(g.class) || "クラスなし") + "　確認済み " + g.checked + " / " + g.target + "人・未ログイン " + g.not_yet + "人");
+        b.onclick = () => { flShowDone = false; go("/first/" + encodeURIComponent(g.class)); };
+        li.appendChild(b); ul.appendChild(li); });
+      sec.appendChild(ul);
+    }
+    m.appendChild(sec);
+    m.appendChild(el("p", "note", "棒は確認済みの割合です。右の数は、まだ一度もログインしていない人数です。"));
+  } else {
+    const sec = secOf("受付中（今日ログインして、まだ確認していない人）・ログインした順", "h-rest"); sec.id = "fl-active";
+    if(!act.length) sec.appendChild(el("div", "empty", "受付中の学生はいません。学生がログインすると、ここに出ます。"));
+    else sec.appendChild(ulOf("list fl", act, s => flActiveRow(s, true)));
+    m.appendChild(sec);
+  }
+  m.appendChild(el("p", "note", "パスワードを決め直したかは、サーバーが自動で確かめます。ホーム画面にアイコンが入ったのを見てから「確認済みにする」を押してください。"));
+  if(keepScroll) window.scrollTo(0, y);
+}
+
+function viewFirstClass(c){
+  header({ back: "/first", backLabel: "受付に戻る", sub: FL_NAME, title: (short(c) || "クラスなし") + " クラス", live: "on" });
+  $("tabs").hidden = true;
+  return flOpen(c, (d, keep) => drawFirstClass(c, d, keep));
+}
+function drawFirstClass(c, d, keepScroll){
+  const y = window.scrollY, rows = d.rows || [];
+  const { notYet, inProg, done } = FirstLogin.split(rows);
+  const p = pct(done.length, rows.length);
+  const hd = header({ back: "/first", backLabel: "受付に戻る", sub: FL_NAME, title: (short(c) || "クラスなし") + " クラス", live: "on" });
+  const big = el("div", "hd-big");
+  const lf = el("div"); lf.appendChild(el("div", "k", "未ログイン"));
+  const v = el("div", "v"); v.appendChild(el("b", null, String(notYet.length))); v.appendChild(el("span", null, "人")); lf.appendChild(v); big.appendChild(lf);
+  const rt = el("div", "of"); rt.appendChild(el("b", null, done.length + " / " + rows.length + "人 確認済み")); rt.appendChild(el("span", null, p + "%")); big.appendChild(rt);
+  hd.appendChild(big); hd.appendChild(bar(p, "hd-bar"));
+  $("tabs").hidden = true;
+  const m = $("main"); m.replaceChildren();
+  const s1 = secOf("受付中（ログインした・まだ確認していない）（" + inProg.length + "人）", "h-rest"); s1.id = "flc-active";
+  if(!inProg.length) s1.appendChild(el("div", "empty", "いまはいません。"));
+  else s1.appendChild(ulOf("list fl", inProg, s => flActiveRow(s, false)));
+  m.appendChild(s1);
+  const s2 = secOf("まだログインしていない（" + notYet.length + "人）", "h-rest"); s2.id = "flc-notyet";
+  if(!notYet.length) s2.appendChild(el("div", "empty", rows.length ? "全員がログインしました。" : "このクラスに在籍中の学生はいません。"));
+  else s2.appendChild(ulOf("list rest", notYet, s => { const li = el("li"); const dot = el("span", "dot"); dot.setAttribute("aria-hidden", "true"); li.appendChild(dot);
+    const nm = el("span", "nm"); nm.appendChild(el("b", null, s.name || "（名前なし）")); nm.appendChild(el("span", null, s.student_no || ""));
+    li.appendChild(nm); li.appendChild(el("span", "badge", "未ログイン")); return li; }));
+  m.appendChild(s2);
+  if(done.length){
+    m.appendChild(chevBtn("sub-go fold", "確認済み " + done.length + "人" + (flShowDone ? "（閉じる）" : ""), ICON.check,
+      () => { flShowDone = !flShowDone; drawFirstClass(c, flLast, true); }, "#1E7B34"));
+    if(flShowDone){ const s3 = secOf("確認済み（" + done.length + "人）・新しい順", "h-ok"); s3.id = "flc-done";
+      s3.appendChild(ulOf("list", done, s => flDoneRow(s, false))); m.appendChild(s3); }
+  }
+  m.appendChild(el("p", "note", "在籍中の学生だけを数えています。会話テストを休んだ学生は「まだログインしていない」に残ります。"));
   if(keepScroll) window.scrollTo(0, y);
 }
 

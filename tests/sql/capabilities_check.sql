@@ -13,13 +13,13 @@ begin
   select id into v_t from public.profiles where role = 'teacher' order by student_no limit 1;
   select id into v_s from public.profiles where role = 'student' order by student_no limit 1;
 
-  -- 0 束の件数（teacher 3 / fulltime 13 / info_admin 16）
+  -- 0 束の件数（teacher 3 / fulltime 13 / info_admin 17）★11/25 に first_login.check（情報管理者だけ）を足して 16→17
   select count(*) into n from public.cap_bundles where bundle = 'teacher';
   r := r || case when n = 3 then ' 0a:OK' else ' 0a:NG(' || n || ')' end;
   select count(*) into n from public.cap_bundles where bundle = 'fulltime';
   r := r || case when n = 13 then ' 0b:OK' else ' 0b:NG(' || n || ')' end;
   select count(*) into n from public.cap_bundles where bundle = 'info_admin';
-  r := r || case when n = 16 then ' 0c:OK' else ' 0c:NG(' || n || ')' end;
+  r := r || case when n = 17 then ' 0c:OK' else ' 0c:NG(' || n || ')' end;
 
   -- 1 学生：何もできない。一覧も束も読めない。直接は書けない
   perform set_config('request.jwt.claims', json_build_object('sub', v_s, 'role', 'authenticated')::text, true);
@@ -41,7 +41,7 @@ begin
   r := r || case when a = array['quiz.run', 'retest.run', 'quiz.result.one'] then ' 2a:OK' else ' 2a:NG' end;
   r := r || case when app_hidden.can('quiz.edit') = false and app_hidden.can('quiz.result.export') = false then ' 2b:OK' else ' 2b:NG' end;
   select count(*) into n from public.capabilities;
-  r := r || case when n = 16 then ' 2c:OK' else ' 2c:NG' end;
+  r := r || case when n = 17 then ' 2c:OK' else ' 2c:NG' end;
   select count(*) into n from public.cap_bundles;
   r := r || case when n = 0 then ' 2d:OK' else ' 2d:NG' end;
   begin update public.profiles set bundle = 'info_admin' where id = v_t; get diagnostics n = row_count;
@@ -60,14 +60,14 @@ begin
   r := r || case when app_hidden.can('そんな鍵は無い') = false then ' 3d:OK' else ' 3d:NG' end;
   execute 'reset role';
 
-  -- 4 情報管理者の印を付けると 16。束も読める
+  -- 4 情報管理者の印を付けると 17。束も読める
   update public.profiles set bundle = 'info_admin' where id = v_m;
   perform set_config('request.jwt.claims', json_build_object('sub', v_m, 'role', 'authenticated')::text, true);
   execute 'set local role authenticated';
   a := public.my_caps();
-  r := r || case when array_length(a, 1) = 16 then ' 4a:OK' else ' 4a:NG' end;
+  r := r || case when array_length(a, 1) = 17 then ' 4a:OK' else ' 4a:NG' end;
   select count(*) into n from public.cap_bundles;
-  r := r || case when n = 32 then ' 4b:OK' else ' 4b:NG(' || n || ')' end;
+  r := r || case when n = 33 then ' 4b:OK' else ' 4b:NG(' || n || ')' end;
   execute 'reset role';
   update public.profiles set bundle = null where id = v_m;
 

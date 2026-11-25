@@ -269,3 +269,13 @@ body.admui .mockflag{display:block;background:var(--or-l);color:var(--or-ink);bo
 .sved .swatch{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #E5E0EA;cursor:pointer;padding:0;}
 .sved .swatch.on{box-shadow:0 0 0 2px var(--ink);}
 @media (max-width:1100px){.sved{grid-template-columns:1fr;}.sved-pv{position:static;}}
+
+/* はじめてのログインの受付（2026-11-25・assets/first-login.js） */
+.fl-tbl td{vertical-align:middle;}
+.fl-tbl td b{font-size:.95rem;}
+.fl-names{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px;font-size:.9rem;margin:4px 0 6px;}
+.fl-name{overflow-wrap:anywhere;}
+.fl-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;width:min(560px,calc(100vw - 32px));background:#1F1A24;color:#fff;border-radius:14px;
+  padding:10px 12px 10px 18px;display:flex;align-items:center;gap:12px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.25);}
+.fl-toast .t{flex:1;min-width:0;font-weight:700;overflow-wrap:anywhere;}
+.fl-toast button{height:38px;padding:0 14px;border-radius:10px;border:0;background:#fff;color:#1F1A24;font-weight:800;cursor:pointer;}

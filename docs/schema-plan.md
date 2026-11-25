@@ -50,6 +50,7 @@ staff_caps            人ごとの足し引き（束との差だけを持つ）
 | `student.read`（名簿と学生の詳細） | | ○ | ○ |
 | `student.pwreset`（パスワードを初期値に戻す） | | ○ | ○ |
 | `account.manage`（発行・停止・再開・卒業生へ） | | | ○ |
+| `first_login.check`（はじめてのログインの受付。2026-11-25 足した・きあ「とりあえず情報管理者だけ」。当日の手伝いには人ごとに足す） | | | ○ |
 | `notice.send`（お知らせ） | | ○ | ○ |
 | `quiz.editlog.read`（問題の変更の履歴） | | ○ | ○ |
 | `audit.read`（操作の記録） | | | ○ |
@@ -181,6 +182,7 @@ quiz_runs に足す：  pass_pct  integer         始めた瞬間の線の写し
 | `homeroom.set` | 担任を付けた・外した（記録には人数だけ） |
 | `quiz.kind.set` | 回の種類を手で変えた |
 | `view.notice_unread` | はじめのお知らせを「まだ読んでいない学生」の一覧を開いた（記録には人数だけ） |
+| `view.first_login` | はじめてのログインの受付を開いた（全体＝`first_login`/`all`、クラス＝`class`/クラス名。記録には人数だけ） |
 
 ## 4本目で決めたこと（設計案からの差）
 

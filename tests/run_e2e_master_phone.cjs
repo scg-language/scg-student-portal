@@ -74,7 +74,7 @@ async function main() {
     check('見本データの帯が出ている', await ev('!document.getElementById("demo-bar").hidden'));
     check('ホーム：提出 205 / 256人', await ev('/205/.test(document.querySelector(".cnt").textContent) && /256人/.test(document.querySelector(".cnt").textContent)'));
     check('ホーム：横にはみ出さない', await noOverflow());
-    check('ホーム：大きなカードは いまの回だけ（1枚）', await ev('document.querySelectorAll(".card:not(#nt-card)").length === 1'));
+    check('ホーム：大きなカードは いまの回だけ（1枚）', await ev('document.querySelectorAll(".card:not(#nt-card):not(#fl-card)").length === 1'));
     check('ホーム：「終了したアンケート（2）」がある', await ev('!!' + byText('終了したアンケート（2）')));
     await shot('1_home.png');
 
@@ -162,6 +162,61 @@ async function main() {
     await shot('6_notice_class.png');
     await click('document.querySelector(".hd .ibtn")'); await wait('location.hash === "#/notice"', 'notice back');
     check('お知らせ：戻るでクラスの選択へ', await ev('location.hash === "#/notice"'));
+
+    // ── はじめてのログインの受付（2026-11-25・12/12 の会話テストの日） ──
+    // 見本：A1〜A4 が途中（確認済み 14+11+8+5＝38人）、受付中は各2人＝8人（先に来た1人は決め直し済み、あとの1人はパスワードまだ）
+    const flSrc = fs.readFileSync(path.join(repo, 'src', 'assets', 'first-login.js'), 'utf8');
+    check('受付：RPC の名前が DB と同じ（判定と送り先は assets/first-login.js の1か所＝PC と同じもの）',
+      /api\.rpc\("first_login_board"/.test(flSrc) && /api\.rpc\("first_login_mark"/.test(flSrc) && /FirstLogin\.load\(c\)/.test(src) && /FirstLogin\.mark\(id, on\)/.test(src) && !/api\.rpc\("first_login_/.test(src));
+    check('受付：カードは権限（first_login.check）を持つ人だけ（見本データでは出す）', /const flOn = \(\) => DEMO \|\| !!D\.flOk;/.test(src) && /D\.flOk = await FirstLogin\.can\(\)/.test(src) && /const CAP = "first_login\.check"/.test(flSrc));
+    await ev('location.hash = "#/", true'); await wait('!!document.getElementById("fl-card")', 'first card');
+    check('受付：ホームにカードが出る', await ev('/はじめてのログイン/.test(document.getElementById("fl-card").textContent)'));
+    await click('document.querySelector("#fl-card .go")');
+    await wait('location.hash === "#/first" && !!document.getElementById("fl-active")', 'first');
+    check('受付：受付中 8人（大きな数と行の数が合う）', await ev('document.querySelector(".hd-big .v b").textContent === "8" && document.querySelectorAll("#fl-active li").length === 8'));
+    check('受付：今日の確認済み 38人・確認できる人 4人', await ev('/今日の確認済み 38人/.test(document.querySelector(".hd-big .of").textContent) && /確認できる人 4人/.test(document.querySelector(".hd-big .of").textContent)'));
+    check('受付：決め直した人にだけ「確認済みにする」（4つ）・まだの人は「パスワードまだ」（4つ）', await ev('document.querySelectorAll("#fl-active .mk").length === 4 && document.querySelectorAll("#fl-active .st.wait").length === 4'));
+    check('受付：行に学籍番号・クラス・ログインの時刻', await ev('[...document.querySelectorAll("#fl-active .nm span")].every(e=>/^\\d{7}・A\\d・\\d+:\\d\\d ログイン$/.test(e.textContent))'));
+    check('受付：ログインした順（先頭は A1）', await ev('/・A1・/.test(document.querySelector("#fl-active .nm span").textContent)'));
+    check('受付：「10秒ごとに更新」の表示', await ev('/10秒ごとに更新/.test(document.getElementById("live").textContent)'));
+    check('受付：横にはみ出さない', await noOverflow());
+    await shot('7_first_active.png');
+    // 押す → 受付中から消え、確認済みが1人増え、下に名前と「取り消す」
+    const firstName = await ev('document.querySelector("#fl-active .mk").closest("li").querySelector(".nm b").textContent');
+    await click('document.querySelector("#fl-active .mk")');
+    await wait('!!document.getElementById("toast") && !document.getElementById("toast").hidden', 'toast');
+    check('受付：押すと受付中が7人・確認済みが39人', await ev('document.querySelector(".hd-big .v b").textContent === "7" && /今日の確認済み 39人/.test(document.querySelector(".hd-big .of").textContent)'));
+    check('受付：下に「○○ さんを確認済みにしました」と「取り消す」', await ev('document.querySelector("#toast .t").textContent === ' + JSON.stringify(firstName + ' さんを確認済みにしました') + ' && !!document.querySelector("#toast button")'));
+    check('受付：押した人は受付中の一覧から消える', await ev('![...document.querySelectorAll("#fl-active .nm b")].some(e=>e.textContent===' + JSON.stringify(firstName) + ')'));
+    check('受付：知らせが出ていても横にはみ出さない', await noOverflow());
+    await shot('7_first_toast.png');
+    await click('document.querySelector("#toast button")');
+    await wait('document.querySelector(".hd-big .v b").textContent === "8"', 'undo');
+    check('受付：「取り消す」で受付中 8人・確認済み 38人に戻る', await ev('/今日の確認済み 38人/.test(document.querySelector(".hd-big .of").textContent) && [...document.querySelectorAll("#fl-active .nm b")].some(e=>e.textContent===' + JSON.stringify(firstName) + ')'));
+    // 確認済みのしぼりこみ
+    await click(tabBtn('確認済み'));
+    await wait('!!document.getElementById("fl-done")', 'first done');
+    check('受付・確認済み：38行・新しい順・どの行にも「取り消す」', await ev('document.querySelectorAll("#fl-done li").length === 38 && document.querySelectorAll("#fl-done .undo").length === 38 && /・A4・/.test(document.querySelector("#fl-done .nm span").textContent)'));
+    check('受付・確認済み：横にはみ出さない', await noOverflow());
+    await shot('7_first_done.png');
+    // クラス別（人数だけ）
+    await click(tabBtn('クラス別'));
+    await wait('!!document.getElementById("fl-classes")', 'first classes');
+    check('受付・クラス別：10クラス・名前を出さない', await ev('document.querySelectorAll("#fl-classes li").length === 10 && !/見本 学生/.test(document.getElementById("fl-classes").innerText)'));
+    check('受付・クラス別：A1＝未ログイン 9（25人−確認済み14−受付中2）', await ev('/未ログイン 9/.test([...document.querySelectorAll("#fl-classes li")].find(e=>e.querySelector(".c").textContent==="A1").textContent)'));
+    check('受付・クラス別：横にはみ出さない', await noOverflow());
+    await shot('7_first_classes.png');
+    await click('[...document.querySelectorAll("#fl-classes li button")].find(e=>e.querySelector(".c").textContent==="A2")');
+    await wait('location.hash.startsWith("#/first/") && !!document.getElementById("flc-notyet")', 'first class');
+    check('受付・クラス：未ログイン 13人（大きな数と行の数が合う）・名前＋学籍番号', await ev('document.querySelector(".hd-big .v b").textContent === "13" && document.querySelectorAll("#flc-notyet li").length === 13 && [...document.querySelectorAll("#flc-notyet .nm span")].every(e=>/^\\d{7}$/.test(e.textContent))'));
+    check('受付・クラス：受付中 2人・11 / 26人 確認済み', await ev('document.querySelectorAll("#flc-active li").length === 2 && /11 \\/ 26人 確認済み/.test(document.querySelector(".hd-big .of").textContent)'));
+    check('受付・クラス：確認済みはたたむ（押すと開く）', await ev('!document.getElementById("flc-done") && /^確認済み 11人/.test(document.querySelector(".sub-go.fold").textContent)'));
+    await click('document.querySelector(".sub-go.fold")');
+    check('受付・クラス：開くと確認済み 11行', await ev('document.querySelectorAll("#flc-done li").length === 11'));
+    check('受付・クラス：横にはみ出さない', await noOverflow());
+    await shot('7_first_class.png');
+    await click('document.querySelector(".hd .ibtn")'); await wait('location.hash === "#/first" && !!document.getElementById("fl-classes")', 'first back');
+    check('受付・クラス：戻るとクラス別のまま', await ev(tabBtn('クラス別') + '.getAttribute("aria-pressed")==="true"'));
     check('JS の例外 0件', exceptions.length === 0);
     if (exceptions.length) console.log('  例外: ' + exceptions.join(' / '));
     check('外への通信を試みていない', blocked.length === 0);
