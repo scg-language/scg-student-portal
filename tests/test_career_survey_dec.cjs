@@ -30,13 +30,18 @@ note('1 JLPT に N5 がある', q('jlpt_level').o.some(o => o.v === 'n5'));
 note('1 JLPT 以外の試験の順番＝JPT・NAT・J.TEST・JFT・J-cert・JLCT・TOPJ', q('other_tests').o.map(o => o.v).join() === 'jpt,nat,jtest,jft,jcert,jlct,topj,none');
 const cur = d.q.filter(x => x.section === 'current').map(x => x.k);
 note('1 級・点数の欄も、同じ順番で並ぶ', cur.slice(2, 10).join() === 'jpt_score,nat_level,jtest_kind,jtest_score,jft_score,jcert_level,jlct_level,topj_level');
-note('1 JLPT 以外の試験と、その級・点数は任意', !q('other_tests').required && cur.slice(2, 10).every(k => !q(k).required));
+note('1 JLPT 以外の試験は必須（11/26 校長）・その級・点数は任意', q('other_tests').required === true && cur.slice(2, 10).every(k => !q(k).required));
 note('1 次の JLPT で受けたい級は聞かない（11/26 きあ：合格していないと次の級は受けさせない＝答えると約束に読める）', !q('next_jlpt'));
 note('1 ほかに受けたい試験は任意', !q('other_exams').required && q('other_exams').t === 'multi');
 const plans = d.q.filter(x => x.section === 'plans').map(x => x.k), pos = k => plans.indexOf(k);
 note('1 ②の順番＝仕事 → 分野 → 進路 → 学校', pos('job') === 0 && pos('job') < pos('field_first') && pos('field_second') < pos('path_1')
   && pos('path_1') < pos('path_2') && pos('path_2') < pos('schools_status'));
 note('1 進路は第2希望まで（11/26：3つだと全部になる）・第1希望だけが必須', q('path_1').required === true && !q('path_2').required && !q('path_3'));
+note('1 勉強したいことの2ばんは任意（1つだけの学生もいる）・1ばんは必須', q('field_second').required === false && q('field_first').required === true
+  && (() => { const a = { ...base }; delete a.field_second; return v(a).ok; })());
+note('1 JLPT以外の試験は必須（校長）・心配なことは「進路のことで」', q('other_tests').required === true && /進路/.test(q('concerns').l.ja) && /進路/.test(q('concerns').l.jy)
+  && (() => { const a = { ...base }; delete a.other_tests; return !v(a).ok; })());
+note('1 ほかに受けたい試験に JPT がある', q('other_exams').o.some(o => o.v === 'jpt'));
 note('1 12月の版はチップの形（案C）・1月の版は今の形のまま', d.layout === 'chips' && !jan.layout);
 note('1 仕事と分野に、建築・電気CAD がある', ['job'].concat(['field_first', 'field_second']).every(k => ['architecture', 'electric_cad'].every(v => q(k).o.some(o => o.v === v))));
 note('1 「その他」は選択肢のいちばん下（記入の欄がすぐ下に来る）', ['job', 'field_first', 'field_second', 'other_exams', 'education'].every(k => q(k).o[q(k).o.length - 1].v === 'other'));
@@ -92,7 +97,7 @@ note('3 断る文は、やさしい日本語・範囲つき・漢字なし', r.e
 r = v({ ...base, jpt_score: '991' }, 'en');
 note('3 英語のときは英語で断る', /number/i.test(r.errors[0].message) && r.errors[0].message.includes('990'));
 note('4 試験を選んで、級・点数を空のままでも通る（任意）', v({ ...base, jpt_score: '', nat_level: '', jtest_kind: '', jtest_score: '' }).ok);
-note('4 JLPT 以外の試験を何も選ばなくても通る', v({ ...base, other_tests: [] }).ok);
+note('4 JLPT 以外の試験は、何も選ばないと通らない（「持っていない」を選べば通る）', !v({ ...base, other_tests: [] }).ok && v({ ...base, other_tests: ['none'] }).ok);
 note('4 「持っていない」は、ほかと一緒に選べない', !v({ ...base, other_tests: ['none', 'jpt'] }).ok);
 note('4 ほかに受けたい試験：選ばなくても通る・「その他」の名前は書かなくても通る',
   v({ ...base, other_exams: ['eju'] }).ok && v({ ...base, other_exams: ['other'] }).ok && v({ ...base, other_exams: ['other'], other_exams_other: 'BJT' }).answers.other_exams_other === 'BJT');

@@ -25,6 +25,9 @@
 .sv-form .sv-qtext,.sv-form .sv-option span,.sv-form .sv-hint,.sv-form .sv-section{line-height:2.1}
 /* 選んだときだけ出る質問（番号なし）：すぐ上の質問につながって見えるように、字下げして線でつなぐ */
 .sv-form .sv-question.sv-sub{margin:-12px 0 25px 14px;padding:12px 0 2px 14px;border-left:3px solid #c9d6e6}
+/* 「必須・かならず」は赤で目立たせる（2026-11-26 校長：薄くて分からない）。「任意」は灰色のまま */
+.sv-form .sv-required.sv-must{color:#fff;background:#c62828;font-weight:700}
+@media print{.sv-form .sv-required.sv-must{color:#000;background:#fff;border:1px solid #000}}
 /* チップの形（def.layout:"chips"＝12月の進路アンケート）。選択肢を丸いチップにして詰めて並べる。
  * 本物のチェック・ラジオは見えなくするだけで残す（キーボード・読み上げ・答えの読み取りはそのまま） */
 .sv-form.sv-chips .sv-options{display:flex;flex-wrap:wrap;gap:8px}

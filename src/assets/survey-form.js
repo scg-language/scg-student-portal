@@ -168,7 +168,7 @@
       const title = make("label"), number = make("span", (i + 1) + ". ", "sv-qno");
       title.append(number, rich("span", q.l, "sv-qtext"));
       title.htmlFor = id; numbers.set(q.k, number);
-      title.appendChild(make("span", q.required ? msg.requiredMark : msg.optional, "sv-required"));
+      title.appendChild(make("span", q.required ? msg.requiredMark : msg.optional, "sv-required" + (q.required ? " sv-must" : "")));
       field.appendChild(title);
       if (q.hint) field.appendChild(rich("p", q.hint, "sv-hint"));
       let input;
