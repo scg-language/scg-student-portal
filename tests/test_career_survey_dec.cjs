@@ -18,7 +18,7 @@ const v = (a, lang) => F.validate(d, a, { lang: lang || 'ja' });
 
 const base = {
   jlpt_level: 'n5', other_tests: ['jpt', 'nat', 'jtest'], nat_level: 'k5', jtest_kind: 'fg', jtest_score: 'unknown', jpt_score: '５２０',
-  next_jlpt: 'n3', education: 'high_school', job: ['it_engineer', 'care'], field_first: 'it', field_second: 'unknown',
+  education: 'high_school', job: ['it_engineer', 'care'], field_first: 'it', field_second: 'unknown',
   path_1: 'university', path_2: 'vocational_school', schools_status: 'undecided', areas: ['kyoto', 'osaka'], oc_status: 'no',
   funding: ['family'], family_status: 'agree', concerns: ['none'], interview_preference: 'regular',
 };
@@ -31,14 +31,18 @@ note('1 JLPT 以外の試験の順番＝JPT・NAT・J.TEST・JFT・J-cert・JLCT
 const cur = d.q.filter(x => x.section === 'current').map(x => x.k);
 note('1 級・点数の欄も、同じ順番で並ぶ', cur.slice(2, 10).join() === 'jpt_score,nat_level,jtest_kind,jtest_score,jft_score,jcert_level,jlct_level,topj_level');
 note('1 JLPT 以外の試験と、その級・点数は任意', !q('other_tests').required && cur.slice(2, 10).every(k => !q(k).required));
-note('1 次の JLPT で受けたい級に N3 がある・必須', q('next_jlpt').required === true && q('next_jlpt').o.map(o => o.v).join() === 'n1,n2,n3,none,undecided');
+note('1 次の JLPT で受けたい級は聞かない（11/26 きあ：合格していないと次の級は受けさせない＝答えると約束に読める）', !q('next_jlpt'));
 note('1 ほかに受けたい試験は任意', !q('other_exams').required && q('other_exams').t === 'multi');
 const plans = d.q.filter(x => x.section === 'plans').map(x => x.k), pos = k => plans.indexOf(k);
 note('1 ②の順番＝仕事 → 分野 → 進路 → 学校', pos('job') === 0 && pos('job') < pos('field_first') && pos('field_second') < pos('path_1')
-  && pos('path_1') < pos('path_2') && pos('path_2') < pos('path_3') && pos('path_3') < pos('schools_status'));
-note('1 進路の第1希望だけが必須', q('path_1').required === true && !q('path_2').required && !q('path_3').required);
-note('1 場所の選択肢は8つ（京都・大阪・その他関西・東京・東京の近く・名古屋・通える所・どこでも）',
-  q('areas').o.map(o => o.v).join() === 'kyoto,osaka,kansai_other,tokyo,near_tokyo,nagoya,commutable,anywhere');
+  && pos('path_1') < pos('path_2') && pos('path_2') < pos('schools_status'));
+note('1 進路は第2希望まで（11/26：3つだと全部になる）・第1希望だけが必須', q('path_1').required === true && !q('path_2').required && !q('path_3'));
+note('1 仕事と分野に、建築・電気CAD がある', ['job'].concat(['field_first', 'field_second']).every(k => ['architecture', 'electric_cad'].every(v => q(k).o.some(o => o.v === v))));
+note('1 「その他」は選択肢のいちばん下（記入の欄がすぐ下に来る）', ['job', 'field_first', 'field_second', 'other_exams', 'education'].every(k => q(k).o[q(k).o.length - 1].v === 'other'));
+note('1 「その他」の記入と、見学した学校の名前は任意。気になっている学校の第1希望は必須のまま',
+  ['job_other', 'field_first_other', 'field_second_other', 'other_exams_other', 'education_other', 'oc_school'].every(k => q(k).required === false) && q('school_1').required === true);
+note('1 場所の選択肢は12（11/26 に福島・広島・福岡・沖縄を足した）',
+  q('areas').o.map(o => o.v).join() === 'kyoto,osaka,kansai_other,tokyo,near_tokyo,nagoya,fukushima,hiroshima,fukuoka,okinawa,commutable,anywhere');
 const flags = d.q.flatMap(x => (x.o || []).filter(o => o.flag).map(o => x.k + ':' + o.v + ':' + o.flag)).sort().join('|');
 const janFlags = jan.q.flatMap(x => (x.o || []).filter(o => o.flag).map(o => (x.k === 'path' ? 'path_1' : x.k) + ':' + o.v + ':' + o.flag)).sort().join('|');
 note('1 面談候補の印は、1月の版と同じ8つ', flags === janFlags && flags.split('|').length === 8, flags);
@@ -89,20 +93,24 @@ note('3 英語のときは英語で断る', /number/i.test(r.errors[0].message) 
 note('4 試験を選んで、級・点数を空のままでも通る（任意）', v({ ...base, jpt_score: '', nat_level: '', jtest_kind: '', jtest_score: '' }).ok);
 note('4 JLPT 以外の試験を何も選ばなくても通る', v({ ...base, other_tests: [] }).ok);
 note('4 「持っていない」は、ほかと一緒に選べない', !v({ ...base, other_tests: ['none', 'jpt'] }).ok);
-note('4 次の JLPT を選ばないと断る', !v({ ...base, next_jlpt: '' }).ok);
-note('4 ほかに受けたい試験：選ばなくても通る・「その他」を選んだら名前が要る',
-  v({ ...base, other_exams: ['eju'] }).ok && !v({ ...base, other_exams: ['other'] }).ok && v({ ...base, other_exams: ['other'], other_exams_other: 'BJT' }).ok);
+note('4 ほかに受けたい試験：選ばなくても通る・「その他」の名前は書かなくても通る',
+  v({ ...base, other_exams: ['eju'] }).ok && v({ ...base, other_exams: ['other'] }).ok && v({ ...base, other_exams: ['other'], other_exams_other: 'BJT' }).answers.other_exams_other === 'BJT');
 note('5 仕事は複数選べる', v(base).answers.job.length === 2);
 note('5 仕事の「まだ決まっていない」は、ほかと一緒に選べない', !v({ ...base, job: ['undecided', 'care'] }).ok && v({ ...base, job: ['undecided'] }).ok);
-note('5 仕事の「その他」を選んだら、記入が要る', !v({ ...base, job: ['other'] }).ok && v({ ...base, job: ['other'], job_other: '日本語の先生' }).ok);
-note('5 進路の第2・第3希望は、空でも通る', v({ ...base, path_2: '', path_3: '' }).ok);
+note('5 仕事の「その他」は、書かなくても通る・書けば送る', v({ ...base, job: ['other'] }).ok && v({ ...base, job: ['other'], job_other: '日本語の先生' }).answers.job_other === '日本語の先生');
+note('5 見学に行った学校の名前は、書かなくても通る', v({ ...base, oc_status: 'yes' }).ok);
+note('5 気になっている学校が「ある」なら、第1希望の名前は要る', !v({ ...base, schools_status: 'decided' }).ok && v({ ...base, schools_status: 'decided', school_1: 'A校' }).ok);
+note('5 進路の第2希望は、空でも通る', v({ ...base, path_2: '' }).ok);
 note('5 場所：「どこでもいい」は、ほかと一緒に選べない', !v({ ...base, areas: ['anywhere', 'kyoto'] }).ok && v({ ...base, areas: ['anywhere'] }).ok);
 
 // 5b 地図（場所の質問）
 const MAP = require(path.join(root, 'src/assets/japan-map-data.js')), am = q('areas').map;
 note('5b 地図のデータ：47都道府県・コードは 01〜47・形がある', MAP.pref.length === 47 && MAP.pref.every((p, i) => p.c === String(i + 1).padStart(2, '0') && /^M[\d.,LMZ-]+Z$/.test(p.d) && p.ja));
 note('5b 沖縄は、左上の枠の中にある', (() => { const o = MAP.pref.find(p => p.c === '47'), n = MAP.inset; return o.b[0] >= n.x && o.b[1] >= n.y && o.b[2] <= n.x + n.w && o.b[3] <= n.y + n.h; })());
-note('5b 地図にある選択肢は6つで、どれも一覧にもある', Object.keys(am).join() === 'kyoto,osaka,kansai_other,tokyo,near_tokyo,nagoya' && Object.keys(am).every(k => q('areas').o.some(o => o.v === k)));
+note('5b 地図にある選択肢は10で、どれも一覧にもある', Object.keys(am).join() === 'kyoto,osaka,kansai_other,tokyo,near_tokyo,nagoya,fukushima,hiroshima,fukuoka,okinawa' && Object.keys(am).every(k => q('areas').o.some(o => o.v === k)));
+note('5b 福島＝07・広島＝34・福岡＝40・沖縄＝47', am.fukushima.codes.join() === '07' && am.hiroshima.codes.join() === '34' && am.fukuoka.codes.join() === '40' && am.okinawa.codes.join() === '47');
+note('5b 札どうしが重ならない（まん中が横60・縦34より近くない）', Object.values(am).every((a, i, all) => all.every((b, j) => j <= i || Math.abs(a.at[0] - b.at[0]) >= 60 || Math.abs(a.at[1] - b.at[1]) >= 34)),
+  Object.entries(am).map(([k, g]) => k + ':' + g.at).join(' '));
 const codes = Object.values(am).flatMap(g => g.codes);
 note('5b 都道府県は実在し、2つの選択肢に重ならない', codes.every(c => MAP.pref.some(p => p.c === c)) && new Set(codes).size === codes.length);
 note('5b 京都＝26・大阪＝27・東京＝13', am.kyoto.codes.join() === '26' && am.osaka.codes.join() === '27' && am.tokyo.codes.join() === '13');

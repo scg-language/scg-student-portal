@@ -160,7 +160,7 @@
         if (section) { const h = rich("h2", section.title, "sv-section"); container.appendChild(h); page.nodes.push(h); }
         currentSection = q.section;
       }
-      const id = "sv-" + q.k, field = make("div", null, "field sv-question");
+      const id = "sv-" + q.k, field = make("div", null, "field sv-question" + (q.showWhen ? " sv-sub" : ""));
       field.dataset.question = q.k;
       page.keys.push(q.k); page.nodes.push(field);
       // 番号は、出ている質問だけで数え直す（updateVisibility）。番号と文を分けて持つ（文にはルビの要素が入るため）
@@ -267,11 +267,14 @@
     }
     function updateVisibility() {
       const values = read();
+      /* 番号は「いつも出ている質問」だけに付ける。選んだときだけ出る質問（showWhen＝「その他」の記入など）は番号なしで、
+       * すぐ上の質問の下に字下げして出す（2026-11-26 きあ：「その他」を選ぶと下の番号がずれる）。
+       * これで、何を選んでも番号は変わらない＝「5ばんを見て」と言える */
       let visibleNumber = 0;
       (def.q || []).forEach(q => {
         const hidden = !isVisible(q, values), row = rows.get(q.k);
         row.hidden = hidden;
-        if (!hidden) numbers.get(q.k).textContent = (++visibleNumber) + ". ";
+        if (!hidden) numbers.get(q.k).textContent = q.showWhen ? "" : (++visibleNumber) + ". ";
         row.querySelectorAll("input, select").forEach(el => { el.disabled = hidden; });
       });
     }
