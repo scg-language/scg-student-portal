@@ -37,6 +37,7 @@ const plans = d.q.filter(x => x.section === 'plans').map(x => x.k), pos = k => p
 note('1 ②の順番＝仕事 → 分野 → 進路 → 学校', pos('job') === 0 && pos('job') < pos('field_first') && pos('field_second') < pos('path_1')
   && pos('path_1') < pos('path_2') && pos('path_2') < pos('schools_status'));
 note('1 進路は第2希望まで（11/26：3つだと全部になる）・第1希望だけが必須', q('path_1').required === true && !q('path_2').required && !q('path_3'));
+note('1 12月の版はチップの形（案C）・1月の版は今の形のまま', d.layout === 'chips' && !jan.layout);
 note('1 仕事と分野に、建築・電気CAD がある', ['job'].concat(['field_first', 'field_second']).every(k => ['architecture', 'electric_cad'].every(v => q(k).o.some(o => o.v === v))));
 note('1 「その他」は選択肢のいちばん下（記入の欄がすぐ下に来る）', ['job', 'field_first', 'field_second', 'other_exams', 'education'].every(k => q(k).o[q(k).o.length - 1].v === 'other'));
 note('1 「その他」の記入と、見学した学校の名前は任意。気になっている学校の第1希望は必須のまま',

@@ -374,7 +374,8 @@ const SURVEYS = [
   const kyu = n => o("k" + n, n + "級", n + "${級}(きゅう)", "Level " + n);
   const topj = (v, band, yomi, en, c) => o(v, band + c, "${" + band + "}(" + yomi + ")" + c, en + " " + c);
 
-  SURVEYS.push({ key: "shinro_2026_dec_v1", schemaVersion: 1, easy: true,
+  /* layout:"chips"＝選択肢を丸いチップで詰めて並べる（スマホ向け・2026-11-26 きあが案Cを選んだ）。見た目だけで、答えの値は同じ */
+  SURVEYS.push({ key: "shinro_2026_dec_v1", schemaVersion: 1, easy: true, layout: "chips",
     studentIdentity: true, sb: "Career", color: "#2f9e44",
     title: { ja: "しんろアンケート（2026年12月）", en: "Career survey (December 2026)" },
     desc: { ja: "しんがく・しごとの きぼう、おかね、めんだん", en: "Your future plans, study costs and guidance needs" },

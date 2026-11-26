@@ -130,6 +130,7 @@
     const initial = options.answers || {}, controls = new Map(), rows = new Map(), errorNodes = new Map(), numbers = new Map();
     container.replaceChildren();
     container.classList.add("sv-form");
+    container.classList.toggle("sv-chips", def.layout === "chips");   // 見た目だけ（survey-form.css）
     const make = (tag, text, className) => {
       const el = doc.createElement(tag);
       if (text != null) el.textContent = text;
