@@ -6,7 +6,6 @@
 <title>進路アンケート・日本語／英語版の確認</title>
 <link rel="stylesheet" href="assets/app.css">
 <link rel="stylesheet" href="assets/survey-form.css">
-<link rel="stylesheet" href="assets/japan-map.css">
 <style>
 body{background:#eef2f7;color:#10161c;font-size:17px}
 .preview-header{padding:22px;background:#20375a;color:white}.preview-header h1{font-size:23px;margin:0 0 8px}.preview-header p{margin:0;font-size:15px;line-height:1.65;color:#eef3fa}
@@ -26,21 +25,16 @@ body{background:#eef2f7;color:#10161c;font-size:17px}
 <section class="preview-card" id="preview-receipt-panel" hidden><h2 id="receipt-title"></h2><p id="receipt-note"></p><dl class="preview-receipt" id="receipt-list"></dl><div class="preview-actions"><button id="preview-back" class="preview-action primary" type="button">回答画面に戻る</button></div></section>
 </main>
 <script src="assets/surveys.js"></script>
-<script src="assets/japan-map-data.js"></script>
-<script src="assets/japan-map.js"></script>
 <script src="assets/survey-form.js"></script>
 <script>
 "use strict";
-/* ?v=dec で 2026年12月の版を出す（career-survey-dec-preview.html から来る）。何も付けなければ 1月の版 */
-const previewDec=new URLSearchParams(location.search).get("v")==="dec";
-const definition=SURVEYS.find(s=>s.key===(previewDec?"shinro_2026_dec_v1":"shinro_2027_jan_v1"));
+const definition=SURVEYS.find(s=>s.key==="shinro_2027_jan_v1");
 const profile={student_no:"DUMMY-JAN-001",display_name:"確認用の学生 / Preview student",class_name:"確認用クラス / Preview class"};
 let previewLang="ja",formController=null,savedPreview=null;
 const previewText={
  ja:{heading:"進路アンケート・日本語／英語版の確認",caption:"現在の1年生全員向け／2027年1月実施予定。12月に実施できる状態を目指した初版です。",warning:"確認用画面です。実在の学生情報は使っていません。回答はサーバーやファイルへ保存されず、このページを閉じると消えます。",submit:"回答内容を確認する（保存しません）",receipt:"回答内容の確認",note:"保存される項目の形を確認しています。本番への送信は行っていません。",back:"回答画面に戻る"},
  en:{heading:"Career survey: Japanese / English preview",caption:"For all current first-year students, planned for January 2027. This first version is being prepared for use from December.",warning:"Preview only. No real student information is used. Your answers are not saved to a server or file and will disappear when you close this page.",submit:"Check answers (not saved)",receipt:"Check your answers",note:"This shows the answers that would be submitted. Nothing has been sent to the live system.",back:"Return to answers"}
 };
-if(previewDec){previewText.ja.caption="現在の1年生全員向け／2026年12月15日のHRで実施予定の版です。";previewText.en.caption="For all current first-year students. This version is planned for the homeroom on 15 December 2026.";}
 const get=id=>document.getElementById(id);
 function previewLabel(v){return v&&typeof v==="object"?(v[previewLang]||v.ja||v.en||""):String(v||"");}
 function mountPreview(answers){
